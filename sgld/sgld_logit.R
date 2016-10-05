@@ -14,8 +14,8 @@ grad_log_prior <- function(beta) {
   - sign(beta)
 }
 
-log_prior <- function(beta) {
-
+log_prior <- function(beta, lambda = 1) {
+  log(lambda / 2) - lambda * sum(abs(beta))
 }
 
 log_likelihood <- function(X, y, beta) {
@@ -31,9 +31,9 @@ sgld <- function(X, y, beta0, grad_log_prior, grad_log_likelihood, eps = NULL,
                  n_iter = 1000, batch_size = 10) {
 
   betas <- matrix(NA, nrow = n_iter, ncol = length(beta0))
-  lls <- vector(length = n_iter)
+  log_posterior <- vector(length = n_iter)
   betas[1, ] <- beta0
-  lls[1] <- log_likelihood(X, y, beta0)
+  log_posterior[1] <- log_prior(beta0) + log_likelihood(X, y, beta0)
   N <- nrow(X)
   batches <- rep(1:batch_size, length.out = N)
 
@@ -49,8 +49,8 @@ sgld <- function(X, y, beta0, grad_log_prior, grad_log_likelihood, eps = NULL,
         )
     ) + rnorm(1, 0, sqrt(eps[i]))
 
-    lls[i] <- log_likelihood(X, y, betas[i, ])
+    log_posterior[i] <- log_prior(betas[i, ]) + log_likelihood(X, y, betas[i, ])
   }
 
-  list(betas = betas, lls = lls)
+  list(betas = betas, log_posterior = log_posterior)
 }
