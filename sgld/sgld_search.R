@@ -72,30 +72,38 @@ for (error_type in c("log(error_beta)", "error_p_train", "error_p_test")) {
     ggplot(sgd_search) +
       geom_point(aes_string(x = "log(eps_final)", y = error_type, col = "log(eps_init)")),
     ggplot(sgd_search) +
+      geom_point(aes_string(x = "log(eps_init)", y = "log(eps_final)", col = error_type)),
+    ggplot(sgd_search) +
       geom_point(aes_string(x = "gamma", y = error_type, col = "log(eps_init)"))
   )
 }
 
-# refit using best parameters
-opt_params <- sgd_search[which.min(sgd_search[, "error_p_test"]), ]
+# refit using smallest eps within 1-sd of min
+error_sd <- sd(sgd_search$error_p_test)
+opt_params <- sgd_search %>%
+  filter(error_p_test < min(error_p_test) + error_sd) %>%
+  filter(eps_init == min(eps_init))
+
 eps <- get_eps(n_iter, opt_params$gamma, opt_params$eps_init, opt_params$eps_final)
 res <- sgld(X, y, beta0, grad_log_prior,
             grad_log_likelihood, eps = eps,
             n_iter = n_iter, batch_size = batch_size)
-plot(sigmoid(X %*% true_beta), sigmoid(X %*% res$betas[1000, ]))
-plot(sigmoid(X %*% true_beta), sigmoid(X %*% res$betas[5000, ]))
+plot(sigmoid(X %*% true_beta), sigmoid(X %*% res$betas[.1 * n_iter, ]))
+plot(sigmoid(X %*% true_beta), sigmoid(X %*% res$betas[n_iter, ]))
 
-ggplot(data.frame(iter = 1:n_iter, lll = log(-res$ll))) +
-  geom_point(aes(x = iter, y = lll), size = 0.1) +
-  ylim(3.7, 6)
+ggplot(data.frame(iter = 1:n_iter, llp = log(-res$log_posterior))) +
+  geom_point(aes(x = iter, y = llp), size = 0.1)
 
-ggplot(data.frame(iter = seq_len(n_iter), beta = res$betas) %>%
-         filter(iter > 1)) +
+ggplot(data.frame(iter = seq_len(n_iter), beta = res$betas)) +
   geom_point(aes(x = iter, y = beta.1), size = 0.1)
 
 ggplot(data.frame(iter = seq_len(n_iter), beta = res$betas) %>%
          filter(iter > 0.8 * n_iter)) +
   geom_point(aes(x = iter, y = beta.1), size = 0.1)
+
+ggplot(data.frame(iter = seq_len(n_iter), beta = res$betas) %>%
+         filter(iter > 0.8 * n_iter)) +
+  geom_point(aes(x = iter, y = beta.2), size = 0.1)
 
 # just for comparison
 glm(y ~ ., family = "binomial", data = data.frame(y = y == 1, X))
