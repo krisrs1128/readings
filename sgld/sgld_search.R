@@ -107,3 +107,18 @@ ggplot(data.frame(iter = seq_len(n_iter), beta = res$betas) %>%
 
 # just for comparison
 glm(y ~ ., family = "binomial", data = data.frame(y = y == 1, X))
+
+# visualize the posterior, after thinning and removing burn-in
+eps <- get_eps(100 * n_iter, opt_params$gamma, opt_params$eps_init, opt_params$eps_final)
+res <- sgld(X, y, beta0, grad_log_prior,
+            grad_log_likelihood, eps = eps,
+            n_iter = 100 * n_iter, batch_size = batch_size)
+
+betas_posterior <- res$betas[(0.1 * 100 * n_iter) : (100 * n_iter), ]
+betas_posterior <- betas_posterior[rep(1:100, length.out = nrow(betas_posterior)) == 1, ]
+ggplot(melt(betas_posterior)) +
+  geom_histogram(aes(x = value), bins = 100) +
+  facet_grid(~ Var2, scale = "free_x")
+
+ggplot(data.frame(betas_posterior)) +
+  geom_point(aes(x = X1, y = X2), size = .2, alpha = 0.3)
