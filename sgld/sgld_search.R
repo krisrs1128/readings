@@ -27,7 +27,8 @@ sgd_search <- data.frame(
   "eps_init" = numeric(n_search),
   "eps_final" = numeric(n_search),
   "error_beta" = numeric(n_search),
-  "error_p" = numeric(n_search)
+  "error_p_train" = numeric(n_search),
+  "error_p_test" = numeric(n_search)
 )
 
 # random search loop
@@ -109,12 +110,12 @@ ggplot(data.frame(iter = seq_len(n_iter), beta = res$betas) %>%
 glm(y ~ ., family = "binomial", data = data.frame(y = y == 1, X))
 
 # visualize the posterior, after thinning and removing burn-in
-eps <- get_eps(100 * n_iter, opt_params$gamma, opt_params$eps_init, opt_params$eps_final)
-res <- sgld(X, y, beta0, grad_log_prior,
-            grad_log_likelihood, eps = eps,
+full_eps <- get_eps(100 * n_iter, opt_params$gamma, opt_params$eps_init, opt_params$eps_final)
+full_res <- sgld(X, y, beta0, grad_log_prior,
+            grad_log_likelihood, eps = full_eps,
             n_iter = 100 * n_iter, batch_size = batch_size)
 
-betas_posterior <- res$betas[(0.1 * 100 * n_iter) : (100 * n_iter), ]
+betas_posterior <- full_res$betas[(0.1 * 100 * n_iter) : (100 * n_iter), ]
 betas_posterior <- betas_posterior[rep(1:100, length.out = nrow(betas_posterior)) == 1, ]
 ggplot(melt(betas_posterior)) +
   geom_histogram(aes(x = value), bins = 100) +
