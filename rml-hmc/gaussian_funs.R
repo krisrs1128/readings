@@ -3,23 +3,23 @@
 # Functions for sampling normal model using (riemannian )langevin monte carlo
 ###############################################################################
 
-grad_posterior <- function(theta, x) {
+grad_U <- function(theta, x) {
   mu <- theta["mu"]
   sigma <- theta["sigma"]
 
-  grad <- c((1 / sigma ^ 2) * sum(x - mu),
-            - length(x) / sigma + (1 / sigma ^ 3) * sum( (x - mu) ^ 2 ))
+  grad <- c( (-1 / sigma ^ 2) * sum(x - mu),
+            length(x) / sigma - (1 / sigma ^ 3) * sum( (x - mu) ^ 2 ))
   names(grad) <- c("mu", "sigma")
   grad
 }
 
 proposal <- function(theta, x, eps) {
-  proposal_mean(theta, x, eps) + rnorm(2, 0, eps)
+  proposal_mean(theta, x, eps) + rnorm(2, 0, sqrt(eps))
 }
 
 proposal_mean <- function(theta, x, eps) {
-  grad <- grad_posterior(theta, x)
-  theta + (eps ^ 2 / 2) * grad
+  grad <- grad_U(theta, x)
+  theta - (eps / 2) * grad
 }
 
 log_likelihood_ratio <- function(x, theta_new, theta_cur) {
@@ -74,7 +74,7 @@ accept_proposal <- function(theta_new, theta_cur, x, eps) {
     return (TRUE)
   } else {
     u <- runif(1)
-    if (u > exp(log_acceptance_ratio))
+    if (u < exp(log_acceptance_ratio))
       return (TRUE)
   }
   return (FALSE)
