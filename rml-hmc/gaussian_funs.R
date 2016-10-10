@@ -36,12 +36,33 @@ log_likelihood_ratio <- function(x, theta_new, theta_cur) {
       1 / (2 * sigma_cur ^ 2) * sum( (x - mu_cur) ^ 2)
 }
 
+#' @title Mahalanobis distances between two vectors
+maha_dist <- function(x, y, mu, Sigma) {
+  t(x - mu) %*% solve(Sigma) %*% (y - mu)
+}
+
+#' @Calculate log of ratio of gaussian densities
+#' @description This is the log of the ratio of densities
+#' N(x_1 | mu_1, Sigma_1) / N(x_2 | mu_2, Sigma_2).
+log_gaussian_ratio <- function(x_1, x_2, mu_1, mu_2, Sigma_1, Sigma_2) {
+  0.5 * (log(det(Sigma_2)) -
+           log(det(Sigma_1)) -
+           maha_dist(x_1, x_1, mu_1, Sigma_1) +
+           maha_dist(x_2, x_2, mu_2, Sigma_2))
+}
+
 log_transition_ratio <- function(x, theta_new, theta_cur, eps) {
   mu_forwards <- proposal_mean(theta_cur, x, eps)
   mu_reversed <- proposal_mean(theta_new, x, eps)
+  Sigma <- diag(rep(eps, 2))
 
-  - 1 / (2 * eps ^ 2) * (
-    - sum( (theta_cur - mu_reversed) ^ 2) + sum( (theta_new - mu_forwards) ^ 2)
+  log_gaussian_ratio(
+    theta_cur,
+    theta_new,
+    mu_reversed,
+    mu_forwards,
+    Sigma,
+    Sigma
   )
 }
 
