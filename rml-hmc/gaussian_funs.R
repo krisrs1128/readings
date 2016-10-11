@@ -3,6 +3,19 @@
 # Functions for sampling normal model using (riemannian )langevin monte carlo
 ###############################################################################
 
+###############################################################################
+# helpers
+###############################################################################
+
+information <- function(theta) {
+  (1 / theta["sigma"] ^ 2) * diag(c(1, 2))
+}
+
+mat_pow <- function(X, pow = 1) {
+  eigen_X <- eigen(X)
+  eigen_X$vectors %*% diag(eigen_X$values ^ pow) %*% t(eigen_X$vectors)
+}
+
 grad_U <- function(theta, x) {
   mu <- theta["mu"]
   sigma <- theta["sigma"]
@@ -13,14 +26,6 @@ grad_U <- function(theta, x) {
   grad
 }
 
-proposal <- function(theta, x, eps) {
-  proposal_mean(theta, x, eps) + rnorm(2, 0, sqrt(eps))
-}
-
-proposal_mean <- function(theta, x, eps) {
-  grad <- grad_U(theta, x)
-  theta - (eps / 2) * grad
-}
 
 log_likelihood_ratio <- function(x, theta_new, theta_cur) {
   n <- length(x)
@@ -51,10 +56,61 @@ log_gaussian_ratio <- function(x_1, x_2, mu_1, mu_2, Sigma_1, Sigma_2) {
            maha_dist(x_2, x_2, mu_2, Sigma_2))
 }
 
-log_transition_ratio <- function(x, theta_new, theta_cur, eps) {
+check_ratio <- function(log_acceptance_ratio) {
+  if (log_acceptance_ratio > 0) {
+    return (TRUE)
+  } else {
+    u <- runif(1)
+    if (u < exp(log_acceptance_ratio))
+      return (TRUE)
+  }
+  return (FALSE)
+}
+
+#' Generic MCMC
+mcmc <- function(x, theta0, n_iter, proposal_fun, accept_fun) {
+  thetas <- matrix(NA, nrow = n_iter, ncol = length(theta0))
+  colnames(thetas) <- names(theta0)
+
+  acceptances <- rep(0, n_iter)
+  thetas[1, ] <- theta0
+
+  for (i in 2:n_iter) {
+    theta_new <- proposal_fun(thetas[i - 1, ], x)
+
+    accept <- accept_fun(theta_new, thetas[i - 1, ], x)
+
+    if (accept) {
+      acceptances[i] <- 1
+      thetas[i, ] <- theta_new
+    } else {
+      thetas[i, ] <- thetas[i - 1, ]
+    }
+
+  }
+
+  list(thetas = thetas, acceptances = acceptances)
+}
+
+###############################################################################
+# usual langevin
+###############################################################################
+
+langevin_proposal <- function(eps) {
+  function(theta, x) {
+    proposal_mean(theta, x, eps) + rnorm(2, 0, sqrt(2 * eps))
+  }
+}
+
+proposal_mean <- function(theta, x, eps) {
+  grad <- grad_U(theta, x)
+  theta - (eps / 2) * grad
+}
+
+log_langevin_ratio <- function(x, theta_new, theta_cur, eps) {
   mu_forwards <- proposal_mean(theta_cur, x, eps)
   mu_reversed <- proposal_mean(theta_new, x, eps)
-  Sigma <- diag(rep(eps, 2))
+  Sigma <- 2 * diag(rep(eps, 2))
 
   log_gaussian_ratio(
     theta_cur,
@@ -66,38 +122,14 @@ log_transition_ratio <- function(x, theta_new, theta_cur, eps) {
   )
 }
 
-accept_proposal <- function(theta_new, theta_cur, x, eps) {
-  log_acceptance_ratio <- log_transition_ratio(x, theta_new, theta_cur, eps) +
-    log_likelihood_ratio(x, theta_new, theta_cur)
-
-  if (log_acceptance_ratio > 0) {
-    return (TRUE)
-  } else {
-    u <- runif(1)
-    if (u < exp(log_acceptance_ratio))
-      return (TRUE)
+langevin_acceptance <- function(eps) {
+  function(theta_new, theta_cur, x) {
+    log_p_ratio <- log_likelihood_ratio(x, theta_new, theta_cur) # could be replaced by log guassian ratio
+    log_q_ratio <- log_langevin_ratio(x, theta_new, theta_cur, eps)
+    check_ratio(log_p_ratio + log_q_ratio)
   }
-  return (FALSE)
 }
 
-mcmc <- function(x, theta0, eps, n_iter) {
-  thetas <- matrix(NA, nrow = n_iter, ncol = length(theta0))
-  colnames(thetas) <- names(theta0)
-
-  acceptances <- rep(0, n_iter)
-  thetas[1, ] <- theta0
-
-  for (i in 2:n_iter) {
-    theta_new <- proposal(thetas[i - 1, ], x, eps)
-
-    if (accept_proposal(theta_new, thetas[i - 1, ], x, eps)) {
-      acceptances[i] <- 1
-      thetas[i, ] <- theta_new
-    } else {
-      thetas[i, ] <- thetas[i - 1, ]
-    }
-
-  }
-
-  list(thetas = thetas, acceptances = acceptances)
+langevin_mcmc <- function(x, theta0, n_iter, eps) {
+  mcmc(x, theta0, n_iter, langevin_proposal(eps), langevin_acceptance(eps))
 }
