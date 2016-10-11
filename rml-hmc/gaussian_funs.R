@@ -133,3 +133,56 @@ langevin_acceptance <- function(eps) {
 langevin_mcmc <- function(x, theta0, n_iter, eps) {
   mcmc(x, theta0, n_iter, langevin_proposal(eps), langevin_acceptance(eps))
 }
+
+###############################################################################
+## rmc langevin
+###############################################################################
+
+rmc_proposal <- function(eps) {
+  function(theta, x) {
+    G <- length(x) * information(theta)
+    theta_star <- rmc_proposal_mean(theta, x, eps) +
+      mat_pow(G, -0.5) %*% rnorm(2, 0, sqrt(2 * eps))
+    setNames(as.numeric(theta_star), c("mu", "sigma"))
+  }
+}
+
+rmc_proposal_mean <- function(theta, x, eps) {
+  n <- length(x)
+  grad <- grad_U(theta, x)
+
+  G <- n * information(theta)
+  theta - (eps / 2) * (
+    solve(G) %*% grad + theta["sigma"] / n
+  )
+}
+
+log_rmc_ratio <- function(x, theta_new, theta_cur, eps) {
+  n <- length(x)
+  mu_forwards <- rmc_proposal_mean(theta_cur, x, eps)
+  mu_reversed <- rmc_proposal_mean(theta_new, x, eps)
+
+  Sigma_reversed <- 2 * eps * solve(n * information(theta_cur))
+  Sigma_forwards <- 2 * eps * solve(n * information(theta_new))
+
+  log_gaussian_ratio(
+    theta_cur,
+    theta_new,
+    mu_reversed,
+    mu_forwards,
+    Sigma_reversed,
+    Sigma_forwards
+  )
+}
+
+rmc_acceptance <- function(eps) {
+  function(theta_new, theta_cur, x) {
+    log_p_ratio <- log_likelihood_ratio(x, theta_new, theta_cur) # could be replaced by log guassian ratio
+    log_q_ratio <- log_rmc_ratio(x, theta_new, theta_cur, eps)
+    check_ratio(log_p_ratio + log_q_ratio)
+  }
+}
+
+rmc_mcmc <- function(x, theta0, n_iter, eps) {
+  mcmc(x, theta0, n_iter, rmc_proposal(eps), rmc_acceptance(eps))
+}
