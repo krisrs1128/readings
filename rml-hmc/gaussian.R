@@ -4,38 +4,22 @@
 ###############################################################################
 
 source("gaussian_funs.R")
+library("ggplot2")
 
 x <- rnorm(300, 0, 10)
-res <- langevin_mcmc(x, c("mu" = 5, "sigma" = 100), 800, 0.1)
-mean(res$acceptances)
-colnames(res$thetas)
-plot(res$thetas[, 1])
-plot(res$thetas[, 2], col = "red")
-plot(res$thetas, col = "white", asp = 1)
-lines(res$thetas)
-
-x <- rnorm(300, 0, 10)
-res <- langevin_mcmc(x, c("mu" = 5, "sigma" = 40), 2000, 0.1)
-mean(res$acceptances)
-colnames(res$thetas)
-plot(res$thetas[, 1])
-plot(res$thetas[, 2])
-plot(res$thetas, col = "white", asp = 1)
-lines(res$thetas)
-
-
-samples_df <- data.frame(
-  res$thetas,
-  accept = res$acceptances,
-  iter = seq_len(nrow(res$thetas))
+langevin_res <- langevin_mcmc(x, c("mu" = 5, "sigma" = 100), 800, 0.1)
+rmc_res <- rmc_mcmc(x, c("mu" = 5, "sigma" = 100), 800, 0.1)
+samples <- data.frame(
+  method = c(rep("langevin", 800), rep("riemann", 800)),
+  rbind(langevin_res$thetas, rmc_res$thetas),
+  accept = as.factor(c(langevin_res$acceptances, rmc_res$acceptances)),
+  iter = c(1:800, 1:800)
 )
 
-x <- rnorm(300, 0, 10)
-res <- rmc_mcmc(x, c("mu" = 5, "sigma" = 100), 800, 0.1)
-mean(res$acceptances)
-plot(res$thetas[, 1])
-plot(res$thetas[, 2])
-plot(res$thetas, col = "white", asp = 1)
-lines(res$thetas)
-
-#save.image("~/Desktop/langevin_exper.Rdata")
+## ---- rml_vis ----
+ggplot(samples) +
+  geom_point(aes(x = sigma, y = mu, col = accept), size = 0.5) +
+  geom_path(aes(x = sigma, y = mu), alpha = 0.1) +
+  facet_grid(method~.) +
+  scale_color_manual(values = c("#F09465", "#5EBD90")) +
+  coord_fixed()
