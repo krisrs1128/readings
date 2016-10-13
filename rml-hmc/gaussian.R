@@ -4,6 +4,7 @@
 ###############################################################################
 
 source("gaussian_funs.R")
+library("ggplot2")
 
 x <- rnorm(300, 0, 10)
 langevin_res <- langevin_mcmc(x, c("mu" = 5, "sigma" = 100), 800, 0.1)
