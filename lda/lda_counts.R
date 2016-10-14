@@ -41,7 +41,7 @@ generate_data <- function(n_documents, document_lengths = NULL, alpha = NULL,
   # Document and higher level parameters
   K <- length(alpha)
   V <- length(gamma)
-  theta <- rdirichlet(n, alpha)
+  theta <- rdirichlet(n_documents, alpha)
   beta <- rdirichlet(K, gamma)
 
   # generate word counts for each topic
@@ -52,7 +52,7 @@ generate_data <- function(n_documents, document_lengths = NULL, alpha = NULL,
   }
   Nkv <- Nkv %>%
     rbindlist() %>%
-    setcolorder(Nkv, c("document", "topic", "word", "value"))
+    setcolorder(c("document", "topic", "word", "value"))
 
   # observed data doesn't see topic labels
   Nv <- Nkv %>%
