@@ -73,7 +73,7 @@ nkv_xi_theta <- function(nkv_tilde, xi_theta_tilde) {
   V <- dim(nkv_tilde)[3]
   products  <- vector(length = V)
   for (v in seq_len(V)) {
-    products[v] <- sum(nkv_tilde[,, v] * xi_tilde)
+    products[v] <- sum(nkv_tilde[,, v] * xi_theta_tilde)
   }
   sum(products)
 }
@@ -82,7 +82,7 @@ nkv_xi_beta <- function(nkv_tilde, xi_beta_tilde) {
   D <- dim(nkv_tilde)[1]
   products  <- vector(length = D)
   for (d in seq_len(D)) {
-    products[d] <- sum(nkv_tilde[d,,] * xi_beta_tilde)
+    products[d] <- sum(nkv_tilde[d,, ] * xi_beta_tilde)
   }
   sum(products)
 }
