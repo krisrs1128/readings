@@ -36,53 +36,154 @@ multinomial_entropy <- function(N, p) {
   N * sum(p * log(p))
 }
 
-#' @param nkv_tilde [3-d array] An array of document x topic x word
+###############################################################################
+# Variational Lower Bound
+###############################################################################
+
+ndkv_xi_theta <- function(ndkv_tilde, xi_theta_tilde) {
+  V <- dim(ndkv_tilde)[3]
+  products  <- vector(length = V)
+  for (v in seq_len(V)) {
+    products[v] <- sum(ndkv_tilde[,, v] * xi_theta_tilde)
+  }
+  sum(products)
+}
+
+ndkv_xi_beta <- function(ndkv_tilde, xi_beta_tilde) {
+  D <- dim(ndkv_tilde)[1]
+  products  <- vector(length = D)
+  for (d in seq_len(D)) {
+    products[d] <- sum(ndkv_tilde[d,, ] * xi_beta_tilde)
+  }
+  sum(products)
+}
+
+#' @param ndkv_tilde [3-d array] An array of document x topic x word
 #' variational parameters.
 #' @param theta_tilde [matrix] An array of document x topic variational
 #' parameters.
 #' @param beta_tilde [matrix] An array of topic x vocabulary variational
 #' parameters
-#' @param alpha [scalar] The dirichlet hyperparameter for the theta (document
+#' @param alpha [vector] The dirichlet hyperparameter for the theta (document
 #' topic) mixture proportions
-#' @param eta [scalar] The analog for alpha on the beta (vocabulary)
+#' @param eta [vector] The analog for alpha on the beta (vocabulary)
 #' @return elbo scalar The evidence lower bound, which should increase after
 #' every variational update.
 #' proportions.
-lower_bound <- function(nkv_tilde,
+lower_bound <- function(ndkv_tilde,
                         theta_tilde,
                         beta_tilde,
                         alpha,
                         eta) {
-  N <- sum(nkv)
+  N <- dim(ndkv_tilde)[1]
   xi_theta_tilde <- t(apply(theta_tilde, 1, xi))
   xi_beta_tilde <- t(apply(beta_tilde, 1, xi))
 
   # complete data likelihood terms
-  N * nkv_xi_theta(xi_theta_tilde, nkv_tilde) +
-  N * nkv_xi_beta(xi_beta_tilde, nkv_tilde) +
-  alpha * sum(xi_theta_tilde) +
-  eta * sum(xi_beta_tilde) +
+  N * ndkv_xi_theta(ndkv_tilde, xi_theta_tilde)
+  N * ndkv_xi_beta(ndkv_tilde, xi_beta_tilde) +
+  sum(alpha * xi_theta_tilde) +
+  sum(eta * xi_beta_tilde) +
 
   #  start entropy terms
-  N * multinomial_entropy(N, as.numeric(nkv_tilde)) +
+  N * multinomial_entropy(N, as.numeric(ndkv_tilde)) +
   sum(dirichlet_entropies(theta, theta)) +
   sum(dirichlet_entropies(beta, beta))
 }
 
-nkv_xi_theta <- function(nkv_tilde, xi_theta_tilde) {
-  V <- dim(nkv_tilde)[3]
-  products  <- vector(length = V)
-  for (v in seq_len(V)) {
-    products[v] <- sum(nkv_tilde[,, v] * xi_theta_tilde)
+###############################################################################
+# E and M steps
+###############################################################################
+
+#' @param nv [vector] A vector of word counts associated with the i^th document
+#' @param beta [matrix] A topics x vocabulary matrix of word probabilities
+#' across topics.
+#' @param alpha [scalar] The dirichlet hyperparameter for the theta (document
+#' topic) mixture proportions.
+e_step <- function(nv, beta_tilde, alpha, n_iter = 100) {
+  theta_tilde <- alpha
+  xi_beta_tilde <- apply(beta_tilde, 2, xi)
+  K <- nrow(beta_tilde)
+  V <- ncol(beta_tilde)
+
+  for (iter in seq_len(n_iter)) {
+    nkv_tilde <- exp(xi_beta_tilde + xi(theta_tilde) %*% matrix(1, 1, V))
+
+    for (v in seq_len(V)) {
+      nkv_tilde[, v] <- nkv_tilde[, v] / sum(nkv_tilde[, v])
+    }
+
+    theta_tilde <- rowSums((matrix(1, K, 1) %*% nv) * nkv_tilde)
   }
-  sum(products)
+
+  list(
+    "theta_tilde" = theta_tilde,
+    "nkv_tilde" = nkv_tilde
+  )
 }
 
-nkv_xi_beta <- function(nkv_tilde, xi_beta_tilde) {
-  D <- dim(nkv_tilde)[1]
-  products  <- vector(length = D)
-  for (d in seq_len(D)) {
-    products[d] <- sum(nkv_tilde[d,, ] * xi_beta_tilde)
+#' @param eta [scalar] The analog for alpha on the beta (vocabulary)
+#' @param S [matrix] A topics x vocabulary matrix of sufficient statistics
+m_step <- function(eta, S) {
+  eta + S
+}
+
+###############################################################################
+# Overall variational bayes
+###############################################################################
+
+#' @param ndv [matrix] A document by vocabulary matrix of word counts.
+#' @example
+#' ndv <- matrix(sample(1:10, 200 * 100, replace = T), 200, 100)
+#' vb_counts(ndv, rep(1, 3), rep(1, 100))
+vb_counts <- function(ndv, alpha, eta, beta_tilde_init = NULL, n_iter = 100) {
+  K <- length(alpha)
+  V <- length(eta)
+  D <- nrow(ndv)
+
+  if (is.null(beta_tilde_init)) {
+    beta_tilde_init <- t(rdirichlet(V, alpha))
   }
-  sum(products)
+  beta_tilde <- beta_tilde_init
+  elbo <- vector(length = 2 * n_iter)
+
+  latent_data <- list(
+    "theta_tilde" = matrix(0, D, K),
+    "ndkv_tilde" = array(0, c(D, K, V))
+  )
+
+  for (iter in seq_len(n_iter)) {
+    S <- matrix(0, K, V)
+
+    for (d in seq_len(D)) {
+      cur_latent_data <- e_step(ndv[d, ], beta_tilde, alpha)
+      latent_data$theta_tilde[d, ] <- cur_latent_data$theta_tilde
+      latent_data$ndkv_tilde[d,, ] <- cur_latent_data$nkv_tilde
+      S <- S + (matrix(1, K, 1) %*% ndv[d, ]) * latent_data$ndkv_tilde[d,, ]
+    }
+
+    elbo[2 * iter - 1] <- lower_bound(
+      latent_data$ndkv_tilde,
+      latent_data$theta_tilde,
+      beta_tilde,
+      alpha,
+      eta
+    )
+    beta_tilde <- m_step(eta, S)
+    cat(sprintf("iter %d | elbo %f \n ", iter, elbo[2 * iter - 1]))
+
+    elbo[2 * iter] <- lower_bound(
+      latent_data$ndkv_tilde,
+      latent_data$theta_tilde,
+      beta_tilde,
+      alpha,
+      eta
+    )
+  }
+
+  list (
+    "theta_tilde" = latent_data$theta_tilde,
+    "ndkv_tilde" = latent_data$nkv_tilde,
+    "beta_tilde" = beta_tilde
+  )
 }
