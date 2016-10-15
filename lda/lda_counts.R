@@ -14,6 +14,7 @@ library("dplyr")
 ## ---- simulation functions ----
 rdirichlet <- function(n, alpha) {
   gammas <- sapply(alpha, function(x) rgamma(n, x))
+  gammas <- as.matrix(gammas, nrow = n)
   gammas / rowSums(gammas)
 }
 

@@ -18,7 +18,7 @@ xi <- function(alpha) {
 #' @param x A length K vector of dirichlet probabilities
 #' @param alpha A length K vector of dirichlet hyperparametrs
 dirichlet_entropy <- function(x, alpha) {
-  sum(x * xi(alpha))
+  sum(x * xi(alpha), na.rm = TRUE) # sometimes probabilities are too small for digamma
 }
 
 #' @title Compute ExpectedEntropy across many Dirichlets
@@ -87,8 +87,8 @@ lower_bound <- function(ndkv_tilde,
 
   #  start entropy terms
   N * multinomial_entropy(N, as.numeric(ndkv_tilde)) +
-  sum(dirichlet_entropies(theta, theta)) +
-  sum(dirichlet_entropies(beta, beta))
+  sum(dirichlet_entropies(theta_tilde, theta_tilde)) +
+  sum(dirichlet_entropies(beta_tilde, beta_tilde))
 }
 
 ###############################################################################
@@ -100,7 +100,7 @@ lower_bound <- function(ndkv_tilde,
 #' across topics.
 #' @param alpha [scalar] The dirichlet hyperparameter for the theta (document
 #' topic) mixture proportions.
-e_step <- function(nv, beta_tilde, alpha, n_iter = 100) {
+e_step <- function(nv, beta_tilde, alpha, n_iter = 10) {
   theta_tilde <- alpha
   xi_beta_tilde <- apply(beta_tilde, 2, xi)
   K <- nrow(beta_tilde)
@@ -108,6 +108,7 @@ e_step <- function(nv, beta_tilde, alpha, n_iter = 100) {
 
   for (iter in seq_len(n_iter)) {
     nkv_tilde <- exp(xi_beta_tilde + xi(theta_tilde) %*% matrix(1, 1, V))
+    nkv_tilde[is.na(nkv_tilde)] <- 0
 
     for (v in seq_len(V)) {
       nkv_tilde[, v] <- nkv_tilde[, v] / sum(nkv_tilde[, v])
@@ -138,14 +139,14 @@ m_step <- function(eta, S) {
 #' vb_counts(ndv, rep(1, 3), rep(1, 100))
 vb_counts <- function(ndv, alpha, eta, beta_tilde_init = NULL, n_iter = 100) {
   K <- length(alpha)
-  V <- length(eta)
   D <- nrow(ndv)
+  V <- ncol(ndv)
 
   if (is.null(beta_tilde_init)) {
     beta_tilde_init <- t(rdirichlet(V, alpha))
   }
   beta_tilde <- beta_tilde_init
-  elbo <- vector(length = 2 * n_iter)
+  elbo <- vector(length = n_iter)
 
   latent_data <- list(
     "theta_tilde" = matrix(0, D, K),
@@ -162,28 +163,22 @@ vb_counts <- function(ndv, alpha, eta, beta_tilde_init = NULL, n_iter = 100) {
       S <- S + (matrix(1, K, 1) %*% ndv[d, ]) * latent_data$ndkv_tilde[d,, ]
     }
 
-    elbo[2 * iter - 1] <- lower_bound(
+    elbo[iter] <- lower_bound(
       latent_data$ndkv_tilde,
       latent_data$theta_tilde,
       beta_tilde,
       alpha,
       eta
     )
-    beta_tilde <- m_step(eta, S)
-    cat(sprintf("iter %d | elbo %f \n ", iter, elbo[2 * iter - 1]))
+    cat(sprintf("iter %d | elbo %f \n ", iter, elbo[iter]))
 
-    elbo[2 * iter] <- lower_bound(
-      latent_data$ndkv_tilde,
-      latent_data$theta_tilde,
-      beta_tilde,
-      alpha,
-      eta
-    )
+    beta_tilde <- m_step(eta, S)
   }
 
   list (
+    "elbo" = elbo,
     "theta_tilde" = latent_data$theta_tilde,
-    "ndkv_tilde" = latent_data$nkv_tilde,
+    "ndkv_tilde" = latent_data$ndkv_tilde,
     "beta_tilde" = beta_tilde
   )
 }
