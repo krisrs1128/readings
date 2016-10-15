@@ -11,14 +11,14 @@
 #' @description This appears in the entropy of Dirichlet variables:
 #' Psi(alpha_{k}) - Psi(sum alpha_{k})
 #' where Psi are digamma functions
-xi <- function(alpha) {
+psi <- function(alpha) {
   digamma(alpha) - digamma(sum(alpha))
 }
 
 #' @param x A length K vector of dirichlet probabilities
 #' @param alpha A length K vector of dirichlet hyperparametrs
 dirichlet_entropy <- function(x, alpha) {
-  sum(x * xi(alpha), na.rm = TRUE) # sometimes probabilities are too small for digamma
+  sum(x * psi(alpha), na.rm = TRUE) # sometimes probabilities are too small for digamma
 }
 
 #' @title Compute ExpectedEntropy across many Dirichlets
@@ -40,20 +40,20 @@ multinomial_entropy <- function(N, p) {
 # Variational Lower Bound
 ###############################################################################
 
-ndkv_xi_theta <- function(ndkv_tilde, xi_theta_tilde) {
+ndkv_psi_theta <- function(ndkv_tilde, psi_theta_tilde) {
   V <- dim(ndkv_tilde)[3]
   products  <- vector(length = V)
   for (v in seq_len(V)) {
-    products[v] <- sum(ndkv_tilde[,, v] * xi_theta_tilde)
+    products[v] <- sum(ndkv_tilde[,, v] * psi_theta_tilde)
   }
   sum(products)
 }
 
-ndkv_xi_beta <- function(ndkv_tilde, xi_beta_tilde) {
+ndkv_psi_beta <- function(ndkv_tilde, psi_beta_tilde) {
   D <- dim(ndkv_tilde)[1]
   products  <- vector(length = D)
   for (d in seq_len(D)) {
-    products[d] <- sum(ndkv_tilde[d,, ] * xi_beta_tilde)
+    products[d] <- sum(ndkv_tilde[d,, ] * psi_beta_tilde)
   }
   sum(products)
 }
@@ -76,14 +76,14 @@ lower_bound <- function(ndkv_tilde,
                         alpha,
                         eta) {
   N <- dim(ndkv_tilde)[1]
-  xi_theta_tilde <- t(apply(theta_tilde, 1, xi))
-  xi_beta_tilde <- t(apply(beta_tilde, 1, xi))
+  psi_theta_tilde <- t(apply(theta_tilde, 1, psi))
+  psi_beta_tilde <- t(apply(beta_tilde, 1, psi))
 
   # complete data likelihood terms
-  N * ndkv_xi_theta(ndkv_tilde, xi_theta_tilde)
-  N * ndkv_xi_beta(ndkv_tilde, xi_beta_tilde) +
-  sum(alpha * xi_theta_tilde) +
-  sum(eta * xi_beta_tilde) +
+  N * ndkv_psi_theta(ndkv_tilde, psi_theta_tilde)
+  N * ndkv_psi_beta(ndkv_tilde, psi_beta_tilde) +
+  sum(alpha * psi_theta_tilde) +
+  sum(eta * psi_beta_tilde) +
 
   #  start entropy terms
   N * multinomial_entropy(N, as.numeric(ndkv_tilde)) +
@@ -104,9 +104,9 @@ e_step <- function(nv, beta_tilde, alpha, n_iter = 100) {
   K <- nrow(beta_tilde)
   V <- ncol(beta_tilde)
 
-  xi_beta_tilde <- matrix(0, K, V)
+  psi_beta_tilde <- matrix(0, K, V)
   for (k in seq_len(K)) {
-    xi_beta_tilde[k, ] <- xi(beta_tilde[k, ])
+    psi_beta_tilde[k, ] <- psi(beta_tilde[k, ])
   }
 
   nkv_tilde <- matrix(0, K, V)
@@ -117,7 +117,7 @@ e_step <- function(nv, beta_tilde, alpha, n_iter = 100) {
 
     for (v in seq_len(V)) {
       for (k in seq_len(K)) {
-        nkv_tilde[k, v] <- exp(xi_beta_tilde[k, v] + xi(theta_tilde_old)[k])
+        nkv_tilde[k, v] <- exp(psi_beta_tilde[k, v] + psi(theta_tilde_old)[k])
       }
       nkv_tilde[, v] <- nkv_tilde[, v] / sum(nkv_tilde[, v])
       for (k in seq_len(K)) {
