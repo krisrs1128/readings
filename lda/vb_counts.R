@@ -100,21 +100,30 @@ lower_bound <- function(ndkv_tilde,
 #' across topics.
 #' @param alpha [scalar] The dirichlet hyperparameter for the theta (document
 #' topic) mixture proportions.
-e_step <- function(nv, beta_tilde, alpha, n_iter = 10) {
-  theta_tilde <- alpha
-  xi_beta_tilde <- apply(beta_tilde, 2, xi)
+e_step <- function(nv, beta_tilde, alpha, n_iter = 100) {
   K <- nrow(beta_tilde)
   V <- ncol(beta_tilde)
 
+  xi_beta_tilde <- matrix(0, K, V)
+  for (k in seq_len(K)) {
+    xi_beta_tilde[k, ] <- xi(beta_tilde[k, ])
+  }
+
+  nkv_tilde <- matrix(0, K, V)
+  theta_tilde <- alpha
   for (iter in seq_len(n_iter)) {
-    nkv_tilde <- exp(xi_beta_tilde + xi(theta_tilde) %*% matrix(1, 1, V))
-    nkv_tilde[is.na(nkv_tilde)] <- 0
+    theta_tilde_old <- theta_tilde
+    theta_tilde <- alpha
 
     for (v in seq_len(V)) {
+      for (k in seq_len(K)) {
+        nkv_tilde[k, v] <- exp(xi_beta_tilde[k, v] + xi(theta_tilde_old)[k])
+      }
       nkv_tilde[, v] <- nkv_tilde[, v] / sum(nkv_tilde[, v])
+      for (k in seq_len(K)) {
+        theta_tilde[k] <- theta_tilde[k] + nv[v] * nkv_tilde[k, v]
+      }
     }
-
-    theta_tilde <- rowSums((matrix(1, K, 1) %*% nv) * nkv_tilde)
   }
 
   list(
@@ -126,7 +135,14 @@ e_step <- function(nv, beta_tilde, alpha, n_iter = 10) {
 #' @param eta [scalar] The analog for alpha on the beta (vocabulary)
 #' @param S [matrix] A topics x vocabulary matrix of sufficient statistics
 m_step <- function(eta, S) {
-  eta + S
+  K <- nrow(S)
+  V <- ncol(S)
+
+  beta_tilde <- matrix(nrow = K, ncol = V)
+  for (v in seq_len(V)) {
+    beta_tilde[, v] <- eta[v] + S[, v]
+  }
+  beta_tilde
 }
 
 ###############################################################################
@@ -143,7 +159,7 @@ vb_counts <- function(ndv, alpha, eta, beta_tilde_init = NULL, n_iter = 100) {
   V <- ncol(ndv)
 
   if (is.null(beta_tilde_init)) {
-    beta_tilde_init <- t(rdirichlet(V, alpha))
+    beta_tilde_init <- matrix(rgamma(K * V, shape = 100, scale = 1 / 100), K, V)
   }
   beta_tilde <- beta_tilde_init
   elbo <- vector(length = n_iter)
