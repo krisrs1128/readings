@@ -15,21 +15,28 @@ psi <- function(alpha) {
   digamma(alpha) - digamma(sum(alpha))
 }
 
-#' @param x A length K vector of dirichlet probabilities
-#' @param alpha A length K vector of dirichlet hyperparametrs
-dirichlet_entropy <- function(x, alpha) {
-  sum(x * psi(alpha), na.rm = TRUE) # sometimes probabilities are too small for digamma
+elbo <- function(ndv, vb_params, alpha, eta) {
+  expected_complete_density(n, vb_params, alpha, eta) +
+    dirichlet_entropy(vb_params$beta_tilde) +
+    dirichlet_entropy(vb_params$theta_tilde) +
+    cat_entropy(ndv, vb_params$ndkv_tilde)
 }
 
-#' @title Compute ExpectedEntropy across many Dirichlets
-#' @param x An N x K matrix of dirichlet probabilities
-#' @param
-dirichlet_entropies <- function(x, alpha) {
-  N <- nrow(x)
-  entropies <- vector(length = N)
-  for (i in seq_len(N)) {
-    entropies[i] <- dirichlet_entropy(x[i, ], alpha[i, ])
-  }
+#' @param alpha A p x k matrix of dirichlet parameters. Each row is considered
+#' the parameter to a dirichlet distribution.
+#' @return
+#' sum_{j, k} log Gamma(alpha_{jk}) +
+#' sum_{j} log Gamma(sum_{k} alpha_{jk}) -
+#' sum_{j, k} (alpha_{jk} - 1) * psi_{v}(alpha_{j})
+#'
+#' @examples
+#' alpha <- rdirichlet(20, c(1, 1, 1, 1))
+#' dirichlet_entropy(alpha)
+dirichlet_entropy <- function(alpha) {
+  psi_ks  <- t(apply(alpha, 1, psi))
+  sum(lgamma(alpha)) +
+    sum(lgamma(rowSums(alpha))) +
+    sum((alpha - 1) * psi_ks)
 }
 
 multinomial_entropy <- function(N, p) {
