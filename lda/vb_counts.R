@@ -16,10 +16,45 @@ psi <- function(alpha) {
 }
 
 elbo <- function(ndv, vb_params, alpha, eta) {
-  expected_complete_density(n, vb_params, alpha, eta) +
+  expected_complete_density(ndv, vb_params, alpha, eta) +
     dirichlet_entropy(vb_params$beta_tilde) +
     dirichlet_entropy(vb_params$theta_tilde) +
-    cat_entropy(ndv, vb_params$ndkv_tilde)
+    cat_entropy(ndv, vb_params$ndvk_tilde)
+}
+
+
+#' @description E_{q}{log p(x, z)} for LDA
+#' @examples
+#' ndv <- matrix(sample(1:10, size = 200 * 15, replace = TRUE), 200, 15)
+#' ndvk <- array(sample(1:10, size = 200 * 15 * 3, replace = TRUE), c(200, 3, 15))
+#' expected_complete_density(ndv,
+#'                           list(beta_tilde = matrix(runif(3 * 15), 3, 15),
+#'                                ndvk_tilde = ndvk,
+#'                                theta_tilde = matrix(runif(200 * 3), 200, 3)),
+#'                           rep(1, 3), rep(1, 15))
+expected_complete_density <- function(ndv, vb_params, alpha, eta) {
+  V <- ncol(vb_params$beta_tilde)
+  K <- nrow(vb_params$beta_tilde)
+  D <- nrow(vb_params$theta_tilde)
+
+  result <- 0
+  for (k in seq_len(K)) {
+    psi_beta_k <- psi(vb_params$beta_tilde[k, ])
+    for (v in seq_len(V)) {
+      result  <- result +
+        (sum(ndv[, v] * vb_params$ndvk_tilde[, k, v]) + eta[v] - 1) * psi_beta_k[v]
+    }
+  }
+
+  for (d in seq_len(D)) {
+    psi_theta_d <- psi(vb_params$theta_tilde[d, ])
+    for (k in seq_len(K)) {
+      result <- result +
+        (sum(ndv[d, ] * vb_params$ndvk_tilde[d, k, ]) + alpha[k] - 1) * psi_theta_d[k]
+    }
+  }
+
+  result
 }
 
 #' @param alpha A p x k matrix of dirichlet parameters. Each row is considered
@@ -47,25 +82,25 @@ multinomial_entropy <- function(N, p) {
 # Variational Lower Bound
 ###############################################################################
 
-ndkv_psi_theta <- function(ndkv_tilde, psi_theta_tilde) {
-  V <- dim(ndkv_tilde)[3]
+ndvk_psi_theta <- function(ndvk_tilde, psi_theta_tilde) {
+  V <- dim(ndvk_tilde)[3]
   products  <- vector(length = V)
   for (v in seq_len(V)) {
-    products[v] <- sum(ndkv_tilde[,, v] * psi_theta_tilde)
+    products[v] <- sum(ndvk_tilde[,, v] * psi_theta_tilde)
   }
   sum(products)
 }
 
-ndkv_psi_beta <- function(ndkv_tilde, psi_beta_tilde) {
-  D <- dim(ndkv_tilde)[1]
+ndvk_psi_beta <- function(ndvk_tilde, psi_beta_tilde) {
+  D <- dim(ndvk_tilde)[1]
   products  <- vector(length = D)
   for (d in seq_len(D)) {
-    products[d] <- sum(ndkv_tilde[d,, ] * psi_beta_tilde)
+    products[d] <- sum(ndvk_tilde[d,, ] * psi_beta_tilde)
   }
   sum(products)
 }
 
-#' @param ndkv_tilde [3-d array] An array of document x topic x word
+#' @param ndvk_tilde [3-d array] An array of document x topic x word
 #' variational parameters.
 #' @param theta_tilde [matrix] An array of document x topic variational
 #' parameters.
@@ -77,23 +112,23 @@ ndkv_psi_beta <- function(ndkv_tilde, psi_beta_tilde) {
 #' @return elbo scalar The evidence lower bound, which should increase after
 #' every variational update.
 #' proportions.
-lower_bound <- function(ndkv_tilde,
+lower_bound <- function(ndvk_tilde,
                         theta_tilde,
                         beta_tilde,
                         alpha,
                         eta) {
-  N <- dim(ndkv_tilde)[1]
+  N <- dim(ndvk_tilde)[1]
   psi_theta_tilde <- t(apply(theta_tilde, 1, psi))
   psi_beta_tilde <- t(apply(beta_tilde, 1, psi))
 
   # complete data likelihood terms
-  N * ndkv_psi_theta(ndkv_tilde, psi_theta_tilde)
-  N * ndkv_psi_beta(ndkv_tilde, psi_beta_tilde) +
+  N * ndvk_psi_theta(ndvk_tilde, psi_theta_tilde)
+  N * ndvk_psi_beta(ndvk_tilde, psi_beta_tilde) +
   sum(alpha * psi_theta_tilde) +
   sum(eta * psi_beta_tilde) +
 
   #  start entropy terms
-  N * multinomial_entropy(N, as.numeric(ndkv_tilde)) +
+  N * multinomial_entropy(N, as.numeric(ndvk_tilde)) +
   sum(dirichlet_entropies(theta_tilde, theta_tilde)) +
   sum(dirichlet_entropies(beta_tilde, beta_tilde))
 }
@@ -173,7 +208,7 @@ vb_counts <- function(ndv, alpha, eta, beta_tilde_init = NULL, n_iter = 100) {
 
   latent_data <- list(
     "theta_tilde" = matrix(0, D, K),
-    "ndkv_tilde" = array(0, c(D, K, V))
+    "ndvk_tilde" = array(0, c(D, K, V))
   )
 
   for (iter in seq_len(n_iter)) {
@@ -182,12 +217,12 @@ vb_counts <- function(ndv, alpha, eta, beta_tilde_init = NULL, n_iter = 100) {
     for (d in seq_len(D)) {
       cur_latent_data <- e_step(ndv[d, ], beta_tilde, alpha)
       latent_data$theta_tilde[d, ] <- cur_latent_data$theta_tilde
-      latent_data$ndkv_tilde[d,, ] <- cur_latent_data$nkv_tilde
-      S <- S + (matrix(1, K, 1) %*% ndv[d, ]) * latent_data$ndkv_tilde[d,, ]
+      latent_data$ndvk_tilde[d,, ] <- cur_latent_data$nkv_tilde
+      S <- S + (matrix(1, K, 1) %*% ndv[d, ]) * latent_data$ndvk_tilde[d,, ]
     }
 
     elbo[iter] <- lower_bound(
-      latent_data$ndkv_tilde,
+      latent_data$ndvk_tilde,
       latent_data$theta_tilde,
       beta_tilde,
       alpha,
@@ -201,7 +236,7 @@ vb_counts <- function(ndv, alpha, eta, beta_tilde_init = NULL, n_iter = 100) {
   list (
     "elbo" = elbo,
     "theta_tilde" = latent_data$theta_tilde,
-    "ndkv_tilde" = latent_data$ndkv_tilde,
+    "ndvk_tilde" = latent_data$ndvk_tilde,
     "beta_tilde" = beta_tilde
   )
 }
