@@ -15,7 +15,7 @@ psi <- function(alpha) {
   digamma(alpha) - digamma(sum(alpha))
 }
 
-elbo <- function(ndv, vb_params, alpha, eta) {
+evidence_lower_bound <- function(ndv, vb_params, alpha, eta) {
   expected_complete_density(ndv, vb_params, alpha, eta) +
     dirichlet_entropy(vb_params$beta_tilde) +
     dirichlet_entropy(vb_params$theta_tilde) +
@@ -28,16 +28,13 @@ elbo <- function(ndv, vb_params, alpha, eta) {
 #' ndvk_tilde <- array(sample(1:10, size = 200 * 15 * 3, replace = TRUE), c(200, 3, 15))
 #' cat_entropy(ndv, ndkv_tilde)
 cat_entropy <- function(ndv, ndvk_tilde) {
-  D <- nrow(ndv)
-  V <- ncol(ndv)
   K <- dim(ndvk_tilde)[2]
-
   entropy <- ndvk_tilde * log(ndvk_tilde)
   for (k in seq_len(K)) {
     entropy[, k, ] <- ndv * entropy[, k, ]
   }
 
-  sum(entropy)
+  - sum(entropy)
 }
 
 #' @description E_{q}{log p(x, z)} for LDA
@@ -86,13 +83,9 @@ expected_complete_density <- function(ndv, vb_params, alpha, eta) {
 #' dirichlet_entropy(alpha)
 dirichlet_entropy <- function(alpha) {
   psi_ks  <- t(apply(alpha, 1, psi))
-  sum(lgamma(alpha)) +
-    sum(lgamma(rowSums(alpha))) +
+  - sum(lgamma(alpha)) +
+    sum(lgamma(rowSums(alpha))) -
     sum((alpha - 1) * psi_ks)
-}
-
-multinomial_entropy <- function(N, p) {
-  N * sum(p * log(p))
 }
 
 ###############################################################################
@@ -117,39 +110,6 @@ ndvk_psi_beta <- function(ndvk_tilde, psi_beta_tilde) {
   sum(products)
 }
 
-#' @param ndvk_tilde [3-d array] An array of document x topic x word
-#' variational parameters.
-#' @param theta_tilde [matrix] An array of document x topic variational
-#' parameters.
-#' @param beta_tilde [matrix] An array of topic x vocabulary variational
-#' parameters
-#' @param alpha [vector] The dirichlet hyperparameter for the theta (document
-#' topic) mixture proportions
-#' @param eta [vector] The analog for alpha on the beta (vocabulary)
-#' @return elbo scalar The evidence lower bound, which should increase after
-#' every variational update.
-#' proportions.
-lower_bound <- function(ndvk_tilde,
-                        theta_tilde,
-                        beta_tilde,
-                        alpha,
-                        eta) {
-  N <- dim(ndvk_tilde)[1]
-  psi_theta_tilde <- t(apply(theta_tilde, 1, psi))
-  psi_beta_tilde <- t(apply(beta_tilde, 1, psi))
-
-  # complete data likelihood terms
-  N * ndvk_psi_theta(ndvk_tilde, psi_theta_tilde)
-  N * ndvk_psi_beta(ndvk_tilde, psi_beta_tilde) +
-  sum(alpha * psi_theta_tilde) +
-  sum(eta * psi_beta_tilde) +
-
-  #  start entropy terms
-  N * multinomial_entropy(N, as.numeric(ndvk_tilde)) +
-  sum(dirichlet_entropies(theta_tilde, theta_tilde)) +
-  sum(dirichlet_entropies(beta_tilde, beta_tilde))
-}
-
 ###############################################################################
 # E and M steps
 ###############################################################################
@@ -169,14 +129,14 @@ e_step <- function(nv, beta_tilde, alpha, n_iter = 100) {
   }
 
   nkv_tilde <- matrix(0, K, V)
-  theta_tilde <- alpha
   for (iter in seq_len(n_iter)) {
     theta_tilde_old <- theta_tilde
     theta_tilde <- alpha
+    psi_theta_old <- psi(theta_tilde_old)
 
     for (v in seq_len(V)) {
       for (k in seq_len(K)) {
-        nkv_tilde[k, v] <- exp(psi_beta_tilde[k, v] + psi(theta_tilde_old)[k])
+        nkv_tilde[k, v] <- exp(psi_beta_tilde[k, v] + psi_theta_old[k])
       }
       nkv_tilde[, v] <- nkv_tilde[, v] / sum(nkv_tilde[, v])
       for (k in seq_len(K)) {
@@ -238,10 +198,11 @@ vb_counts <- function(ndv, alpha, eta, beta_tilde_init = NULL, n_iter = 100) {
       S <- S + (matrix(1, K, 1) %*% ndv[d, ]) * latent_data$ndvk_tilde[d,, ]
     }
 
-    elbo[iter] <- lower_bound(
-      latent_data$ndvk_tilde,
-      latent_data$theta_tilde,
-      beta_tilde,
+    elbo[iter] <- evidence_lower_bound(
+      ndv,
+      list("ndvk_tilde" = latent_data$ndvk_tilde,
+           "theta_tilde" = latent_data$theta_tilde,
+           "beta_tilde" = beta_tilde),
       alpha,
       eta
     )

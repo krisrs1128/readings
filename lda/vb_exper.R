@@ -12,7 +12,7 @@ for(i in 1:nrow(theta_tilde)) {
   theta_tilde[i, ] <- theta_tilde[i, ] / sum(theta_tilde[i, ])
 }
 
-plot(sqrt(lda_data$theta[, 3]), sqrt(theta_tilde[, 2]), asp =1 )
+plot(sqrt(lda_data$theta[, 3]), sqrt(theta_tilde[, 1]), asp =1 )
 abline(b = 1, a = 0, col = 'red')
 
 beta_tilde <- res$beta_tilde
