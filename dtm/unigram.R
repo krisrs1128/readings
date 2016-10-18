@@ -23,3 +23,30 @@ topic_params <- function(V, n_times, sigma = 1, beta0 = NULL) {
 
   beta
 }
+
+softmax <- function(mu) {
+  exp(mu) / sum(exp(mu))
+}
+
+#' @examples
+#' beta <- topic_params(10, 200, sigma = 0.1)
+#' counts <- word_counts(beta)
+#' library("reshape2")
+#' library("ggplot2")
+#' ggplot(melt(counts)) +
+#'   geom_line(aes(x = Var1, y = value, group = Var2))
+word_counts <- function(beta, document_lengths = NULL) {
+  if (is.null(document_lengths)) {
+    document_lengths <- rep(1000, nrow(beta))
+  }
+
+  n_times <- nrow(beta)
+  V <- ncol(beta)
+  counts <- matrix(nrow = n_times, ncol = V)
+
+  for (i in seq_len(n_times)) {
+    counts[i, ] <- rmultinom(1, document_lengths[i], softmax(beta[i, ]))
+  }
+
+  counts
+}
