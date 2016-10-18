@@ -12,10 +12,8 @@ for(i in 1:nrow(theta_tilde)) {
   theta_tilde[i, ] <- theta_tilde[i, ] / sum(theta_tilde[i, ])
 }
 
-head(theta_tilde)
-head(lda_data$theta)
-
-res$elbo
+plot(sqrt(lda_data$theta[, 3]), sqrt(theta_tilde[, 2]), asp =1 )
+abline(b = 1, a = 0, col = 'red')
 
 beta_tilde <- res$beta_tilde
 for (i in 1:nrow(res$beta_tilde)) {
