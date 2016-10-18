@@ -22,6 +22,23 @@ elbo <- function(ndv, vb_params, alpha, eta) {
     cat_entropy(ndv, vb_params$ndvk_tilde)
 }
 
+#' @title Entropy over many cat-distributed variables
+#' @examples
+#' ndv <- matrix(sample(1:10, size = 200 * 15, replace = TRUE), 200, 15)
+#' ndvk_tilde <- array(sample(1:10, size = 200 * 15 * 3, replace = TRUE), c(200, 3, 15))
+#' cat_entropy(ndv, ndkv_tilde)
+cat_entropy <- function(ndv, ndvk_tilde) {
+  D <- nrow(ndv)
+  V <- ncol(ndv)
+  K <- dim(ndvk_tilde)[2]
+
+  entropy <- ndvk_tilde * log(ndvk_tilde)
+  for (k in seq_len(K)) {
+    entropy[, k, ] <- ndv * entropy[, k, ]
+  }
+
+  sum(entropy)
+}
 
 #' @description E_{q}{log p(x, z)} for LDA
 #' @examples
