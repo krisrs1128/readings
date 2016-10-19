@@ -115,6 +115,7 @@ mean_derivative <- function(nu, sigma, Vt) {
   mean_derivative_backwards(dm_dbeta, sigma, Vt)
 }
 
+# forwards pass in derivatives for optimizing elbo wrt pseudo-observations
 mean_derivative_forwards <- function(nu, sigma, Vt) {
   n_times <- length(Vt)
   dm_dbeta <- matrix(0, nrow = n_times, ncol = n_times)
@@ -130,4 +131,21 @@ mean_derivative_forwards <- function(nu, sigma, Vt) {
   }
 
   dm_debta
+}
+
+# backwards pass in derivatives for optimizing elbo wrt pseudo-observations
+mean_derivative_backwards <- function(dm_dbeta, sigma, Vt) {
+  n_times <- length(Vt)
+  dmtilde_dbeta <- matrix(0, nrow = n_times, ncol = n_times)
+  dmtilde_dbeta[n_times, ] <- dm_dbeta[n_times, ]
+
+  for (j in seq_len(n_times)) {
+    for (i in (n_times - 1):1) {
+      gamma <- sigma ^ 2 / (Vt[i] + sigma ^ 2)
+      dmtilde_dbeta[i, j] <- gamma * dm_dbeta[i, j] +
+        (1 - gamma) * dmtilde_dbeta[i + 1, j]
+    }
+  }
+
+  dmtilde_dbeta
 }
