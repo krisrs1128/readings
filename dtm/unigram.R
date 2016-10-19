@@ -6,6 +6,10 @@
 # Lafferty's Dynamic Topic Models.
 ###############################################################################
 
+###############################################################################
+# Generate data from dynamic unigram model
+###############################################################################
+
 #' @title Generate topic parameters before putting in logit
 #' @examples
 #' beta <- topic_params(15, 1000)
@@ -49,4 +53,45 @@ word_counts <- function(beta, document_lengths = NULL) {
   }
 
   counts
+}
+
+###############################################################################
+# calculate ELBO
+###############################################################################
+
+#' @title Evidence lower bound in dynamic unigram model
+#' @examples
+#' # simulate 200 timepoints, 100 words
+#' beta <- topic_params(100, 200, sigma = 0.1)
+#' ntv <- word_counts(beta)
+#' mtv <- beta
+#' Vt <- matrix(1, 200, 100)
+#' zeta <- runif(200)
+#' sigma <- 1
+#' evidence_lower_bound(ntv, mtv, Vt, zeta, sigma)
+evidence_lower_bound <- function(ntv, mtv, Vt, zeta, sigma) {
+  n_times <- nrow(ntv)
+  n_words <- ncol(ntv)
+  res <- 0
+
+  # contribution from expected likelihood
+  res <- res + sum(ntv * mtv)
+  for(i in seq_len(n_times)) {
+    nt <- sum(ntv[i, ])
+    for (v in seq_len(n_words)) {
+      res <- res +
+        nt * (exp(mtv[i, v] + .5 * Vt[i, v]) / zeta[i] - log(zeta[i]) + 1)
+    }
+  }
+
+  # contribution from expected prior
+  for (i in seq_len(n_times - 1)) {
+    res <- res +
+      1 / (2 * sigma ^ 2) * sum((mtv[i + 1, ] - mtv[i]) ^ 2) -
+      1 / sigma ^ 2 * sum(Vt[i, ])
+  }
+  res <- res - 1 / (2 * sigma ^ 2) * (sum(Vt[1, ]) + sum(Vt[n_times, ]))
+
+  # contribution from entropy
+  res + (1 / 2) * sum(log(Vt))
 }
