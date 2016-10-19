@@ -25,7 +25,7 @@
 #'
 #' y_tilde <- kalman_filter(y, mu0, sigma0, A, C, Q, R)
 #' plot(y[, 1], type = "l")
-#' lines(y_tilde$mu[, 1], col = "red")
+#' lines(y_tilde$filtered$mu[, 1], col = "red")
 kalman_filter <- function(y, mu0, sigma0, A, C, Q, R) {
   n_times <- nrow(y)
   p <- ncol(y)
