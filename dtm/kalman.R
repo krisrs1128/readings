@@ -112,3 +112,14 @@ smooth_filtered_estimates <- function(mu_filtered, sigma_filtered, mu_pred, sigm
     "sigma_smoothed" = sigma_smoothed
   )
 }
+
+kalman_smoother <- function(y, mu0, sigma0, A, C, Q, R) {
+  y_kf <- kalman_filter(y, mu0, sigma0, A, C, Q, R)
+  smooth_filtered_estimates(
+    y_kf$filtered$mu,
+    y_kf$filtered$sigma,
+    y_kf$predicted$mu,
+    y_kf$predicted$sigma,
+    A
+  )
+}
