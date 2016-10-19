@@ -95,3 +95,39 @@ evidence_lower_bound <- function(ntv, mtv, Vt, zeta, sigma) {
   # contribution from entropy
   res + (1 / 2) * sum(log(Vt))
 }
+
+###############################################################################
+# Calculate required derivatives
+###############################################################################
+
+#' @title mean derivative for a single word
+#' @description dm_tilde / dbeta in the appendix of Blei and Lafferty's Dynamic
+#' Topic Models. i^{th} row are derivatives of mean at time i. j^{th} column are
+#' derivatives with respect to time j.
+#' @param nu [length T vector] A length t vector of variational parameters for
+#' this one word (across) all times.
+#' @param sigma [scalar] The assumed variance in the diffusion of the underlying
+#' latent process.
+#' @param Vt [length T vector] The smoothed variances for this one word across
+#' all times.
+mean_derivative <- function(nu, sigma, Vt) {
+  dm_dbeta <- mean_derivative_forwards(nu, sigma, Vt)
+  mean_derivative_backwards(dm_dbeta, sigma, Vt)
+}
+
+mean_derivative_forwards <- function(nu, sigma, Vt) {
+  n_times <- length(Vt)
+  dm_dbeta <- matrix(0, nrow = n_times, ncol = n_times)
+
+  for (j in seq_len(n_times)) {
+    for (i in seq_len(n_times - 1)) {
+      gamma <- nu[i + 1] / (Vt[i] + sigma ^ 2 + nu[i + 1])
+      dm_beta[i + 1, j] <- gamma * dm_debata[i, j]
+      if (i == j) {
+        dm_beta[i, j] <- dm_beta[i, j] + (1 - gamma)
+      }
+    }
+  }
+
+  dm_debta
+}
