@@ -149,3 +149,8 @@ mean_derivative_backwards <- function(dm_dbeta, sigma, Vt) {
 
   dmtilde_dbeta
 }
+
+#' @param Vt [T x V matrix] a matrix of variances for word v at time t.
+update_zeta <- function(mtv, Vt) {
+  rowSums(exp(mtv + (1 / 2) * Vt))
+}
