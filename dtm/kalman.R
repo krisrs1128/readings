@@ -123,3 +123,26 @@ kalman_smoother <- function(y, mu0, sigma0, A, C, Q, R) {
     A
   )
 }
+
+kalman_univariate <- function(y, sigma, R, mu0 = 0, sigma0 = 0) {
+  stopifnot(class(y) == "numeric")
+  y <- matrix(y, ncol = 1)
+  R <- array(R, dim = c(1, 1, length(R))) # the nu_t^2 in the paper
+
+  y_kf <- kalman_filter(y, mu0, sigma0, 1, 1, sigma ^ 2, R)
+  y_smoothed <- smooth_filtered_estimates(
+    y_kf$filtered$mu,
+    y_kf$filtered$sigma,
+    y_kf$predicted$mu,
+    y_kf$predicted$sigma,
+    A
+  )
+
+  list(
+    "filtered" = y_kf$filtered,
+    "smoothed" = list(
+      "mu" = y_smoothed$mu,
+      "sigma" = y_smoothed$sigma
+    )
+  )
+}
