@@ -154,3 +154,22 @@ mean_derivative_backwards <- function(dm_dbeta, sigma, Vt) {
 update_zeta <- function(mtv, Vt) {
   rowSums(exp(mtv + (1 / 2) * Vt))
 }
+
+gradient_beta_v <- function(nv, nt, m_tilde_v, dmtilde_dbeta, Vt_tilde, zeta,
+                            sigma) {
+  n_times <- length(nv)
+  dl_dbeta <- rep(0, n_times)
+
+  for (j in seq_len(n_times)) {
+    for (i in seq_len(n_times - 1)) {
+      dl_beta[j]  <- dl_dbeta[j] -
+        1 / (sigma ^ 2) * (
+          m_tilde_v[i + 1, s] - m_tilde_v[i, s]
+        ) +
+        dmtilde_dbeta[i, j] * (
+          nv[i + 1] - (nt * exp(m_tilde_v[i + 1] + Vt_tilde[i + 1] / 2))
+        )
+    }
+  }
+  dl_dbeta
+}
