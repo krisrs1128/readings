@@ -167,9 +167,47 @@ gradient_beta_v <- function(nv, nt, m_tilde_v, dmtilde_dbeta, Vt_tilde, zeta,
           m_tilde_v[i + 1, s] - m_tilde_v[i, s]
         ) +
         dmtilde_dbeta[i, j] * (
-          nv[i + 1] - (nt * exp(m_tilde_v[i + 1] + Vt_tilde[i + 1] / 2))
+          nv[i + 1] - (nt[i] * exp(m_tilde_v[i + 1] + Vt_tilde[i + 1] / 2))
         )
     }
   }
   dl_dbeta
+}
+
+unigram_optimize <- function(ntv, sigma, beta_hat_0, xi_hat_0, n_iter, stepsize,
+                             n_steps) {
+  n_times <- nrow(ntv)
+  V <- ncol(ntv)
+
+  mtv <- matrix(nrow = n_times, ncol = V)
+  mtv_tilde <- matrix(nrow = n_times, ncol = V)
+  Vt <- matrix(nrow = n_times, ncol = V)
+  Vt_tilde <- matrix(nrow = n_times, ncol = V)
+  elbo <- matrix(nrow = n_iter, ncol = V)
+
+  zeta <- zeta0
+  beta_hat <- beta_hat_0
+
+  for (iter in seq_len(n_iter)) {
+    for (v in seq_len(V)) {
+      #kalman_wrapper
+      zeta <- update_zeta(mtv, Vt)
+      beta_hat_0[, v] <- update_beta(
+        ntv[, v],
+        rowSums(ntv),
+        m_tilde_v,
+        Vt_tilde_v,
+        zeta,
+        sigma
+      )
+
+      elbo[iter, v] <- evidence_lower_bound(
+        ntv,
+        mtv_tilde,
+        Vt_tilde,
+        zeta,
+        sigma
+      )
+    }
+  }
 }
