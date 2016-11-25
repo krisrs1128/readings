@@ -35,8 +35,8 @@ min_theme <- theme_update(
 # generate data
 D <- 50
 K <- 5
-V <- 100
-words_per_doc <- rep(1000, D)
+V <- 300
+words_per_doc <- rep(2500, D)
 alpha <- rep(1, K)
 gamma <- rep(1, V)
 lda_data <- generate_data(D, words_per_doc, alpha, gamma)
@@ -74,9 +74,14 @@ beta_hat <- samples_beta %>%
 # which estimated topics line up with which true ones?
 lda_data$beta
 pairs(cbind(t(beta_hat[, -1]), t(lda_data$beta)))
+match_ix <- apply(cor(t(lda_data$beta), t(beta_hat[, -1])), 1, which.max)
 
 # recovered cluster memberships
-samples_theta <- melt(samples$theta, varnames= c("iteration", "n", "k"))
+samples_theta <- melt(
+  samples$theta[,, match_ix],
+  varnames= c("iteration", "n", "k")
+)
+
 theta_hat <- samples_theta %>%
   group_by(n, k) %>%
   summarise(mean = mean(value, na.rm = TRUE)) %>%
