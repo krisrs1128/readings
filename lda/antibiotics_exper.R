@@ -15,7 +15,6 @@ library("dplyr")
 library("ggplot2")
 library("phyloseq")
 library("treelapse")
-source("./lda_counts.R")
 set.seed(11242016)
 
 theme_set(theme_bw())
@@ -57,4 +56,26 @@ stan_data <- list(
   alpha = rep(1e-4, 4)
 )
 
-stan_fit <- vb(m, stan_data, eta = 1, adapt_engaged = FALSE, grad_samples = 40)
+stan_fit <- vb(m, stan_data, eta = .1, adapt_engaged = FALSE, grad_samples = 1, iter = 2000)
+
+# get samples
+samples <- rstan::extract(stan_fit)
+
+# underlying RSV distributions
+samples_beta <- melt(samples$beta)
+
+beta_hat <- samples_beta %>%
+  group_by(Var2, Var3) %>%
+  summarise(mean = mean(value)) %>%
+  dcast(Var2 ~ Var3)
+
+colnames(beta_hat) <- c("cluster", colnames(X))
+beta_hat <- beta_hat %>%
+  melt(id.vars = "cluster", variable.name = "rsv")
+
+# might want to set prior for more extreme decay
+ggplot(beta_hat) +
+  geom_bar(aes(x = reorder(rsv, -value, mean), y = value, fill = as.factor(cluster)),
+           stat = "identity") +
+  scale_fill_brewer(palette = "Set2") +
+  theme(axis.text.x = element_text(angle = -90, size = 3))
