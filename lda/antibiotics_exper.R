@@ -84,6 +84,7 @@ beta_hat$Taxon_5 <- factor(
   beta_hat$Taxon_5,
   levels = sorted_taxa
 )
+beta_hat$cluster <- paste("Cluster", beta_hat$cluster)
 
 ## ---- visualize_beta ----
 # might want to set prior for more extreme decay
@@ -101,7 +102,7 @@ ggplot(beta_hat %>%
   facet_grid(cluster~Taxon_5, scale = "free_x", space = "free_x") +
   theme(
     axis.text.x = element_text(angle = -90, size = 3),
-    strip.text = element_blank()
+    strip.text.x = element_blank()
   )
 
 ## ---- extrac_theta ----
@@ -114,13 +115,15 @@ colnames(theta_hat) <- c("sample", "cluster", "theta")
 
 sample_info <- sample_data(abt)
 sample_info$sample <- rownames(sample_info)
+theta_hat$cluster <- paste("Cluster", theta_hat$cluster)
 
 theta_hat <- theta_hat %>%
   left_join(sample_info, by = "sample")
 
 ## ---- visualize_theta ----
 ggplot(theta_hat) +
-  geom_line(aes(x = time, y = theta, col = as.factor(cluster))) +
+  geom_point(aes(x = time, y = theta, col = condition), size = .4) +
+  geom_line(aes(x = time, y = theta, col = condition), size = 0.5) +
   facet_wrap(~cluster) +
   scale_color_brewer(palette = "Set2") +
   theme(axis.text.x = element_text(angle = -90))
