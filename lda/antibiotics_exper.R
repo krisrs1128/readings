@@ -58,10 +58,9 @@ stan_data <- list(
 )
 
 stan_fit <- vb(m, stan_data, eta = .1, adapt_engaged = FALSE, grad_samples = 1, iter = 2000)
-
-# get samples
 samples <- rstan::extract(stan_fit)
 
+## ---- extract_beta ----
 # underlying RSV distributions
 samples_beta <- melt(samples$beta)
 
@@ -85,6 +84,7 @@ beta_hat$Taxon_5 <- factor(
   levels = sorted_taxa
 )
 
+## ---- visualize_beta ----
 # might want to set prior for more extreme decay
 ggplot(beta_hat) +
   geom_bar(aes(x = reorder(rsv, -value, mean), y = value, fill = as.factor(cluster)),
@@ -100,7 +100,7 @@ ggplot(beta_hat %>%
   facet_grid(cluster~Taxon_5, scale = "free_x", space = "free_x") +
   theme(axis.text.x = element_text(angle = -90, size = 3))
 
-# study sample cluster memberships
+## ---- extrac_theta ----
 samples_theta <- melt(samples$theta)
 theta_hat <- samples_theta %>%
   group_by(Var2, Var3) %>%
@@ -114,12 +114,14 @@ sample_info$sample <- rownames(sample_info)
 theta_hat <- theta_hat %>%
   left_join(sample_info, by = "sample")
 
+## ---- visualize_theta ----
 ggplot(theta_hat) +
   geom_line(aes(x = time, y = theta, col = as.factor(cluster))) +
   facet_wrap(~cluster) +
   scale_color_brewer(palette = "Set2") +
   theme(axis.text.x = element_text(angle = -90))
 
+## ---- save_results ----
 dir.create("results")
 write.csv(samples_theta, file = "results/theta.csv", row.names = FALSE)
 write.csv(samples_beta, file = "results/beta.csv", row.names = FALSE)
