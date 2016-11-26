@@ -53,7 +53,7 @@ stan_data <- list(
   V = ncol(X),
   D = nrow(X),
   n = X,
-  alpha = rep(1e-4, 4)
+  alpha = rep(1e-10, 4)
 )
 
 stan_fit <- vb(m, stan_data, eta = .1, adapt_engaged = FALSE, grad_samples = 1, iter = 2000)
@@ -79,3 +79,17 @@ ggplot(beta_hat) +
            stat = "identity") +
   scale_fill_brewer(palette = "Set2") +
   theme(axis.text.x = element_text(angle = -90, size = 3))
+
+# study sample cluster memberships
+samples_theta <- melt(samples$theta)
+theta_hat <- samples_theta %>%
+  group_by(Var2, Var3) %>%
+  summarise(mean = mean(value))
+theta_hat$Var2 <- rownames(X)[theta_hat$Var2]
+colnames(theta_hat) <- c("sample", "cluster", "theta")
+head(theta_hat)
+
+ggplot(theta_hat) +
+  geom_tile(aes(x = sample, y = cluster, fill = theta)) +
+  theme(axis.text.x = element_text(angle = -90)) +
+  coord_fixed(2)
