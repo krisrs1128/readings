@@ -94,12 +94,15 @@ ggplot(beta_hat) +
   theme(axis.text.x = element_text(angle = -90, size = 3))
 
 ggplot(beta_hat %>%
-         filter(Taxon_5 %in% sorted_taxa[1:5])) +
-  geom_bar(aes(x = reorder(rsv, -value, min), y = value),
+         filter(Taxon_5 %in% levels(beta_hat$Taxon_5)[1:8])) +
+  geom_bar(aes(x = reorder(rsv, -value, min), y = value, fill = Taxon_5),
            stat = "identity") +
   scale_fill_brewer(palette = "Set2") +
   facet_grid(cluster~Taxon_5, scale = "free_x", space = "free_x") +
-  theme(axis.text.x = element_text(angle = -90, size = 3))
+  theme(
+    axis.text.x = element_text(angle = -90, size = 3),
+    strip.text = element_blank()
+  )
 
 ## ---- extrac_theta ----
 samples_theta <- melt(samples$theta)
