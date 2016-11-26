@@ -69,15 +69,34 @@ beta_hat <- samples_beta %>%
   summarise(mean = mean(value)) %>%
   dcast(Var2 ~ Var3)
 
+taxa <- data.table(tax_table(abt)@.Data)
+taxa$rsv <- rownames(tax_table(abt))
+taxa$Taxon_5[which(taxa$Taxon_5 == "")] <- taxa$Taxon_4[which(taxa$Taxon_5 == "")]
+
 colnames(beta_hat) <- c("cluster", colnames(X))
 beta_hat <- beta_hat %>%
-  melt(id.vars = "cluster", variable.name = "rsv")
+  melt(id.vars = "cluster", variable.name = "rsv") %>%
+  left_join(taxa, by = "rsv")
+
+sorted_taxa <- names(sort(table(beta_hat$Taxon_5), decreasing = TRUE))
+beta_hat$Taxon_5 <- factor(
+  beta_hat$Taxon_5,
+  levels = sorted_taxa
+)
 
 # might want to set prior for more extreme decay
 ggplot(beta_hat) +
   geom_bar(aes(x = reorder(rsv, -value, mean), y = value, fill = as.factor(cluster)),
            stat = "identity") +
   scale_fill_brewer(palette = "Set2") +
+  theme(axis.text.x = element_text(angle = -90, size = 3))
+
+ggplot(beta_hat %>%
+         filter(Taxon_5 %in% sorted_taxa[1:5])) +
+  geom_bar(aes(x = reorder(rsv, -value, min), y = value),
+           stat = "identity") +
+  scale_fill_brewer(palette = "Set2") +
+  facet_grid(cluster~Taxon_5, scale = "free_x", space = "free_x") +
   theme(axis.text.x = element_text(angle = -90, size = 3))
 
 # study sample cluster memberships
