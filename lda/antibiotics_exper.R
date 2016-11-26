@@ -15,6 +15,7 @@ library("dplyr")
 library("ggplot2")
 library("phyloseq")
 library("treelapse")
+library("feather")
 set.seed(11242016)
 
 theme_set(theme_bw())
@@ -123,5 +124,5 @@ ggplot(theta_hat) +
 
 ## ---- save_results ----
 dir.create("results")
-write.csv(samples_theta, file = "results/theta.csv", row.names = FALSE)
-write.csv(samples_beta, file = "results/beta.csv", row.names = FALSE)
+write_feather(theta_hat, path = "results/theta.feather")
+write_feather(beta_hat, path = "results/beta.feather")
