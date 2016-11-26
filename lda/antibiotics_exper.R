@@ -36,7 +36,8 @@ min_theme <- theme_update(
 data(abt)
 n_samples <- ncol(otu_table(abt))
 abt <- abt %>%
-  filter_taxa(function(x) sum(x != 0) > .4 * n_samples, prune = TRUE)
+  filter_taxa(function(x) sum(x != 0) > .4 * n_samples, prune = TRUE) %>%
+  subset_samples(ind == "D")
 hist(colSums(otu_table(abt)), 15)
 
 ## ---- heatmaps ----
@@ -106,9 +107,19 @@ theta_hat <- samples_theta %>%
   summarise(mean = mean(value))
 theta_hat$Var2 <- rownames(X)[theta_hat$Var2]
 colnames(theta_hat) <- c("sample", "cluster", "theta")
-head(theta_hat)
+
+sample_info <- sample_data(abt)
+sample_info$sample <- rownames(sample_info)
+
+theta_hat <- theta_hat %>%
+  left_join(sample_info, by = "sample")
 
 ggplot(theta_hat) +
-  geom_tile(aes(x = sample, y = cluster, fill = theta)) +
-  theme(axis.text.x = element_text(angle = -90)) +
-  coord_fixed(2)
+  geom_line(aes(x = time, y = theta, col = as.factor(cluster))) +
+  facet_wrap(~cluster) +
+  scale_color_brewer(palette = "Set2") +
+  theme(axis.text.x = element_text(angle = -90))
+
+dir.create("results")
+write.csv(samples_theta, file = "results/theta.csv", row.names = FALSE)
+write.csv(samples_beta, file = "results/beta.csv", row.names = FALSE)
