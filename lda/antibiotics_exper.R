@@ -128,6 +128,17 @@ ggplot(theta_hat) +
   scale_color_brewer(palette = "Set2") +
   theme(axis.text.x = element_text(angle = -90))
 
+ggplot(theta_hat) +
+  geom_tile(aes(x = time, y = cluster, fill = theta)) +
+  scale_fill_gradient(low = "#FFFFFF", high = "#5BBABA", limits = c(0, 1)) +
+  facet_grid(~condition, scale = "free_x", space = "free_x") +
+  scale_x_discrete(expand = c(0, 0)) +
+  scale_y_discrete(expand = c(0, 0)) +
+  theme(
+    panel.border = element_rect(fill = "transparent", size = .4, color = "#C9C9C9"),
+    panel.spacing = unit(0, "line")
+  )
+
 ## ---- save_results ----
 dir.create("results")
 write_feather(theta_hat, path = "results/theta.feather")
