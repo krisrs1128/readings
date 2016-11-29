@@ -95,8 +95,13 @@ ggplot(beta_hat) +
 ## ---- view_taxa ----
 taxa <- tax_table(abt)
 beta_hat$group <- taxa@.Data[beta_hat$i, "Taxon_5"]
+beta_hat$rsv <- factor(beta_hat$rsv, levels = rownames(taxa@.Data))
 
 ggplot(beta_hat) +
   geom_line(aes(x = time, y = value, group = rsv), alpha = 0.1) +
   scale_color_brewer(palette = "Set2") +
   facet_wrap(~group)
+
+ggplot(beta_hat) +
+  geom_tile(aes(x = time, y = rsv, fill = value)) +
+  facet_wrap(~group, scale = "free_y")
