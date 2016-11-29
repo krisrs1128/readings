@@ -5,7 +5,15 @@
 
 ## ---- setup ----
 # List of packages for session
-.packages  <-  c("data.table", "plyr", "dplyr", "knitr", "reshape2", "ggplot2")
+.packages  <-  c(
+  "data.table",
+  "plyr",
+  "dplyr",
+  "knitr",
+  "reshape2",
+  "ggplot2",
+  "rstan"
+)
 
 # Install CRAN packages (if not already installed)
 .inst <- .packages %in% installed.packages()
@@ -40,6 +48,30 @@ source("./unigram.R")
 # Code Block -------------------------------------------------------------------
 
 # generate data
-beta <- topic_params(15, 1000, sigma = .1)
-X <- word_counts(beta, rep(500, 1000))
+N <- 100
+V <- 15
+T <- N
+times <- 1:N
+times_mapping <- times
+sigma <- 0.1
+
+beta <- topic_params(V, N, sigma = sigma)
+X <- word_counts(beta, rep(500, N))
 head(X)
+
+stan_data <- list(
+  N = N,
+  V = V,
+  T = T,
+  sigma = sigma,
+  times = times,
+  times_mapping = times_mapping,
+  X = X
+)
+
+m <- stan_model("unigram.stan")
+stan_fit <- vb(m, data = stan_data)
+samples <- extract(stan_fit)
+
+beta_hat <- samples$beta %>%
+  apply(c(2, 3), mean)
