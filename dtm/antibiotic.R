@@ -45,13 +45,11 @@ raw_times <- sample_data(abt)$time
 X <- log(1 + t(otu_table(abt)@.Data))
 X[] <- as.integer(round(X, 2) * 100)
 
-times <- 5 * round(raw_times / 5)
+times <- 4 * round(raw_times / 4)
 times_mapping <- match(times, unique(times))
 times <- unique(times)
 
 ## ----  run_model ----
-m <- stan_model(file = "lda_counts.stan")
-
 N <- nrow(X)
 V <- ncol(X)
 T <- length(times)
@@ -84,24 +82,43 @@ beta_hat <- beta_hat %>%
 beta_hat$time <- times[beta_hat$time]
 beta_hat$rsv <- rownames(otu_table(abt))[beta_hat$i]
 
-ggplot(beta_hat %>% filter(word < 20)) +
-  geom_line(aes(x = time, y = value, col = type)) +
-  scale_color_brewer(palette = "Set2") +
-  facet_wrap(~rsv)
-
-ggplot(beta_hat) +
-  geom_tile(aes(x = rsv, y = time, fill = value))
+p_hat <- beta_hat %>%
+  group_by(time) %>%
+  mutate(prob = softmax(value), beta = value) %>%
+  select(-value)
 
 ## ---- view_taxa ----
-taxa <- tax_table(abt)
-beta_hat$group <- taxa@.Data[beta_hat$i, "Taxon_5"]
-beta_hat$rsv <- factor(beta_hat$rsv, levels = rownames(taxa@.Data))
+taxa <- data.table(rsv = rownames(tax_table(abt)), tax_table(abt)@.Data)
+taxa$Taxon_5[which(taxa$Taxon_5 == "")] <- taxa$Taxon_4[which(taxa$Taxon_5 == "")]
+p_hat$group <- taxa[p_hat$i]$Taxon_5
+group_order <- sort(table(taxa$Taxon_5), decreasing = TRUE)
+p_hat$group <- factor(p_hat$group, levels = names(group_order))
+p_hat$rsv <- factor(taxa[p_hat$i]$rsv, levels = rownames(tax_table(abt)))
 
-ggplot(beta_hat) +
-  geom_line(aes(x = time, y = value, group = rsv), alpha = 0.1) +
+ggplot(p_hat) +
+  geom_line(aes(x = time, y = beta, group = rsv), alpha = 0.1) +
   scale_color_brewer(palette = "Set2") +
   facet_wrap(~group)
 
-ggplot(beta_hat) +
-  geom_tile(aes(x = time, y = rsv, fill = value)) +
+ggplot(p_hat) +
+  geom_line(aes(x = time, y = prob, group = rsv), alpha = 0.1) +
+  scale_color_brewer(palette = "Set2") +
+  facet_wrap(~group)
+
+ggplot(p_hat) +
+  geom_tile(aes(x = time, y = rsv, fill = beta)) +
   facet_wrap(~group, scale = "free_y")
+
+ggplot(p_hat) +
+  geom_tile(aes(x = time, y = rsv, alpha = prob, fill = group)) +
+  scale_color_brewer()
+
+ggplot(p_hat %>%
+         filter(group %in% names(group_order)[1:8])) +
+  geom_bar(aes(x = rsv, y = prob, fill = group), stat = "identity") +
+  facet_grid(time ~ group, space = "free_x", scales = "free_x") +
+  scale_fill_brewer(palette = "Set2") +
+  theme(
+    strip.text = element_blank(),
+    axis.text.x = element_blank()
+  )
