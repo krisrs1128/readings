@@ -118,7 +118,8 @@ ggplot(p_hat %>%
   geom_bar(aes(x = rsv, y = prob, fill = group), stat = "identity") +
   facet_grid(time ~ group, space = "free_x", scales = "free_x") +
   scale_fill_brewer(palette = "Set2") +
+  scale_y_continuous(breaks = c(0, .02)) +
   theme(
-    strip.text = element_blank(),
+    strip.text.x = element_blank(),
     axis.text.x = element_blank()
   )
