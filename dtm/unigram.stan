@@ -23,9 +23,7 @@ parameters {
 
 model {
   for (i in 1:(T - 1)) {
-    for (v in 1:V) {
-      beta[i + 1, v] ~ normal(beta[i, v], sqrt(times[i + 1] - times[i]) * sigma);
-    }
+    beta[i + 1] ~ normal(beta[i], sqrt(times[i + 1] - times[i]) * sigma);
   }
 
   for (i in 1:N) {
