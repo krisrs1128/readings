@@ -14,5 +14,21 @@ data {
 
   real times[T]; // unique times
   int<lower=0> times_mapping[N]; // times associated to each sample
-  integer<lower=0> X[N, V]; // word counts
+  int<lower=0> X[N, V]; // word counts
+}
+
+parameters {
+  vector[V] beta[T];
+}
+
+model {
+  for (i in 1:(T - 1)) {
+    for (v in 1:V) {
+      beta[i + 1, v] ~ normal(beta[i, v], sqrt(times[i + 1] - times[i]) * sigma);
+    }
+  }
+
+  for (i in 1:N) {
+    X[i] ~ multinomial(softmax(beta[times_mapping[i]]));
+  }
 }
