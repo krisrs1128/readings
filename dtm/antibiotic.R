@@ -100,10 +100,12 @@ ggplot(p_hat) +
   scale_color_brewer(palette = "Set2") +
   facet_wrap(~group)
 
-ggplot(p_hat) +
-  geom_line(aes(x = time, y = prob, group = rsv), alpha = 0.1) +
+ggplot(p_hat %>%
+         filter(group %in% names(group_order)[1:8])) +
+  geom_line(aes(x = time, y = prob, col = group, group = rsv), alpha = 0.4) +
   scale_color_brewer(palette = "Set2") +
-  facet_wrap(~group)
+  facet_wrap(~group) +
+  theme(legend.position = "none")
 
 ggplot(p_hat) +
   geom_tile(aes(x = time, y = rsv, fill = beta)) +
@@ -123,3 +125,5 @@ ggplot(p_hat %>%
     strip.text.x = element_blank(),
     axis.text.x = element_blank()
   )
+
+write_feather(p_hat, "p_hat.feather")
