@@ -17,7 +17,7 @@
 topic_params <- function(V, n_times, sigma = 1, beta0 = NULL) {
   beta <- matrix(nrow = n_times, ncol = V)
   if (is.null(beta0)) {
-    beta0 <- rep(0, V)
+    beta0 <- rnorm(V, sd = sigma)
   }
 
   beta[1, ] <- beta0
