@@ -84,7 +84,7 @@ beta_hat$Taxon_5 <- factor(
   beta_hat$Taxon_5,
   levels = sorted_taxa
 )
-beta_hat$cluster <- paste("Cluster", beta_hat$cluster)
+beta_hat$rsv <- factor(beta_hat$rsv, levels = taxa$rsv)
 
 ## ---- visualize_beta ----
 # might want to set prior for more extreme decay
@@ -96,12 +96,14 @@ ggplot(beta_hat) +
 
 ggplot(beta_hat %>%
          filter(Taxon_5 %in% levels(beta_hat$Taxon_5)[1:8])) +
-  geom_bar(aes(x = reorder(rsv, -value, min), y = value, fill = Taxon_5),
+  geom_bar(aes(x = rsv, y = value, fill = Taxon_5),
            stat = "identity") +
   scale_fill_brewer(palette = "Set2") +
+  scale_y_continuous(breaks = c(0, 0.02)) +
   facet_grid(cluster~Taxon_5, scale = "free_x", space = "free_x") +
+  labs(y = "probability", fill = "family") +
   theme(
-    axis.text.x = element_text(angle = -90, size = 3),
+    axis.text.x = element_blank(),
     strip.text.x = element_blank()
   )
 
