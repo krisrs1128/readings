@@ -176,6 +176,7 @@ gradient_beta_v <- function(nv, nt, m_tilde_v, dmtilde_dbeta, Vt_tilde, zeta,
 
 unigram_optimize <- function(ntv, sigma, beta_hat_0, xi_hat_0, n_iter, stepsize,
                              n_steps) {
+  stop("VB for unigram model is not implemented yet")
   n_times <- nrow(ntv)
   V <- ncol(ntv)
 
