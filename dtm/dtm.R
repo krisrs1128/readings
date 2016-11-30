@@ -40,5 +40,5 @@ dtm_data <- function(N, V, document_lengths, alpha = NULL, sigma = 0.1,
     X[i, ] <- rmultinom(1, document_lengths[i], probs)
   }
 
-  X
+  list(X = X, beta = beta, theta = theta)
 }
