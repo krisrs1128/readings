@@ -51,14 +51,14 @@ times <- unique(times)
 N <- nrow(X)
 V <- ncol(X)
 T <- length(times)
-sigma <- 0.1
-delta <- 0.1
+sigma <- 0.025
+delta <- 0.025
 
 stan_data <- list(
   N = N,
   V = V,
   T = T,
-  K = 4,
+  K = 3,
   sigma = sigma,
   delta = delta,
   times = times,
@@ -71,6 +71,10 @@ stan_fit <- vb(m, data = stan_data)
 samples <- rstan::extract(stan_fit)
 
 ## ---- visualize_theta ----
+softmax <- function(mu) {
+  exp(mu) / sum(exp(mu))
+}
+
 alpha_hat <- apply(samples$alpha, c(2, 3), mean)
 theta_hat <- t(apply(alpha_hat, 1, softmax))
 
@@ -98,42 +102,26 @@ beta_hat <- apply(samples$beta, c(2, 3, 4), mean)
 taxa <- data.table(tax_table(abt)@.Data)
 taxa$rsv <- rownames(tax_table(abt))
 taxa$Taxon_5[which(taxa$Taxon_5 == "")] <- taxa$Taxon_4[which(taxa$Taxon_5 == "")]
+sorted_taxa <- names(sort(table(taxa$Taxon_5), decreasing = TRUE))
 
 mbeta_hat <- melt(beta_hat, varnames = c("time_ix", "cluster", "rsv_ix"))
 mbeta_hat$rsv <- rownames(otu_table(abt))[mbeta_hat$rsv_ix]
 mbeta_hat$time <- times[mbeta_hat$time_ix]
 mbeta_hat <- mbeta_hat %>%
-  left_join(taxa)
+  left_join(taxa) %>%
+  right_join(data.frame(Taxon_5 = factor(sorted_taxa)))
+mbeta_hat$rsv <- factor(mbeta_hat$rsv, levels = unique(mbeta_hat$rsv))
+mbeta_hat$Taxon_5 <- factor(mbeta_hat$Taxon_5, sorted_taxa)
 
-sorted_taxa <- names(sort(table(mbeta_hat$Taxon_5), decreasing = TRUE))
-mbeta_hat$Taxon_5 <- factor(
-  mbeta_hat$Taxon_5,
-  levels = sorted_taxa
-)
-
-
-
-mbeta_hat$rsv <- factor(mbeta_hat$rsv, levels = taxa$rsv)
-
-levels(mbeta_hat$Taxon_5)
-
-mbeta_hat2 <- mbeta_hat %>%
-  right_join(data.frame(Taxon_5 = levels(mbeta_hat$Taxon_5)))
-
-mbeta_hat2$rsv <- factor(mbeta_hat2$rsv, levels = unique(mbeta_hat2$rsv))
-mbeta_hat2$Taxon_5 <- factor(mbeta_hat2$Taxon_5, levels(mbeta_hat$Taxon_5))
-
-
-ggplot(mbeta_hat2 %>%
-         filter(Taxon_5 %in% levels(mbeta_hat$Taxon_5)[1:8],
-                cluster %in% 1:4)
+ggplot(mbeta_hat %>%
+         filter(Taxon_5 %in% levels(mbeta_hat$Taxon_5)[1:8])
        ) +
   geom_bar(aes(x = rsv, y = value, fill = Taxon_5), stat = "identity") +
-  scale_fill_brewer(palette = "Set3") +
-  scale_y_continuous(limits = c(0, .03), breaks = c(0, .02), oob = rescale_none) +
+  scale_fill_brewer(palette = "Set2") +
+  scale_y_continuous(limits = c(0, .03), breaks = c(0, .02), oob = scales::rescale_none) +
   facet_grid(time~cluster) +
   theme(
-    panel.border = element_rect(fill = "transparent", size = 0.05),
+    panel.border = element_rect(fill = "transparent", size = 0.1),
     panel.spacing = unit(0, "line"),
-    axis.text.x = element_blank(),
+    axis.text.x = element_blank()
   )
