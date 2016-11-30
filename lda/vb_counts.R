@@ -129,6 +129,7 @@ e_step <- function(nv, beta_tilde, alpha, n_iter = 100) {
   }
 
   nkv_tilde <- matrix(0, K, V)
+  theta_tilde <- alpha
   for (iter in seq_len(n_iter)) {
     theta_tilde_old <- theta_tilde
     theta_tilde <- alpha
