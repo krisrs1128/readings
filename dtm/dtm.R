@@ -8,7 +8,7 @@ source("unigram.R")
 
 #' @examples
 #' beta <- dtm_probs(15, 4, 50)
-dtm_probs <- function(V, K, n_times, sigma = 0.1, beta0 = NULL) {
+dtm_beta <- function(V, K, n_times, sigma = 0.1, beta0 = NULL) {
   beta <- list()
   for (k in seq_len(K)) {
     beta[[k]] <- topic_params(V, n_times, sigma, beta0)
