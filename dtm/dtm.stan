@@ -26,7 +26,6 @@ parameters {
 transformed parameters {
   vector[V] beta[T, K];
   vector[K] theta[T];
-
   for (i in 1:T) {
     for (k in 1:K) {
       beta[i, k] = softmax(mu[i, k]);
