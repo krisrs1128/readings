@@ -14,6 +14,7 @@ library("plyr")
 library("dplyr")
 library("ggplot2")
 library("phyloseq")
+library("treelapse")
 set.seed(11242016)
 
 theme_set(theme_bw())
@@ -32,8 +33,6 @@ min_theme <- theme_update(
 
 # Code Block -------------------------------------------------------------------
 ## ---- get_data ----
-#abt <- get(load("data/abt.rda"))
-library("treelapse")
 data(abt)
 n_samples <- ncol(otu_table(abt))
 abt <- abt %>%
@@ -53,8 +52,6 @@ times <- unique(times)
 N <- nrow(X)
 V <- ncol(X)
 T <- length(times)
-sigma <- 0.005
-delta <- 0.005
 
 param_grid <- expand.grid(
   sigma = c(.001, .005, .01, .05, .1, .5),
@@ -78,7 +75,6 @@ stan_data <- list(
 print(timestamp)
 stan_fit <- vb(m, data = stan_data)
 samples <- rstan::extract(stan_fit)
-#save(stan_fit, file = paste0("sims/", i, timestamp, ".RData"))
 
 ## ---- visualize_theta ----
 softmax <- function(mu) {
@@ -99,6 +95,7 @@ theta_hat <- cbind(
   )
 levels(theta_hat$cluster) <- rev(levels(theta_hat$cluster))
 
+feather::write_feather(theta_hat, "dtm_theta_hat.feather")
 ggplot(theta_hat) +
   geom_tile(aes(x = reorder(sample, time), y = cluster, fill = value)) +
   scale_fill_gradient(low = "#FFFFFF", high = "#5BBABA", limits = c(0, 1))
@@ -147,7 +144,7 @@ p2 <- ggplot(mbeta_hat %>%
     legend.title = element_blank()
   )
 
-#feather::write_feather(mbeta_hat, "dtm_mbeta_hat.feather")
+feather::write_feather(mbeta_hat, "dtm_mbeta_hat.feather")
 
 ## ---- multiplot ----
 multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
