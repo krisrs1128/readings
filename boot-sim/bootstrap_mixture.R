@@ -29,7 +29,17 @@ bootstrap_mixture <- function(Xs, theta) {
   B <- nrow(theta)
   x_star <- vector(length = B)
   for (k in seq_along(Xs)) {
-    x_star <- x_star + theta[, k] * sample(Xs[[k]], size = B, replace = TRUE)
+    x_star <- x_star + theta[, k] * sample_rows(as.matrix(Xs[[k]]), B)
   }
   x_star
+}
+
+#' Sample rows of a Matrix with Replacement
+#'
+#' @param X [matrix] A matrix whose rows we want to sample with replacement
+#' @param B [int] The number of rows in the resampled X*
+#' @return X* [matrix] The resampled version of X
+sample_rows <- function(X, B) {
+  sample_ix <- sample(nrow(X), size = B, replace = TRUE)
+  X[sample_ix, ]
 }
