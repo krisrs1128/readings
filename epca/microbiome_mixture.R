@@ -20,7 +20,8 @@ library("plyr")
 library("dplyr")
 library("ggplot2")
 library("reshape2")
-source("./bootstrap_mixture.R")
+source("../boot-sim/bootstrap_mixture.R")
+source("./epca.R")
 
 theme_set(theme_bw())
 min_theme <- theme_update(
@@ -135,19 +136,27 @@ for (i in seq_along(gammas)) {
   gradients[[i]] <- simulate_gradient(x_list, B, gammas[i])
 }
 
-## ---- plot-gradients ----
+## ---- plot-pca ----
 for (i in seq_along(gradients)) {
-  cur_pca <- princomp(gradients[[i]]$x_star)
+  cur_pca <- princomp(gradients[[i]]$x_star[, -1])
   plot_gradient(
     merge_pca(gradients[[i]]$theta, cur_pca$scores),
     cur_pca$sdev
-  ) %>%
+  ) + ggtitle(sprintf("PCA, gamma = %f", gammas[i])) %>%
     print()
 
-  cur_pca <- princomp(scale(asinh(gradients[[i]]$x_star)))
+  cur_pca <- princomp(scale(asinh(gradients[[i]]$x_star[, -1])))
   plot_gradient(
     merge_pca(gradients[[i]]$theta, cur_pca$scores),
     cur_pca$sdev
-  ) %>%
+  ) + ggtitle(sprintf("Scaled PCA, gamma = %f", gammas[i])) %>%
+    print()
+
+  cur_pca <- epca(gradients[[1]]$x_star[, -1])
+  colnames(cur_pca$U) <- paste0("Comp.", 1:ncol(cur_pca$U))
+  plot_gradient(
+    merge_pca(gradients[[i]]$theta, cur_pca$U),
+    cur_pca$evals$V1
+  ) + ggtitle(sprintf("ePCA, gamma = %f", gammas[i])) %>%
     print()
 }
