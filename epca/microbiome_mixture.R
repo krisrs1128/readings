@@ -80,7 +80,8 @@ merge_pca <- function(theta, scores) {
 #' @param X [data.frame] The reshaped PCA data, as output by merge_pca
 #' @param evals [numeric] A vector of eigenvalues from the PCA, used
 #'   to adjust the aspect of the resulting figure.
-plot_gradient <- function(X, evals) {
+#' @param title [string] The title to display on the resulting figure.
+plot_gradient <- function(X, evals, title) {
   ggplot(X %>% filter(variable == "theta.1")) +
     geom_point(aes(x = Comp.1, y = Comp.2, col = sqrt(value), size = Comp.3),
                alpha = 0.8) +
@@ -92,7 +93,8 @@ plot_gradient <- function(X, evals) {
       panel.spacing = unit(0, "line")
     ) +
     labs(col = "sqrt(theta(1))") +
-    coord_fixed(sqrt(evals[2] / evals[1]))
+    coord_fixed(sqrt(evals[2] / evals[1])) +
+    ggtitle(title)
 }
 
 ## ---- get-groups ----
@@ -111,11 +113,12 @@ X <- data.frame(
   otu_table(ps)
 )
 
-## ---- vis-groups ----
+## ---- visgroups ----
 ggplot(melt(X, id.vars = "outcome")) +
   geom_histogram(aes(x = log(1 + value)), bins = 100) +
   facet_grid(outcome ~ ., scale = "free_y")
 
+## ---- visgroupssubset ----
 ggplot(melt(X[, 1:10], id.vars = "outcome")) +
   geom_histogram(aes(x = log(1 + value)), bins = 100) +
   facet_grid(outcome ~ variable, scale = "free_y")
@@ -126,7 +129,6 @@ x_list <- X %>%
     as.matrix(x[, -1])
   })
 
-x_list <- x_list[c(1, 3)]
 B <- 1000
 K <- length(x_list)
 gammas <- c(0.01, 1, 10)
@@ -141,22 +143,22 @@ for (i in seq_along(gradients)) {
   cur_pca <- princomp(gradients[[i]]$x_star[, -1])
   plot_gradient(
     merge_pca(gradients[[i]]$theta, cur_pca$scores),
-    cur_pca$sdev
-  ) + ggtitle(sprintf("PCA, gamma = %f", gammas[i])) %>%
-    print()
+    cur_pca$sdev,
+    sprintf("PCA, gamma = %f", gammas[i])
+  ) %>% print()
 
   cur_pca <- princomp(scale(asinh(gradients[[i]]$x_star[, -1])))
   plot_gradient(
     merge_pca(gradients[[i]]$theta, cur_pca$scores),
-    cur_pca$sdev
-  ) + ggtitle(sprintf("Scaled PCA, gamma = %f", gammas[i])) %>%
-    print()
+    cur_pca$sdev,
+    sprintf("Scaled PCA, gamma = %f", gammas[i])
+  ) %>% print()
 
   cur_pca <- epca(gradients[[1]]$x_star[, -1])
   colnames(cur_pca$U) <- paste0("Comp.", 1:ncol(cur_pca$U))
   plot_gradient(
     merge_pca(gradients[[i]]$theta, cur_pca$U),
-    cur_pca$evals$V1
-  ) + ggtitle(sprintf("ePCA, gamma = %f", gammas[i])) %>%
-    print()
+    cur_pca$evals$V1,
+    sprintf("ePCA, gamma = %f", gammas[i])
+  ) %>% print()
 }
