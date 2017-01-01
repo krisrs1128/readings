@@ -40,7 +40,7 @@ generate_correlated <- function(N, rho) {
 N <- 10
 rho <- .4
 R <- 15000
-B <- c(500, 500)
+B <- c(500, 1000)
 
 cors <- vector(length = R)
 for (i in seq_len(R)) {
@@ -58,30 +58,28 @@ ggplot(data.frame(cors)) +
 
 ## Use the current version of X to estimate this transformation
 vst_ests <- list(
-  fits = vector(length = B[1]),
-  variances = vector(length = B[1])
+  fits = vector(mode = "numeric", length = B[1]),
+  variances = vector(mode = "numeric", length = B[1])
 )
 
 for (i in seq_len(B[1])) {
-  if (i %% 20 == 0) {
+  if (i %% 50 == 0) {
     cat(sprintf("outer bootstrap iteration %d\n", i))
   }
 
   cur_x <- X[sample(N, replace = TRUE), ]
   vst_ests$fits[i] <- cor(cur_x)[1, 2]
-  cur_rhos <- vector(length = B[2])
+  cur_rhos <- vector(mode = "numeric", length = B[2])
   for (j in seq_len(B[2])) {
     cur_rhos[j] <- cor(cur_x[sample(N, replace = TRUE), ])[1, 2]
   }
   vst_ests$variances[i] <- var(na.omit(cur_rhos))
 }
 
-## ---- bootstrap-transformation ----
-s_smooth <- ksmooth(
+## ----vis-bootstrap-transformation ----
+s_smooth <- lowess(
   vst_ests$fits,
-  sqrt(vst_ests$variances),
-  kernel = "box",
-  bandwidth = 0.05
+  sqrt(vst_ests$variances)
 )
 
 ggplot() +
@@ -93,4 +91,33 @@ ggplot() +
     data = data.frame(s_smooth),
     aes(x = x, y = y)
   )
- 
+
+## ---- integrate ----
+s_fun <- approxfun(s_smooth$x, s_smooth$y)
+
+g_fun <- function(x, min_val = -.9) {
+  res <- vector(length = length(x))
+  res[x < min_val] <- NA
+
+  for (i in seq_along(x)) {
+    if (is.na(res[i])) next
+    res[i] <- integrate(
+      function(z) { 1 / s_fun(z) },
+      min_val,
+      x[i]
+    )$value
+  }
+  res
+}
+
+## ---- visualize ----
+x_grid <- seq(min(s_smooth$x) + 0.01, max(s_smooth$x) - 0.01, .01)
+ggplot() +
+  geom_line(
+    data = data.frame(x = x_grid, y = g_fun(x_grid, min(x_grid))),
+    aes(x = x, y = y)
+  ) +
+  geom_line(
+    data = data.frame(x = x_grid, y = atanh(x_grid)),
+    aes(x = x, y = y), col = "blue"
+  )
