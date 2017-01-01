@@ -40,6 +40,7 @@ generate_correlated <- function(N, rho) {
 N <- 10
 rho <- .4
 R <- 15000
+B <- c(200, 1000)
 
 cors <- vector(length = R)
 for (i in seq_len(R)) {
@@ -52,3 +53,28 @@ ggplot(data.frame(cors)) +
   geom_histogram(aes(x = cors), binwidth = 0.01)
 ggplot(data.frame(cors)) +
   geom_histogram(aes(x = atanh(cors)), binwidth = 0.01)
+
+## ---- bootstrap-simulation----
+
+## Use the current version of X to estimate this transformation
+vst_ests <- list(
+  fits = vector(length = B[1]),
+  variances = vector(length = B[1])
+)
+
+for (i in seq_len(B[1])) {
+  if (i %% 20 == 0) {
+    cat(sprintf("outer bootstrap iteration %d\n", i))
+  }
+
+  cur_x <- X[sample(N), ]
+  vst_ests$fits[i] <- cor(cur_x)[1, 2]
+  cur_rhos <- vector(length = B[2])
+  for (j in seq_len(B[2])) {
+    cur_rhos[j] <- cor(cur_x[sample(N), ])[1, 2]
+  }
+  vst_ests$variances[i] <- var(cur_rhos)
+}
+
+## ---- bootstrap-transformation ----
+
