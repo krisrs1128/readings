@@ -40,7 +40,7 @@ generate_correlated <- function(N, rho) {
 N <- 10
 rho <- .4
 R <- 15000
-B <- c(200, 1000)
+B <- c(500, 500)
 
 cors <- vector(length = R)
 for (i in seq_len(R)) {
@@ -67,14 +67,30 @@ for (i in seq_len(B[1])) {
     cat(sprintf("outer bootstrap iteration %d\n", i))
   }
 
-  cur_x <- X[sample(N), ]
+  cur_x <- X[sample(N, replace = TRUE), ]
   vst_ests$fits[i] <- cor(cur_x)[1, 2]
   cur_rhos <- vector(length = B[2])
   for (j in seq_len(B[2])) {
-    cur_rhos[j] <- cor(cur_x[sample(N), ])[1, 2]
+    cur_rhos[j] <- cor(cur_x[sample(N, replace = TRUE), ])[1, 2]
   }
-  vst_ests$variances[i] <- var(cur_rhos)
+  vst_ests$variances[i] <- var(na.omit(cur_rhos))
 }
 
 ## ---- bootstrap-transformation ----
+s_smooth <- ksmooth(
+  vst_ests$fits,
+  sqrt(vst_ests$variances),
+  kernel = "box",
+  bandwidth = 0.05
+)
 
+ggplot() +
+  geom_point(
+    data = data.frame(vst_ests),
+    aes(x = fits, y = sqrt(variances))
+  ) +
+  geom_line(
+    data = data.frame(s_smooth),
+    aes(x = x, y = y)
+  )
+ 
