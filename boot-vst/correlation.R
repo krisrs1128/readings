@@ -50,9 +50,9 @@ for (i in seq_len(R)) {
 
 ## ---- usual-transformation ----
 ggplot(data.frame(cors)) +
-  geom_histogram(aes(x = cors), binwidth = 0.01)
+  geom_histogram(aes(x = cors), bins = 200)
 ggplot(data.frame(cors)) +
-  geom_histogram(aes(x = atanh(cors)), binwidth = 0.01)
+  geom_histogram(aes(x = atanh(cors)), bins = 200)
 
 ## ---- bootstrap-simulation----
 
@@ -93,9 +93,14 @@ ggplot() +
   )
 
 ## ---- integrate ----
+## handle endpoints
+s_smooth$x <- c(-1, s_smooth$x, 1)
+s_smooth$y <- c(s_smooth$y[1], s_smooth$y, s_smooth$y[B[1]])
+
 s_fun <- approxfun(s_smooth$x, s_smooth$y)
 
-g_fun <- function(x, min_val = -.9) {
+
+g_fun <- function(x, min_val = -1) {
   res <- vector(length = length(x))
   res[x < min_val] <- NA
 
@@ -121,3 +126,7 @@ ggplot() +
     data = data.frame(x = x_grid, y = atanh(x_grid)),
     aes(x = x, y = y), col = "blue"
   )
+
+## ---- apply-vst ----
+ggplot(data.frame(cors)) +
+  geom_histogram(aes(x = g_fun(cors)), bins = 200)
