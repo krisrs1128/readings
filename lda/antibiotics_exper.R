@@ -15,6 +15,7 @@ library("dplyr")
 library("ggplot2")
 library("phyloseq")
 library("treelapse")
+library("ggsscaffold")
 library("feather")
 set.seed(11242016)
 
@@ -117,15 +118,14 @@ plot_opts <- list(
   "y" = "theta",
   "fill" = "cluster",
   "col" = "cluster",
-  "fill_colors" = RColorBrewer::brewer.pal("Set2", stan_data$K),
-  "col_colors" = RColorBrewer::brewer.pal("Set2", stan_data$K),
+  "fill_colors" = RColorBrewer::brewer.pal(stan_data$K, "Set2"),
+  "col_colors" = RColorBrewer::brewer.pal(stan_data$K, "Set2"),
   "facet_terms" = c("cluster", "."),
   "theme_opts" = list("panel_border" = 0.7)
 )
 p1 <- ggboxplot(data.frame(theta_hat), plot_opts) +
   labs(x = "Time") +
   theme(legend.position = "none")
-ggsave("~/test.png", p1)
 
 ## ---- save_results ----
 dir.create("results")
