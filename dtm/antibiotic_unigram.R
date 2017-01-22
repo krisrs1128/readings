@@ -113,3 +113,27 @@ gglines(
 
 ## save, to avoid recomputing in the future
 write_feather(beta_hat, "beta_unigram.feather")
+
+## ---- unigram_histograms ----
+plot_opts <- list(
+  "x" = "rsv",
+  "y" = "prob",
+  "fill" = "Taxon_5",
+  "col" = "Taxon_5",
+  "outlier.size" = 0.01,
+  "alpha" = 0.4,
+  "facet_terms" = c("time", "Taxon_5"),
+  "facet_scales" = "free_x",
+  "facet_space" = "free_x"
+)
+ggboxplot(
+  beta_hat %>%
+  filter(Taxon_5 %in% levels(beta_hat$Taxon_5)[1:8]) %>%
+  as.data.frame(),
+  plot_opts
+) +
+  theme(
+    strip.text.x = element_blank(),
+    axis.text.x = element_blank(),
+    legend.position = "bottom"
+  )
