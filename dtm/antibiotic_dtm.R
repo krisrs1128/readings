@@ -6,6 +6,7 @@
 ## ---- setup ----
 args <- commandArgs(trailingOnly = TRUE)
 cur_ix <- args[1]
+cur_ix <- 18
 
 library("rstan")
 library("data.table")
@@ -74,6 +75,16 @@ stan_data <- list(
 )
 print(timestamp)
 stan_fit <- vb(m, data = stan_data)
+dir.create("fits")
+save(stan_fit, file = sprintf("fits/dtm_fit-%s.rda", cur_ix))
+
+################################################################################
+## Once we've found a saved model to visualize, we can use the code below. The
+## model comparisons can be done by looking at some convergence diagnostics.
+################################################################################
+
+retrieve_ix <- 18 # fit that seems reasonably interpretable
+stan_fit <- get(load(sprintf("fits/dtm_fit-%s.rda", retrieve_ix)))
 samples <- rstan::extract(stan_fit)
 
 ## ---- visualize_theta ----
@@ -81,17 +92,37 @@ softmax <- function(mu) {
   exp(mu) / sum(exp(mu))
 }
 
-alpha_hat <- apply(samples$alpha, c(2, 3), mean)
-theta_hat <- t(apply(alpha_hat, 1, softmax))
-
-theta_hat <- cbind(
-  sample = colnames(otu_table(abt)),
-  theta_hat[times_mapping, ],
-  sample_data(abt)
-) %>%
+theta_hat <- apply(alpha_hat, c(1, 2), softmax) %>%
   melt(
-    id.vars = c("sample", "ind", "condition", "time"),
-    variable.name = "cluster"
+    varnames = c("cluster", "iteration", "time"),
+    value.name = "theta"
+  ) %>%
+  filter(cluster < param_grid[retrieve_ix, "K"])
+theta_hat$time <- times[theta_hat$time]
+
+cur_samples <- data.frame(sample_data(abt))
+cur_samples$time <- 4 * round(cur_samples$time / 4)
+cur_samples <- cur_samples[c(1, which(diff(cur_samples$time) != 0)), ]
+
+theta_hat <- cur_samples %>%
+  right_join(theta_hat)
+
+plot_opts <- list(
+  "x" = "as.factor(time)",
+  "y" = "theta",
+  "fill" = "as.factor(cluster)",
+  "col" = "as.factor(cluster)",
+  "col_colors" = brewer.pal(param_grid[retrieve_ix, "K"] - 1, "Set2"),
+  "fill_colors" = brewer.pal(param_grid[retrieve_ix, "K"] - 1, "Set2"),
+  "facet_terms" = c(".", "condition"),
+  "facet_scales" = "free_x",
+  "facet_space" = "free_x"
+)
+p <- ggboxplot(theta_hat, plot_opts) +
+  scale_y_continuous(limits = c(0, 1), expand = c(0, 0)) +
+  labs(
+    fill = "Cluster",
+    x = "time"
   )
 levels(theta_hat$cluster) <- rev(levels(theta_hat$cluster))
 
