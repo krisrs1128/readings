@@ -6,6 +6,7 @@
 ## ---- setup ----
 args <- commandArgs(trailingOnly = TRUE)
 cur_ix <- args[1]
+cur_ix <- 18
 
 library("rstan")
 library("data.table")
@@ -73,7 +74,7 @@ save(stan_fit, file = sprintf("fits/dtm_fit-%s.rda", cur_ix))
 ## model comparisons can be done by looking at some convergence diagnostics.
 ################################################################################
 
-retrieve_ix <- 24 # fit that seems reasonably interpretable
+retrieve_ix <- 18 # fit that seems reasonably interpretable
 stan_fit <- get(load(sprintf("fits/dtm_fit-%s.rda", retrieve_ix)))
 samples <- rstan::extract(stan_fit)
 
@@ -92,6 +93,7 @@ theta_hat$time <- times[theta_hat$time]
 
 cur_samples <- data.frame(sample_data(abt))
 cur_samples$time <- 4 * round(cur_samples$time / 4)
+cur_samples <- cur_samples[c(1, which(diff(cur_samples$time) != 0)), ]
 
 theta_hat <- cur_samples %>%
   right_join(theta_hat)
