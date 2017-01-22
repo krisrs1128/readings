@@ -69,7 +69,7 @@ m <- stan_model("unigram.stan")
 stan_fit <- vb(m, data = stan_data)
 samples <- rstan::extract(stan_fit)
 
-## ---- visualize_beta ----
+## ---- prepare-beta ----
 taxa <- data.table(tax_table(abt)@.Data)
 taxa <- data.table(rsv = rownames(tax_table(abt)), tax_table(abt)@.Data)
 
@@ -89,39 +89,27 @@ group_order <- sort(table(taxa$Taxon_5), decreasing = TRUE)
 beta_hat$Taxon_5 <- factor(beta_hat$Taxon_5, levels = names(group_order))
 beta_hat$rsv <- factor(taxa[beta_hat$rsv_ix]$rsv, levels = rownames(tax_table(abt)))
 
-write_feather(beta_hat, "beta_unigram.feather")
-
-## ---- view_taxa ----
-
-ggplot(p_hat) +
-  geom_line(aes(x = time, y = beta, group = rsv), alpha = 0.1) +
-  scale_color_brewer(palette = "Set2") +
-  facet_wrap(~group)
-
-ggplot(p_hat %>%
-         filter(group %in% names(group_order)[1:8])) +
-  geom_line(aes(x = time, y = prob, col = group, group = rsv), alpha = 0.4) +
-  scale_color_brewer(palette = "Set2") +
-  facet_wrap(~group) +
-  theme(legend.position = "none")
-
-ggplot(p_hat) +
-  geom_tile(aes(x = time, y = rsv, fill = beta)) +
-  facet_wrap(~group, scale = "free_y")
-
-ggplot(p_hat) +
-  geom_tile(aes(x = time, y = rsv, alpha = prob, fill = group)) +
-  scale_color_brewer()
-
-ggplot(p_hat %>%
-         filter(group %in% names(group_order)[1:8])) +
-  geom_bar(aes(x = rsv, y = prob, fill = group), stat = "identity") +
-  facet_grid(time ~ group, space = "free_x", scales = "free_x") +
-  scale_fill_brewer(palette = "Set2") +
-  scale_y_continuous(breaks = c(0, .02)) +
+## ---- unigram-series ----
+plot_opts <- list(
+  "x" = "time",
+  "y" = "mean_prob",
+  "col" = "Taxon_5",
+  "alpha" = 0.4,
+  "group" = "rsv",
+  "facet_terms" = c("Taxon_5", ".")
+)
+gglines(
+  beta_hat %>%
+  filter(Taxon_5 %in% levels(beta_hat$Taxon_5)[1:8]) %>%
+  group_by(rsv, time) %>%
+  summarise(mean_prob = mean(prob), Taxon_5 = Taxon_5[1]) %>%
+  as.data.frame(),
+  plot_opts
+) +
   theme(
-    strip.text.x = element_blank(),
-    axis.text.x = element_blank()
+    strip.text.y = element_blank(),
+    legend.position = "bottom"
   )
 
-write_feather(p_hat, "results/p_hat.feather")
+## save, to avoid recomputing in the future
+write_feather(beta_hat, "beta_unigram.feather")
