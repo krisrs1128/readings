@@ -78,7 +78,9 @@ plot_opts <- list(
   "theme_opts" = list(border_size = 0)
 )
 p2 <- ggboxplot(
-  beta_hat %>% data.frame() %>% filter(Taxon_5 %in% levels(beta_hat$Taxon_5)[1:8]),
+  beta_hat %>%
+  data.frame() %>%
+  filter(Taxon_5 %in% levels(beta_hat$Taxon_5)[1:8]),
   plot_opts
 ) +
   labs(y = "beta", fill = "Family") +
@@ -87,14 +89,14 @@ p2 <- ggboxplot(
     strip.text.x = element_blank()
   )
 
-## ---- extrac_theta ----
-samples_theta <- melt(samples$theta)
-theta_hat <- samples_theta %>%
-  group_by(Var2, Var3) %>%
-  summarise(mean = mean(value))
-theta_hat$Var2 <- rownames(X)[theta_hat$Var2]
-colnames(theta_hat) <- c("sample", "cluster", "theta")
+## ---- extract_theta ----
+theta_hat <- samples$theta %>%
+  melt(
+    varnames = c("iteration", "sample", "cluster"),
+    value.name = "theta"
+  )
 
+theta_hat$sample <- rownames(X)[theta_hat$sample]
 sample_info <- sample_data(abt)
 sample_info$sample <- rownames(sample_info)
 theta_hat$cluster <- paste("Cluster", theta_hat$cluster)
@@ -106,16 +108,24 @@ theta_hat <- theta_hat %>%
 plot_opts <- list(
   "x" = "time",
   "y" = "cluster",
-  "fill" = "theta"
+  "fill" = "mean(theta)"
 )
 p1 <- ggheatmap(theta_hat, plot_opts)
 
 plot_opts <- list(
   "x" = "as.factor(time)",
   "y" = "theta",
-  "facet_terms" = c("cluster", "time")
+  "fill" = "cluster",
+  "col" = "cluster",
+  "fill_colors" = RColorBrewer::brewer.pal("Set2", stan_data$K),
+  "col_colors" = RColorBrewer::brewer.pal("Set2", stan_data$K),
+  "facet_terms" = c("cluster", "."),
+  "theme_opts" = list("panel_border" = 0.7)
 )
-p1 <- ggboxplot(data.frame(theta_hat), plot_opts)
+p1 <- ggboxplot(data.frame(theta_hat), plot_opts) +
+  labs(x = "Time") +
+  theme(legend.position = "none")
+ggsave("~/test.png", p1)
 
 ## ---- save_results ----
 dir.create("results")
