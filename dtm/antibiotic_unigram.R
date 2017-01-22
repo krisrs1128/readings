@@ -114,7 +114,7 @@ gglines(
 ## save, to avoid recomputing in the future
 write_feather(beta_hat, "beta_unigram.feather")
 
-## ---- unigram_histograms ----
+## ---- unigram-beta-boxplots ----
 plot_opts <- list(
   "x" = "rsv",
   "y" = "prob",
