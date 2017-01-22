@@ -78,27 +78,9 @@ beta_hat <- beta_hat %>%
 sorted_taxa <- names(sort(table(beta_hat$Taxon_5), decreasing = TRUE))
 beta_hat$Taxon_5 <- factor(beta_hat$Taxon_5, levels = sorted_taxa)
 beta_hat$rsv <- factor(beta_hat$rsv, levels = taxa$rsv)
-write_feather(beta_hat, "beta_unigram.feather")
 
 ## ---- visualize_beta ----
 # might want to set prior for more extreme decay
-p <- ggplot(beta_hat %>%
-       filter(Taxon_5 %in% levels(beta_hat$Taxon_5)[1:5])) +
-  geom_boxplot(
-    aes(x = rsv, y = beta, fill = Taxon_5, color = Taxon_5),
-    outlier.size = 0.05,
-    notchwidth = 0.1,
-    size = 0.1
-  ) +
-  facet_grid(cluster ~ Taxon_5, scale = "free_x", space = "free_x") +
-  scale_fill_brewer(palette = "Set1") +
-  scale_color_brewer(palette = "Set1") +
-  scale_y_continuous(breaks = scales::pretty_breaks(2)) +
-  labs(y = "probability", fill = "family") +
-  theme(
-    axis.text.x = element_blank(),
-    strip.text.x = element_blank()
-  )
 
 ## ---- extrac_theta ----
 samples_theta <- melt(samples$theta)
@@ -116,23 +98,19 @@ theta_hat <- theta_hat %>%
   left_join(sample_info, by = "sample")
 
 ## ---- visualize_theta ----
-ggplot(theta_hat) +
-  geom_point(aes(x = time, y = theta, col = condition), size = .4) +
-  geom_line(aes(x = time, y = theta, col = condition), size = 0.5) +
-  facet_wrap(~cluster) +
-  scale_color_brewer(palette = "Set2") +
-  theme(axis.text.x = element_text(angle = -90))
+plot_opts <- list(
+  "x" = "time",
+  "y" = "cluster",
+  "fill" = "theta"
+)
+p1 <- ggheatmap(theta_hat, plot_opts)
 
-ggplot(theta_hat) +
-  geom_tile(aes(x = time, y = cluster, fill = theta)) +
-  scale_fill_gradient(low = "#FFFFFF", high = "#5BBABA", limits = c(0, 1)) +
-  facet_grid(~condition, scale = "free_x", space = "free_x") +
-  scale_x_discrete(expand = c(0, 0)) +
-  scale_y_discrete(expand = c(0, 0)) +
-  theme(
-    panel.border = element_rect(fill = "transparent", size = .4, color = "#C9C9C9"),
-    panel.spacing = unit(0, "line")
-  )
+plot_opts <- list(
+  "x" = "as.factor(time)",
+  "y" = "theta",
+  "facet_terms" = c("cluster", "time")
+)
+p1 <- ggboxplot(data.frame(theta_hat), plot_opts)
 
 ## ---- save_results ----
 dir.create("results")
