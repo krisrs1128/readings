@@ -47,7 +47,7 @@ heatmap(asinh(otu_table(abt)))
 
 ## ----  lda ----
 m <- stan_model(file = "lda_counts.stan")
-X <- log(1 + t(otu_table(abt)@.Data))
+X <- asinh(t(otu_table(abt)@.Data))
 X[] <- as.integer(round(X, 2) * 100)
 
 stan_data <- list(
@@ -63,44 +63,37 @@ samples <- rstan::extract(stan_fit)
 
 ## ---- extract_beta ----
 # underlying RSV distributions
-samples_beta <- melt(samples$beta)
-
-beta_hat <- samples_beta %>%
-  group_by(Var2, Var3) %>%
-  summarise(mean = mean(value)) %>%
-  dcast(Var2 ~ Var3)
+beta_hat <- samples$beta %>%
+  melt() %>%
+  setnames(c("iterations", "cluster", "rsv_ix", "beta"))
+beta_hat$rsv <- rownames(tax_table(abt))[beta_hat$rsv_ix]
 
 taxa <- data.table(tax_table(abt)@.Data)
 taxa$rsv <- rownames(tax_table(abt))
 taxa$Taxon_5[which(taxa$Taxon_5 == "")] <- taxa$Taxon_4[which(taxa$Taxon_5 == "")]
 
-colnames(beta_hat) <- c("cluster", colnames(X))
 beta_hat <- beta_hat %>%
-  melt(id.vars = "cluster", variable.name = "rsv") %>%
-  left_join(taxa, by = "rsv")
+  left_join(taxa)
 
 sorted_taxa <- names(sort(table(beta_hat$Taxon_5), decreasing = TRUE))
-beta_hat$Taxon_5 <- factor(
-  beta_hat$Taxon_5,
-  levels = sorted_taxa
-)
+beta_hat$Taxon_5 <- factor(beta_hat$Taxon_5, levels = sorted_taxa)
 beta_hat$rsv <- factor(beta_hat$rsv, levels = taxa$rsv)
+write_feather(beta_hat, "beta_unigram.feather")
 
 ## ---- visualize_beta ----
 # might want to set prior for more extreme decay
-ggplot(beta_hat) +
-  geom_bar(aes(x = reorder(rsv, -value, mean), y = value, fill = as.factor(cluster)),
-           stat = "identity") +
-  scale_fill_brewer(palette = "Set2") +
-  theme(axis.text.x = element_text(angle = -90, size = 3))
-
-ggplot(beta_hat %>%
-         filter(Taxon_5 %in% levels(beta_hat$Taxon_5)[1:8])) +
-  geom_bar(aes(x = rsv, y = value, fill = Taxon_5),
-           stat = "identity") +
-  scale_fill_brewer(palette = "Set2") +
-  scale_y_continuous(breaks = c(0, 0.02)) +
-  facet_grid(cluster~Taxon_5, scale = "free_x", space = "free_x") +
+p <- ggplot(beta_hat %>%
+       filter(Taxon_5 %in% levels(beta_hat$Taxon_5)[1:5])) +
+  geom_boxplot(
+    aes(x = rsv, y = beta, fill = Taxon_5, color = Taxon_5),
+    outlier.size = 0.05,
+    notchwidth = 0.1,
+    size = 0.1
+  ) +
+  facet_grid(cluster ~ Taxon_5, scale = "free_x", space = "free_x") +
+  scale_fill_brewer(palette = "Set1") +
+  scale_color_brewer(palette = "Set1") +
+  scale_y_continuous(breaks = scales::pretty_breaks(2)) +
   labs(y = "probability", fill = "family") +
   theme(
     axis.text.x = element_blank(),
@@ -143,5 +136,5 @@ ggplot(theta_hat) +
 
 ## ---- save_results ----
 dir.create("results")
-write_feather(theta_hat, path = "results/theta.feather")
-write_feather(beta_hat, path = "results/beta.feather")
+write_feather(theta_hat, path = "theta.feather")
+write_feather(beta_hat, path = "beta.feather")

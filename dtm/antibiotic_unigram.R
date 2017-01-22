@@ -42,7 +42,7 @@ hist(colSums(otu_table(abt)), 15)
 
 ## ---- vis_times ----
 raw_times <- sample_data(abt)$time
-X <- log(1 + t(otu_table(abt)@.Data))
+X <- asinh(t(otu_table(abt)@.Data))
 X[] <- as.integer(round(X, 2) * 100)
 
 times <- 4 * round(raw_times / 4)
@@ -70,30 +70,28 @@ stan_fit <- vb(m, data = stan_data)
 samples <- rstan::extract(stan_fit)
 
 ## ---- visualize_beta ----
-beta_hat <- samples$beta %>%
-  apply(c(2, 3), mean) %>%
-  melt(varnames = c("time", "i"))
-beta_sd <- samples$beta %>%
-  apply(c(2, 3), sd) %>%
-  melt(varnames = c("time", "i"), value.name = "sd")
-beta_hat <- beta_hat %>%
-  left_join(beta_sd) %>%
-  mutate(type = "estimate")
-beta_hat$time <- times[beta_hat$time]
-beta_hat$rsv <- rownames(otu_table(abt))[beta_hat$i]
+taxa <- data.table(tax_table(abt)@.Data)
+taxa <- data.table(rsv = rownames(tax_table(abt)), tax_table(abt)@.Data)
 
-p_hat <- beta_hat %>%
+beta_hat <- samples$beta %>%
+  melt(
+    varnames = c("iteration", "time", "rsv_ix"),
+    value.name = "beta"
+  )
+beta_hat$rsv <- rownames(otu_table(abt))[beta_hat$rsv_ix]
+beta_hat$time <- times[beta_hat$time]
+beta_hat <- beta_hat %>%
+  left_join(taxa) %>%
   group_by(time) %>%
-  mutate(prob = softmax(value), beta = value) %>%
-  select(-value)
+  mutate(prob = softmax(beta)) 
+
+group_order <- sort(table(taxa$Taxon_5), decreasing = TRUE)
+beta_hat$Taxon_5 <- factor(beta_hat$Taxon_5, levels = names(group_order))
+beta_hat$rsv <- factor(taxa[beta_hat$rsv_ix]$rsv, levels = rownames(tax_table(abt)))
+
+write_feather(beta_hat, "beta_unigram.feather")
 
 ## ---- view_taxa ----
-taxa <- data.table(rsv = rownames(tax_table(abt)), tax_table(abt)@.Data)
-taxa$Taxon_5[which(taxa$Taxon_5 == "")] <- taxa$Taxon_4[which(taxa$Taxon_5 == "")]
-p_hat$group <- taxa[p_hat$i]$Taxon_5
-group_order <- sort(table(taxa$Taxon_5), decreasing = TRUE)
-p_hat$group <- factor(p_hat$group, levels = names(group_order))
-p_hat$rsv <- factor(taxa[p_hat$i]$rsv, levels = rownames(tax_table(abt)))
 
 ggplot(p_hat) +
   geom_line(aes(x = time, y = beta, group = rsv), alpha = 0.1) +
@@ -126,4 +124,4 @@ ggplot(p_hat %>%
     axis.text.x = element_blank()
   )
 
-write_feather(p_hat, "p_hat.feather")
+write_feather(p_hat, "results/p_hat.feather")
