@@ -18,20 +18,6 @@ library("treelapse")
 library("feather")
 set.seed(11242016)
 
-theme_set(theme_bw())
-min_theme <- theme_update(
-  panel.border = element_blank(),
-  panel.grid = element_blank(),
-  axis.ticks = element_blank(),
-  legend.title = element_text(size = 8),
-  legend.text = element_text(size = 6),
-  axis.text = element_text(size = 6),
-  axis.title = element_text(size = 8),
-  strip.background = element_blank(),
-  strip.text = element_text(size = 8),
-  legend.key = element_blank()
-)
-
 # Code Block -------------------------------------------------------------------
 ## ---- get-data ----
 data(abt)
@@ -81,6 +67,25 @@ beta_hat$rsv <- factor(beta_hat$rsv, levels = taxa$rsv)
 
 ## ---- visualize_beta ----
 # might want to set prior for more extreme decay
+plot_opts <- list(
+  "x" = "rsv",
+  "y" =  "beta",
+  "fill" = "Taxon_5",
+  "col" = "Taxon_5",
+  "facet_terms" = c("cluster", "Taxon_5"),
+  "facet_scales" = "free_x",
+  "facet_space" = "free_x",
+  "theme_opts" = list(border_size = 0)
+)
+p2 <- ggboxplot(
+  beta_hat %>% data.frame() %>% filter(Taxon_5 %in% levels(beta_hat$Taxon_5)[1:8]),
+  plot_opts
+) +
+  labs(y = "beta", fill = "Family") +
+  theme(
+    axis.text.x = element_blank(),
+    strip.text.x = element_blank()
+  )
 
 ## ---- extrac_theta ----
 samples_theta <- melt(samples$theta)
