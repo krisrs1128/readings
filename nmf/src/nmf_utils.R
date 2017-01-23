@@ -34,7 +34,7 @@ scores_contours <- function(plot_data, plot_opts) {
   p1 <- ggcontours(plot_data, plot_opts) +
     geom_text(
       data = plot_data %>%
-        group_by_(plot_opts$group) %>%
+        group_by_(.dots = c(plot_opts$group, plot_opts$facet_terms)) %>%
         summarise(mean_1 = mean(value_1), mean_2 = mean(value_2)),
       aes_string(x = "mean_1", y = "mean_2", label = plot_opts$group),
       col = plot_opts$mean_col,
