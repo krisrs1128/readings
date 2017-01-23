@@ -85,6 +85,7 @@ reshape_samples <- function(samples, truth, dims) {
   )
 }
 
+## ---- simulation-helpers ----
 #' Merge Default NMF options
 #'
 #' @param opts [list] A partially filled list of options, to fill in with
@@ -154,6 +155,58 @@ nmf_sim <- function(opts) {
   )
 }
 
+## ---- modeling-helpers ----
+#' Merge Default Modeling Parameters
+#'
+#' This lets us run models with partially specified options.
+#'
+#' @param opts [list] A partially filled list of options, to fill in with
+#'   defaults.
+#' @return opts [list] The version of opts with defaults filled in.
+merge_model_opts <- list(opts = list()) {
+  default_opts <- list(
+    "inference" = "gibbs",
+    "method" = "/scratch/users/kriss1/programming/readings/nmf/src/nmf_gamma_poisson.stan"
+  )
+  modifyList(default_opts, opts)
+}
+
+#' Fit a generic NMF Stan Model
+#'
+#' This wraps vb() and stan() in the STAN package to let us run either approach
+#' using a single command.
+#'
+#' @param y [matrix] The data on which to fit the NMF model.
+#' @param model_opts [list] A partially filled list of model fitting options.
+#'   Unspecified options will be passed into merge_model_opts().
+#' @param prior_opts [list] A list of prior information, required by the NMF
+#'   fitting STAN code.
+#' @return result [stan object] The fitted stan object.
+fit_model <- function(y, model_opts = list(), prior_opts = list()) {
+  stan_data <- list(
+    "N" = nrow(y),
+    "P" = ncol(y),
+    "y" = y
+  )
+  stan_data <- c(stan_data, prior_opts)
+
+  if (grepl("zero", model_opts$method)) {
+    stan_data$zero_inf_prob <- NULL
+  }
+
+  if (model_opts$inference == "gibbs") {
+    result <- stan(file = model_opts$method, data = stan_data, chain = 1)
+  } else if (model_opts$inference == "vb") {
+    f <- stan_model(model_opts$method)
+    result <- vb(f, stan_data)
+  } else {
+    stop("model_opts$inference is not recognized")
+  }
+_
+  extract(result)
+}
+
+## ---- batch-helpers ----
 #' Write experiment configurations files
 #'
 #' This generates the JSON file on which all the experiments will be based. It
@@ -164,16 +217,41 @@ nmf_sim <- function(opts) {
 #' @param path [string] The path to which to save the configurations JSON.
 #' @return NULL
 #' @side-effects Writes the configurations JSON to path.
-factors <- list(
-  "N" = c(50, 100, 200),
-  "P" = c(75, 125),
-  "zero_inf_prob" = c(0, 0.2, 0.5, 0.8),
-  "inference" = c("gibbs", "vb"),
-  "method" = c("zinf_nmf", "nmf")
-)
-write_configs <- function(factors, path = "config.json") {
-  config_df <- expand.grid(factors) 
-  config_df$id <- seq_len(nrow(config_df))
-  toJSON(config_df) 
+#' @examples
+#' sim_factors <- list(
+#'   "N" = c(50, 100, 200),
+#'   "P" = c(75, 125),
+#'   "zero_inf_prob" = c(0, 0.2, 0.5, 0.8)
+#' )
+#' model_factors <- list(
+#'   "inference" = c("gibbs", "vb"),
+#'   "method" = c("zinf_nmf", "nmf")
+#' )
+#' #write_configs(sim_factors, model_factors)
+write_configs <- function(sim_factors,
+                          model_factors,
+                          n_batches = 50,
+                          config_path = "config.json",
+                          output_dir = "./") {
+  config_df <- expand.grid(c(sim_factors, model_factors))
+  config_df$batch <- rep(seq_len(n_batches), length.out = nrow(config_df))
 
+  config <- vector(length = nrow(config_df), mode = "list")
+  sim_ix <- colnames(config_df) %in% names(sim_factors)
+  model_ix <- colnames(config_df) %in% names(model_factors)
+
+  ## reshape into a form appropriate for the config json
+  for (i in seq_len(nrow(config_df))) {
+    config[[i]]$sim_opts <- list(config_df[i, sim_ix])
+    config[[i]]$model_opts <- list(config_df[i, model_ix])
+    config[[i]]$prior_opts <- as.list(
+      config_df[, c("a", "b", "c", "d", "zero_inf_prob")]
+    )
+
+    config[[i]]$output_dir <- output_dir
+    config[[i]]$id <- i
+    config[[i]]$batch <- config_df[i, "batch"]
+  }
+
+  cat(toJSON(config, auto_unbox = TRUE), file = config_path)
 }
