@@ -53,6 +53,58 @@ scores_contours <- function(plot_data, plot_opts) {
   list("grouped" = p1, "coordinates" = p2)
 }
 
+#' Identify a permutation that aligns rows of two matrices
+#'
+#' One way to get confidence intervals for mixtures on the simplex is
+#' to first specify the cluster labels for each component, and then
+#' study each of these histograms on their own. This is different
+#' from, say, smoothing the mixture distribution and identifying
+#' modes.
+#'
+#' The approach taken here is to find the two rows with maximal
+#' correlation and put that in the required permutation. Then, remove
+#' those rows and repeat.
+#'
+#' @param X [numeric matrix] A matrix whose rows we want to align with
+#'   X.
+#' @param Z [numeric matrix] A matrix whose rows we want to align with
+#'   Z.
+#' @return pi_result [vector] A permutation such that X[pi_result, ] = Z
+#' (ideally).
+#' @examples
+#' X <- matrix(rnorm(100, mean = 4) ^ 2, 20, 5)
+#' pi <- sample(1:20)
+#' Z <- X[pi, ] + matrix(rnorm(100), 20, 5)
+#' pi_hat <- match_matrix(X, Z)
+#' cbind(pi_hat, pi)
+match_matrix <- function(X, Z) {
+  n <- nrow(X)
+  X_tilde <- X
+  Z_tilde <- Z
+
+  rownames(X_tilde) <- seq_len(n)
+  rownames(Z_tilde) <- seq_len(n)
+  pi_result <- rep(0, n)
+
+  for (i in seq_len(n)) {
+    # get maximal correlation in remainding rows
+    rho <- cor(t(X_tilde), t(Z_tilde))
+    max_ix0 <- which(rho == max(rho), arr.ind = TRUE)
+
+    max_ix <- c(
+      as.integer(rownames(X_tilde)[max_ix0[1]]),
+      as.integer(rownames(Z_tilde)[max_ix0[2]])
+    )
+
+    # input to resulting permutation, and update rows
+    pi_result[max_ix[2]] <- max_ix[1]
+    X_tilde <- X_tilde[-max_ix0[1],, drop = F]
+    Z_tilde <- Z_tilde[-max_ix0[2],, drop = F]
+  }
+
+  pi_result
+}
+
 #' Reshape fitted scores for easy plotting
 #'
 #' Both thetas and betas in NMF are reshaped using very similar code, so we
@@ -67,6 +119,14 @@ scores_contours <- function(plot_data, plot_opts) {
 #'   the parameter matrix.
 #' @return reshaped [data.table] The melted scores, with truth along with samples.
 reshape_samples <- function(samples, truth, dims) {
+  ## align latent factors (label switchign problem)
+  pi_align <- match_matrix(
+    t(truth),
+    t(apply(samples, c(2, 3), median))
+  )
+  truth <- truth[, pi_align]
+
+  ## now combine into one df
   reshaped <- samples %>%
     melt(varnames = c("iteration", dims)) %>%
     left_join(
