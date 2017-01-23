@@ -163,7 +163,7 @@ nmf_sim <- function(opts) {
 #' @param opts [list] A partially filled list of options, to fill in with
 #'   defaults.
 #' @return opts [list] The version of opts with defaults filled in.
-merge_model_opts <- list(opts = list()) {
+merge_model_opts <- function(opts = list()) {
   default_opts <- list(
     "inference" = "gibbs",
     "method" = "/scratch/users/kriss1/programming/readings/nmf/src/nmf_gamma_poisson.stan"
@@ -202,7 +202,7 @@ fit_model <- function(y, model_opts = list(), prior_opts = list()) {
   } else {
     stop("model_opts$inference is not recognized")
   }
-_
+
   extract(result)
 }
 
@@ -242,11 +242,14 @@ write_configs <- function(sim_factors,
 
   ## reshape into a form appropriate for the config json
   for (i in seq_len(nrow(config_df))) {
-    config[[i]]$sim_opts <- list(config_df[i, sim_ix])
-    config[[i]]$model_opts <- list(config_df[i, model_ix])
-    config[[i]]$prior_opts <- as.list(
-      config_df[, c("a", "b", "c", "d", "zero_inf_prob")]
-    )
+    config[[i]]$sim_opts <- list(config_df[i, sim_ix]) %>%
+      merge_nmf_opts()
+
+    config[[i]]$model_opts <- list(config_df[i, model_ix]) %>%
+      merge_model_opts()
+
+    prior_fields <- c("a", "b", "c", "d", "zero_inf_prob")
+    config[[i]]$prior_opts <- config[[i]]$sim_opts[prior_fields]
 
     config[[i]]$output_dir <- output_dir
     config[[i]]$id <- i
