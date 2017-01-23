@@ -176,12 +176,31 @@ merge_model_opts <- list(opts = list()) {
 #' This wraps vb() and stan() in the STAN package to let us run either approach
 #' using a single command.
 #'
-#' @param Y [matrix] The data on which to fit the NMF model.
+#' @param y [matrix] The data on which to fit the NMF model.
 #' @param opts [list] A partially filled list of model fitting options.
 #'   Unspecified options will be passed into merge_model_opts().
 #' @return result [stan object] The fitted stan object.
-fit_model <- function(Y, opts = list()) {
-  
+fit_model <- function(y, opts = list()) {
+  stan_data <- list(
+    "N" = nrow(y),
+    "P" = ncol(y),
+    "y" = y
+  )
+
+  if (opts$inference == "gibbs") {
+    result <- extract(
+      stan(file = opts$method, data = stan_data, chain = 1)
+    )
+  } else if (opts$inference == "vb") {
+    f <- stan_model(opts$method)
+    result <- extract(
+      vb(f, stan_data)
+    )
+  } else {
+    stop("opts$inference is not recognized")
+  }
+_
+  result
 }
 
 ## ---- batch-helpers ----
