@@ -85,6 +85,7 @@ reshape_samples <- function(samples, truth, dims) {
   )
 }
 
+## ---- simulation-helpers ----
 #' Merge Default NMF options
 #'
 #' @param opts [list] A partially filled list of options, to fill in with
@@ -154,6 +155,36 @@ nmf_sim <- function(opts) {
   )
 }
 
+## ---- modeling-helpers ----
+#' Merge Default Modeling Parameters
+#'
+#' This lets us run models with partially specified options.
+#'
+#' @param opts [list] A partially filled list of options, to fill in with
+#'   defaults.
+#' @return opts [list] The version of opts with defaults filled in.
+merge_model_opts <- list(opts = list()) {
+  default_opts <- list(
+    "inference" = "gibbs",
+    "method" = "/scratch/users/kriss1/programming/readings/nmf/src/nmf_gamma_poisson.stan"
+  )
+  modifyList(default_opts, opts)
+}
+
+#' Fit a generic NMF Stan Model
+#'
+#' This wraps vb() and stan() in the STAN package to let us run either approach
+#' using a single command.
+#'
+#' @param Y [matrix] The data on which to fit the NMF model.
+#' @param opts [list] A partially filled list of model fitting options.
+#'   Unspecified options will be passed into merge_model_opts().
+#' @return result [stan object] The fitted stan object.
+fit_model <- function(Y, opts = list()) {
+  
+}
+
+## ---- batch-helpers ----
 #' Write experiment configurations files
 #'
 #' This generates the JSON file on which all the experiments will be based. It

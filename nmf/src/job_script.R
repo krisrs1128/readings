@@ -9,13 +9,7 @@
 
 ## ---- libraries ----
 library("jsonlite")
-library("rstan")
-library("plyr")
-library("dplyr")
 source("/scratch/users/kriss1/programming/readings/nmf/src/nmf_utils.R")
-rstan_options(auto_write = TRUE)
-options(mc.cores = parallel::detectCores())
-set.seed(01112017)
 
 ## ---- parse-args ----
 args <- commandArgs(trailingOnly = TRUE)
@@ -23,6 +17,7 @@ expers <- fromJSON(args[[1]])
 subset_ix <- as.integer(args[[2]])
 
 for (i in seq_along(expers)) {
+  set.seed(01112017)
   if (expers[[i]]$batch != i) next
   cur_data <- sim_data(expers[[i]]$sim_opts)
   cur_fit <- fit_model(cur_data, expers[[i]]$model_opts)
