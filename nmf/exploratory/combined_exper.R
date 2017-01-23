@@ -53,7 +53,7 @@ theta_plots <- scores_contours(gamma_pois_data, plot_opts)
 ##theta_plots$grouped
 
 zinf_data <- theta_fits %>%
-  filter(zero_inf_prob != 0, P == 75, N == 100, iteration < 100)
+  filter(zero_inf_prob != 0, P == 75, N == 100)
 plot_opts$facet_terms <- c("zero_inf_prob", "inference", "method")
 theta_plots <- scores_contours(zinf_data, plot_opts)
 ##theta_plots$grouped
@@ -77,7 +77,7 @@ beta_plots <- scores_contours(gamma_pois_data, plot_opts)
 ggsave("~/test.png", beta_plots$grouped)
 
 zinf_data <- beta_fits %>%
-  filter(zero_inf_prob != 0, P == 75, N == 100, iteration < 100)
+  filter(zero_inf_prob != 0, P == 75, N == 100)
 plot_opts$facet_terms <- c("zero_inf_prob", "inference", "method")
 theta_plots <- scores_contours(zinf_data, plot_opts)
 ##theta_plots$grouped
