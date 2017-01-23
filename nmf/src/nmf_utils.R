@@ -177,8 +177,10 @@ merge_model_opts <- list(opts = list()) {
 #' using a single command.
 #'
 #' @param y [matrix] The data on which to fit the NMF model.
-#' @param opts [list] A partially filled list of model fitting options.
+#' @param model_opts [list] A partially filled list of model fitting options.
 #'   Unspecified options will be passed into merge_model_opts().
+#' @param prior_opts [list] A list of prior information, required by the NMF
+#'   fitting STAN code.
 #' @return result [stan object] The fitted stan object.
 fit_model <- function(y, model_opts = list(), prior_opts = list()) {
   stan_data <- list(
@@ -188,7 +190,7 @@ fit_model <- function(y, model_opts = list(), prior_opts = list()) {
   )
   stan_data <- c(stan_data, prior_opts)
 
-  if (grepl("zinf", model_opts$method)) {
+  if (grepl("zero", model_opts$method)) {
     stan_data$zero_inf_prob <- NULL
   }
 
