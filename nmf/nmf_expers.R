@@ -16,11 +16,9 @@ source(file.path(base_dir, "src", "nmf_utils.R"))
 
 ## ---- configuration ----
 ## create the configuration JSON file
-output_dir <- file.path(base_dir, "fits")
 batch_dir <- file.path(base_dir, "batch")
 dir.create(batch_dir)
 config_path <- file.path(batch_dir, "config.json")
-
 
 sim_factors <- list(
   "N" = c(100),
@@ -38,15 +36,16 @@ model_factors <- list(
 write_configs(
   sim_factors,
   model_factors,
-  n_batches = 3,
-  config_path = config_path
+  n_batches = 4,
+  config_path = config_path,
+  output_dir = file.path(base_dir, "fits")
 )
 
 ## ---- submit-jobs ----
 ## loop over unique values in the "batch" field of the json file
 configs <- fromJSON(config_path, simplifyVector = FALSE)
 batches <- sapply(configs, function(x) { x$batch })
-batch_opts <- list("mem_alloc" = 4000)
+batch_opts <- list("mem_alloc" = 6000)
 
 for (i in seq_along(unique(batches))) {
     batch_script <- file.path(batch_dir, paste0("batch-", i, ".sbatch"))
