@@ -133,7 +133,7 @@ reshape_all_samples <- function(fits,
     )
 
     ## join in simulation parameters
-    cur_config <- data.frame(c(expers[[i]]$sim_opts, expers[[i]]$model_opts))
+    cur_config <- data.frame(c(cur_exper$sim_opts, cur_exper$model_opts))
     samples[[i]] <- cbind(samples[[i]], cur_config)
   }
 
