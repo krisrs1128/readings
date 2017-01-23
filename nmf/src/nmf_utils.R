@@ -164,16 +164,37 @@ nmf_sim <- function(opts) {
 #' @param path [string] The path to which to save the configurations JSON.
 #' @return NULL
 #' @side-effects Writes the configurations JSON to path.
-factors <- list(
-  "N" = c(50, 100, 200),
-  "P" = c(75, 125),
-  "zero_inf_prob" = c(0, 0.2, 0.5, 0.8),
-  "inference" = c("gibbs", "vb"),
-  "method" = c("zinf_nmf", "nmf")
-)
-write_configs <- function(factors, path = "config.json") {
-  config_df <- expand.grid(factors) 
-  config_df$id <- seq_len(nrow(config_df))
-  toJSON(config_df) 
+#' @examples
+#' sim_factors <- list(
+#'   "N" = c(50, 100, 200),
+#'   "P" = c(75, 125),
+#'   "zero_inf_prob" = c(0, 0.2, 0.5, 0.8)
+#' )
+#' model_factors <- list(
+#'   "inference" = c("gibbs", "vb"),
+#'   "method" = c("zinf_nmf", "nmf")
+#' )
+#' #write_configs(sim_factors, model_factors)
+write_configs <- function(sim_factors,
+                          model_factors,
+                          n_batches = 50,
+                          config_path = "config.json",
+                          output_dir = "./") {
+  config_df <- expand.grid(c(sim_factors, model_factors))
+  config_df$batch <- rep(seq_len(n_batches), length.out = nrow(config_df))
 
+  config <- vector(length = nrow(config_df), mode = "list")
+  sim_ix <- colnames(config_df) %in% names(sim_factors)
+  model_ix <- colnames(config_df) %in% names(model_factors)
+
+  ## reshape into a form appropriate for the config json
+  for (i in seq_len(nrow(config_df))) {
+    config[[i]]$sim_opts <- list(config_df[i, sim_ix])
+    config[[i]]$model_opts <- list(config_df[i, model_ix])
+    config[[i]]$output_dir <- output_dir
+    config[[i]]$id <- i
+    config[[i]]$batch <- config_df[i, "batch"]
+  }
+
+  cat(toJSON(config, auto_unbox = TRUE), file = config_path)
 }
