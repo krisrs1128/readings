@@ -180,27 +180,28 @@ merge_model_opts <- list(opts = list()) {
 #' @param opts [list] A partially filled list of model fitting options.
 #'   Unspecified options will be passed into merge_model_opts().
 #' @return result [stan object] The fitted stan object.
-fit_model <- function(y, opts = list()) {
+fit_model <- function(y, model_opts = list(), prior_opts = list()) {
   stan_data <- list(
     "N" = nrow(y),
     "P" = ncol(y),
     "y" = y
   )
+  stan_data <- c(stan_data, prior_opts)
 
-  if (opts$inference == "gibbs") {
-    result <- extract(
-      stan(file = opts$method, data = stan_data, chain = 1)
-    )
-  } else if (opts$inference == "vb") {
-    f <- stan_model(opts$method)
-    result <- extract(
-      vb(f, stan_data)
-    )
+  if (grepl("zinf", model_opts$method)) {
+    stan_data$zero_inf_prob <- NULL
+  }
+
+  if (model_opts$inference == "gibbs") {
+    result <- stan(file = model_opts$method, data = stan_data, chain = 1)
+  } else if (model_opts$inference == "vb") {
+    f <- stan_model(model_opts$method)
+    result <- vb(f, stan_data)
   } else {
-    stop("opts$inference is not recognized")
+    stop("model_opts$inference is not recognized")
   }
 _
-  result
+  extract(result)
 }
 
 ## ---- batch-helpers ----
@@ -241,6 +242,10 @@ write_configs <- function(sim_factors,
   for (i in seq_len(nrow(config_df))) {
     config[[i]]$sim_opts <- list(config_df[i, sim_ix])
     config[[i]]$model_opts <- list(config_df[i, model_ix])
+    config[[i]]$prior_opts <- as.list(
+      config_df[, c("a", "b", "c", "d", "zero_inf_prob")]
+    )
+
     config[[i]]$output_dir <- output_dir
     config[[i]]$id <- i
     config[[i]]$batch <- config_df[i, "batch"]
