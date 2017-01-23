@@ -9,13 +9,13 @@
 ## author: kriss1@stanford.edu
 
 ## ---- libraries ----
-library("plyr")
-library("dplyr")
-library("data.table")
-library("rstan")
+library("SLURMHelpers")
 source("./nmf_utils.R")
-rstan_options(auto_write = TRUE)
-options(mc.cores = parallel::detectCores())
-set.seed(01112017)
 
 ## ---- configuration ----
+## create the configuration JSON file
+
+## loop over unique values in the "batch" field of the json file
+
+## within each value of the loop, send of a SLURM job that runs the required
+## stan jobs
