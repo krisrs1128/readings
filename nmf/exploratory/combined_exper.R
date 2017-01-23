@@ -14,29 +14,17 @@ source(file.path("src", "nmf_utils.R"))
 ## ---- theta-reshape ----
 ## extract theta information from the fits
 fits <- list.files("fits", "fit-*", full.names = TRUE)
-fit_ids <- stringr::str_extract(fits, "[0-9]+")
-exper_ids <- sapply(expers, function(x) { x$id })
+expers <- fromJSON(
+  file.path("batch", "config.json"),
+  simplifyVector = FALSE
+)
 
-theta_fits <- list()
-for (i in seq_along(fits)) {
-  ## retrieved simulated thetas
-  set.seed(01112017)
-  cur_exper <- expers[[which(exper_ids == fit_ids[[i]])]]
-  cur_data <- nmf_sim(cur_exper$sim_opts)
-
-  ## retrieve fitted thetas
-  theta_fits[[i]] <- reshape_samples(
-    get(load(fits[[i]]))$theta,
-    cur_data$theta,
-    c("i", "k")
-  )
-
-  ## join in simulation parameters
-  cur_config <- data.frame(c(expers[[i]]$sim_opts, expers[[i]]$model_opts))
-  theta_fits[[i]] <- cbind(theta_fits[[i]], cur_config)
-}
-
-theta_fits <- rbindlist(theta_fits)
+theta_fits <- reshape_all_samples(
+  fits,
+  file.path("batch", "config.json"),
+  "theta",
+  c("i", "k")
+)
 theta_fits$method <- basename(as.character(theta_fits$method))
 
 ## ---- visualize-thetas -----
