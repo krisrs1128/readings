@@ -14,6 +14,9 @@ library("reshape2")
 library("ggplot2")
 library("ggscaffold")
 library("jsonlite")
+library("rstan")
+rstan_options(auto_write = TRUE)
+options(mc.cores = parallel::detectCores())
 
 ## ---- plot-utils ---
 #' Plot Contours and Associated Coordinate
@@ -141,8 +144,8 @@ nmf_sim <- function(opts) {
     sample(
       c(0, 1),
       N * P,
-      replace = T,
-      prob = c(zero_inf_prob, 1 - zero_inf_prob)),
+      replace = TRUE,
+      prob = c(1 - zero_inf_prob, zero_inf_prob)),
     N, P
   )
   y[mask == 1] <- 0
@@ -242,10 +245,10 @@ write_configs <- function(sim_factors,
 
   ## reshape into a form appropriate for the config json
   for (i in seq_len(nrow(config_df))) {
-    config[[i]]$sim_opts <- list(config_df[i, sim_ix]) %>%
+    config[[i]]$sim_opts <- as.list(config_df[i, sim_ix]) %>%
       merge_nmf_opts()
 
-    config[[i]]$model_opts <- list(config_df[i, model_ix]) %>%
+    config[[i]]$model_opts <- as.list(config_df[i, model_ix]) %>%
       merge_model_opts()
 
     prior_fields <- c("a", "b", "c", "d", "zero_inf_prob")
