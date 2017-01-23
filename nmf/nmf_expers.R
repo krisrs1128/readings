@@ -49,13 +49,14 @@ batches <- sapply(configs, function(x) { x$batch })
 batch_opts <- list("mem_alloc" = 4000)
 
 for (i in seq_along(unique(batches))) {
-    batch_script <- file.path(batch_dir, paste0("batch-", i, ".sh"))
-    script_lines <- paste("Rscript", batch_script, config_path, i)
+    batch_script <- file.path(batch_dir, paste0("batch-", i, ".sbatch"))
+    rscript_file <- file.path(base_dir, "src", "nmf_script.R")
+    rscript_cmd <- paste("Rscript", rscript_file, config_path, i)
 
     create_job(
       batch_script,
       paste0("nmf-", i),
-      script_lines,
+      rscript_cmd,
       batch_opts
     )
    system(paste("sbatch", batch_script))
