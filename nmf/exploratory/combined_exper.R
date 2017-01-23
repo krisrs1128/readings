@@ -45,8 +45,39 @@ plot_opts <- list(
   "panel_border" = 0.2
 )
 
+## first, visualization in the non-zero-inflated case
 gamma_pois_data <- theta_fits %>%
   filter(zero_inf_prob == 0, method == "nmf_gamma_poisson.stan")
 
 theta_plots <- scores_contours(gamma_pois_data, plot_opts)
-theta_plots$grouped
+##theta_plots$grouped
+
+zinf_data <- theta_fits %>%
+  filter(zero_inf_prob != 0, P == 75, N == 100, iteration < 100)
+plot_opts$facet_terms <- c("zero_inf_prob", "inference", "method")
+theta_plots <- scores_contours(zinf_data, plot_opts)
+##theta_plots$grouped
+
+## ---- visualize-betas ----
+beta_fits <- reshape_all_samples(
+  fits,
+  file.path("batch", "config.json"),
+  "beta",
+  c("v", "k")
+)
+beta_fits$method <- basename(as.character(beta_fits$method))
+
+plot_opts$facet_terms <- c("N", "inference", "P")
+plot_opts$group <- "v"
+
+gamma_pois_data <- beta_fits %>%
+  filter(zero_inf_prob == 0, method == "nmf_gamma_poisson.stan")
+
+beta_plots <- scores_contours(gamma_pois_data, plot_opts)
+ggsave("~/test.png", beta_plots$grouped)
+
+zinf_data <- beta_fits %>%
+  filter(zero_inf_prob != 0, P == 75, N == 100, iteration < 100)
+plot_opts$facet_terms <- c("zero_inf_prob", "inference", "method")
+theta_plots <- scores_contours(zinf_data, plot_opts)
+##theta_plots$grouped
