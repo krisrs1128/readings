@@ -26,6 +26,17 @@
 #' mus <- gaussian_rw(mu0, ts, sigmas)
 #' plot(ts, mus[, 1])
 #'
+#' ## random walk on sigmas, in log space
+#' log_sigmas <- gaussian_rw(0, ts)
+#' plot(5 * exp(log_sigmas))
+#' mus <- gaussian_rw(mu0, ts, 5 * exp(log_sigmas))
+#' plot(ts, mus[, 1])
+#'
+#' ## gaussian process on sigmas
+#' library("simData") # github.com/krisrs1128/simData
+#' sigmas <- abs(gp_data(ts, bandwidth = 5e-3))
+#' mus <- gaussian_rw(mu0, ts, sigmas)
+#' plot(ts, mus[, 1])
 gaussian_rw <- function(mu0, ts, sigmas = NULL) {
   n_times <- length(ts)
   p <- length(mu0)
@@ -46,6 +57,12 @@ gaussian_rw <- function(mu0, ts, sigmas = NULL) {
   rw(mu0, deltas)
 }
 
+#' Standard RW
+#'
+#' @param x0 [length p numeric vector] Initial value of random walk
+#' @param deltas [dimension T x p matrix] Value of changes for each (of T) steps
+#'   in the RW
+#' @return x [dimension T + 1 x p matrix] The summed deltas at each time point
 rw <- function(x0, deltas) {
   n_times <- 1 + nrow(deltas)
   p <- ncol(deltas)
