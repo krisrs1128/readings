@@ -37,6 +37,12 @@
 #' sigmas <- abs(gp_data(ts, bandwidth = 5e-3))
 #' mus <- gaussian_rw(mu0, ts, sigmas)
 #' plot(ts, mus[, 1])
+#'
+#' ## iid inverse gammas for sigma
+#' sigmas <- 1 / rgamma(length(ts), 5, 5)
+#' plot(sigmas)
+#' mus <- gaussian_rw(mu0, ts, sqrt(sigmas))
+#' plot(ts, mus[, 1])
 gaussian_rw <- function(mu0, ts, sigmas = NULL) {
   n_times <- length(ts)
   p <- length(mu0)
