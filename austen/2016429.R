@@ -32,6 +32,9 @@ min_theme <- theme_update(
 )
 
 ## ---- start-analysis ----
+data("stop_words")
+data("sentiments")
+
 original_books <- austen_books() %>%
   group_by(book) %>%
   mutate(
@@ -42,42 +45,25 @@ original_books <- austen_books() %>%
   ) %>%
   ungroup()
 
-original_books
+original_books <- original_books %>%
+  mutate(index = linenumber %/% 80) %>%
+  unnest_tokens(word, text)
 
-data("stop_words")
-books <- original_books %>%
-  unnest_tokens(word, text) %>%
+books <- books %>%
   anti_join(stop_words)
 
-books %>%
-  count(word, sort = TRUE)
-
-data("sentiments")
 bing <- sentiments %>%
   filter(lexicon == "bing") %>%
   select(-score)
 
 sentiment_labels <- books %>%
   inner_join(bing) %>%
-  mutate(index = linenumber %/% 80) %>%
   arrange(book, linenumber)
-sentiment_labels
 
 sentiment_count <- sentiment_labels %>%
   count(book, index, sentiment) %>%
   spread(sentiment, n, fill = 0) %>%
   mutate(sentiment = positive - negative)
-
-sentiment_count %>%
-  arrange(sentiment)
-
-## well damn
-sentiment_labels %>%
-  filter(
-    book == "Mansfield Park",
-    index == 179
-  ) %>%
-  as.data.frame()
 
 ## order books
 book_order <- sentiment_count %>%
@@ -98,3 +84,20 @@ ggplot(sentiment_count) +
   ) +
   scale_fill_gradient2(low = "#6f426f", high = "#426f6f") +
   facet_wrap(~book, ncol = 2, scales = "free_x")
+
+## well damn
+sentiment_labels %>%
+  filter(
+    book == "Mansfield Park",
+    index == 179
+  )
+
+## the most depressing passage
+book_index <- sentiment_labels %>%
+  select(linenumber, index, word, sentiment) %>%
+  right_join(original_books)
+
+book_index %>%
+  filter(book == "Mansfield Park", index == 179) %>%
+  .[["word"]] %>%
+  paste(collapse = " ")
