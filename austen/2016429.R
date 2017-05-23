@@ -158,20 +158,23 @@ taxa_sub <- cbind(
 
 taxa_sub <- taxa_sub[, c(2, 1, 3:8)]
 rownames(taxa_sub) <- NULL
-
 cat(sprintf("var sample_rsv = %s", toJSON(taxa_sub, auto_unbox = FALSE)), file = "~/Desktop/lab_meetings/20170519/sample_rsv.js")
 
 ## topic evolution data
+n <- 250
+time <- seq(0, 1, length.out = n)
+y <- sin(time * 2 * pi * 2.2) #+ runif(100, -0.2, 0.2)
+x <- cos(time * 2 * pi * 3) #+ runif(100, -0.2, 0.2)
+z <- (sin(time * 2 * pi * 3)) ^ 2 #+ runif(100, -0.2, 0.2)
 
-time <- seq(0, 1, length.out = 100)
-y <- sin(time * 2 * pi * 0.5) + runif(100, -0.2, 0.2)
-plot(x = time, y = y)
+p_data <- apply(
+  cbind(x, y, z), 1,
+  function(a) exp(a) / sum(exp(a))
+) %>% t()
 
-cat(sprintf("var sentiment_sketch = %s", toJSON(data.frame(time = time, y = y))), file = "~/Desktop/lab_meetings/20170519/sentiment_sketch.js")
+A <- matrix(c(0, 0.5, 1, 0, 1, 0, 0, 0, 0), byrow = F, ncol = 3)
+p_data <- p_data %*% A
+plot(A[, 1:2], asp = 1)
+points(p_data[, 1:2], asp = 1)
 
-x <- cos(time * 2 * pi * 3) + runif(100, -0.2, 0.2)
-plot(x, y, col = "white")
-for (i in seq_along(x)) {
-  points(x[i], y[i])
-  Sys.sleep(0.1)
-}
+cat(sprintf("var sketch_data = %s", toJSON(data.frame(i = 0:(n - 1), x = p_data[, 1], y = p_data[, 2]))), file = "~/Desktop/lab_meetings/20170519/sketch_data.js")
