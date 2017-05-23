@@ -10,6 +10,7 @@ library("tidytext")
 library("janeaustenr")
 library("dplyr")
 library("stringr")
+library("jsonlite")
 
 scale_colour_discrete <- function(...)
   scale_colour_brewer(..., palette="Set2")
@@ -49,11 +50,11 @@ original_books <- original_books %>%
   mutate(index = linenumber %/% 80) %>%
   unnest_tokens(word, text)
 
-books <- books %>%
+books <- original_books %>%
   anti_join(stop_words)
 
 bing <- sentiments %>%
-  filter(lexicon == "bing") %>%
+  filter(lexicon == "bing", word != "miss") %>%
   select(-score)
 
 sentiment_labels <- books %>%
@@ -95,9 +96,85 @@ sentiment_labels %>%
 ## the most depressing passage
 book_index <- sentiment_labels %>%
   select(linenumber, index, word, sentiment) %>%
-  right_join(original_books)
+  right_join(original_books) %>%
+  group_by(book, index, linenumber) %>%
+  mutate(word_ix = seq_len(n()) - 1, nchar = nchar(word) + 1, nchar_sum = cumsum(nchar),
+         nchar_offset = c(0, nchar_sum[-length(nchar_sum)])) %>%
+  group_by(book, index, sentiment) %>%
+  mutate(sentiment_ix = seq_len(n()))
+
+glimpse(book_index, width = 500)
+
+## ---- write-data ----
+p <- ggplot(book_index %>% filter(book == "Mansfield Park", index == 179) %>% replace_na(list("sentiment" = "unknown"))) +
+  geom_text(aes(y = -linenumber, x = nchar_offset, label = word, col = sentiment), size = 3.8,  hjust = 0, family = "Courier")
+
+p <- ggplot(book_index %>% filter(book == "Pride & Prejudice", linenumber < 30) %>% replace_na(list("sentiment" = "unknown"))) +
+  geom_text(aes(y = -linenumber, x = nchar_offset, label = word, col = sentiment), size = 3.8,  hjust = 0, family = "Courier")
+
+book_small <- rbind(
+  book_index %>%
+  filter(book == "Mansfield Park", index == 179),
+  book_index %>%
+  filter(book == "Pride & Prejudice", index < 3)
+) %>%
+  replace_na(list("sentiment" = "none"))
+
+cat(sprintf("var sentiment = %s;", toJSON(sentiment_count, auto_unbox = FALSE)), file = "~/Desktop/lab_meetings/20170519/sentiment.js")
+cat(sprintf("var book = %s;", toJSON(book_small, auto_unbox = FALSE)), file = "~/Desktop/lab_meetings/20170519/book.js")
 
 book_index %>%
-  filter(book == "Mansfield Park", index == 179) %>%
-  .[["word"]] %>%
-  paste(collapse = " ")
+  filter(linenumber == 10, index == 0) %>%
+  glimpse()
+
+book_index %>%
+  filter(index == 1, book == "Pride & Prejudice", sentiment == "positive") %>%
+  glimpse()
+
+## Write top of document term matrix
+passage_term <- book_index %>%
+  filter(!(word %in% stop_words$word)) %>%
+  ungroup() %>%
+  select(-sentiment) %>%
+  count(book, index, word) %>%
+  arrange(desc(n)) %>%
+  spread(word, n, fill = 0)
+
+col_sums <- apply(passage_term[, -c(1, 2)], 2, sum)
+passage_sub <- passage_term[1:10, c(2, 1, 2 + order(col_sums, decreasing = TRUE)[1:8])]
+cat(sprintf("var document_term = %s", toJSON(passage_sub, auto_unbox = FALSE)), file = "~/Desktop/lab_meetings/20170519/document_term.js")
+
+## Write top of microbiome counts matrix
+library("treelapse")
+library("phyloseq")
+data(abt)
+sample_data(abt)
+taxa_order <- order(taxa_sums(abt), decreasing = TRUE)
+taxa_sub <- cbind(
+  sample_data(abt)[1:10, c("ind", "time")],
+  t(get_taxa(abt))[1:10, taxa_order[1:8]]
+) %>%
+  rename(subject = ind)
+
+taxa_sub <- taxa_sub[, c(2, 1, 3:8)]
+rownames(taxa_sub) <- NULL
+cat(sprintf("var sample_rsv = %s", toJSON(taxa_sub, auto_unbox = FALSE)), file = "~/Desktop/lab_meetings/20170519/sample_rsv.js")
+
+## topic evolution data
+n <- 250
+time <- seq(0, 1, length.out = n)
+y <- sin(time * 2 * pi * 2.2) #+ runif(100, -0.2, 0.2)
+x <- cos(time * 2 * pi * 3) #+ runif(100, -0.2, 0.2)
+z <- (sin(time * 2 * pi * 3)) ^ 2 #+ runif(100, -0.2, 0.2)
+
+p_data <- apply(
+  cbind(x, y, z), 1,
+  function(a) exp(a) / sum(exp(a))
+) %>% t()
+
+A <- matrix(c(0, 0.5, 1, 0, 1, 0, 0, 0, 0), byrow = F, ncol = 3)
+p_data <- p_data %*% A
+plot(A[, 1:2], asp = 1)
+points(p_data[, 1:2], asp = 1)
+
+cat(sprintf("var sketch_data = %s", toJSON(data.frame(i = 0:(n - 1), x = p_data[, 1], y = p_data[, 2]))), file = "~/Desktop/lab_meetings/20170519/sketch_data.js")
