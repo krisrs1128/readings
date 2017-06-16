@@ -141,7 +141,7 @@ passage_term <- book_index %>%
   spread(word, n, fill = 0)
 
 col_sums <- apply(passage_term[, -c(1, 2)], 2, sum)
-passage_sub <- passage_term[1:10, c(2, 1, 2 + order(col_sums, decreasing = TRUE)[1:8])]
+passage_sub <- passage_term[1:20, c(2, 1, 2 + order(col_sums, decreasing = TRUE)[1:8])]
 cat(sprintf("var document_term = %s", toJSON(passage_sub, auto_unbox = FALSE)), file = "~/Desktop/lab_meetings/20170519/document_term.js")
 
 ## Write top of microbiome counts matrix
@@ -151,12 +151,12 @@ data(abt)
 sample_data(abt)
 taxa_order <- order(taxa_sums(abt), decreasing = TRUE)
 taxa_sub <- cbind(
-  sample_data(abt)[1:10, c("ind", "time")],
-  t(get_taxa(abt))[1:10, taxa_order[1:8]]
+  sample_data(abt)[1:20, c("ind", "time")],
+  t(get_taxa(abt))[1:20, taxa_order[1:7]]
 ) %>%
   rename(subject = ind)
 
-taxa_sub <- taxa_sub[, c(2, 1, 3:8)]
+taxa_sub <- taxa_sub[, c(2, 1, 3:9)]
 rownames(taxa_sub) <- NULL
 cat(sprintf("var sample_rsv = %s", toJSON(taxa_sub, auto_unbox = FALSE)), file = "~/Desktop/lab_meetings/20170519/sample_rsv.js")
 
