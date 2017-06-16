@@ -1,0 +1,190 @@
+\documentclass{article}
+\usepackage{natbib}
+\usepackage{amssymb, amsmath}
+\usepackage{graphicx}
+\input{preamble.tex}
+
+\title{Notes on Sampling NBP with Augmentation}
+\author{Kris Sankaran}
+
+\begin{document}
+
+This is a brief summary of \citep{zhou2012augment}, just for future reference.
+The overall goal of the paper is to leverage a relatively less well-known
+representation of the negative binomial distribution in order to facilitate
+sampling of a NBP with a hierarchical GaP prior on the overdispersion parameter.
+This model has an interpretation as the unnormalized, completely random measure
+analog of the hierarchical dirichlet process \citep{teh2005sharing}. The main
+advantage of the NBP here is that, when properly augmented, it's possible to do
+exact gibbs sampling, which makes implementation more straightforwards than for
+the HDP. One point not emphasized so much in the paper, but which is how their
+sampler is actually implemented, is that their exact sampler is for a
+hierarchical dirichlet distribution with large $K$, not actually an HDP. Since
+the hierarchical dirichlet distribution is actually pretty useful in practice
+\citep{wallach2006topic}, I have no problem with this, but just be aware that
+some of the advertising in the paper is a little misleading. Anyways, onto the
+actual summary.
+
+\section{Observation \#1 (Philosophical)}
+
+The first main point is that an elementary property of marked poisson processes
+allows a connection between count and mixture modeling. Informally, count
+modeling is reflected by the counts of arrivals in a poisson process. If we mark
+each arrival with color $k$ with probability $p_{k}$ and then condition on the
+total number of arrivals, the resulting distribution is multinomial with
+probabilities $p_{k}$ -- i.e., the conditioned process can be interpreted as a
+mixture model. Using the notation of the paper, if $X_{j}\left(\cdot\right)$ are
+$J$ different $\PoiP\left(G\right)$ ($G$ is a potentially inhomegenous rate
+function), then for any partition $A_{1}, \dots, A_{q}$, we have for each $j$
+
+\begin{align}
+  \left(X_{j}\left(A_{1}\right), \dots, X_{j}\left(A_{q}\right)\right) \vert X_{j}\left(\Omega\right) \sim \Mult\left(\X_{j}\left(\Omega\right), \tilde{G}\left(A_{1}\right), \dots, \tilde{G}\left(A_{q}\right)\right),
+\end{align}
+where $\tilde{G}$ is the normalized rate measure, $\tilde{G} =
+\frac{G}{G\left(\Omega\right)}$.
+
+\section{Observation \#2 (Mathematical)}
+
+The essential research idea of this paper depends on an
+elementary-but-I-had-never-seen-before probability fact. Let $m \sim NB\left(r,
+p\right)$, a negative binomial with overdispersion\footnote{Confusingly, the
+  associated overdispersion is $r^{-1}$.} parameter $r$ and probability $p$. Then, there is as representation,
+\begin{align}
+  m \vert l &\sim \sum^{l} \Log\left(p\right) \\
+  l &\sim \Poi\left(-r \log\left(1 - p\right)\right),
+\end{align}
+where the sum in the first line is shorthand for the sum of $l$ i.i.d.
+Logarithmically distributed variables. There is actually a connection between
+this representation and the chinese restaurant process -- $l$ can be thought of
+as the number of tables at which a total number of $m$ customers are seated, but
+this is not the focus of this paper, see \citep{zhou2015negative} instead.
+
+Now, recall the more standard fact that $m$ can also be represented as
+\begin{align}
+  m \vert \lambda &\sim \Poi\left(\lambda\right) \\
+  \lambda &\sim \Gamma\left(r, \frac{p}{1 - p}\right).
+\end{align}
+
+Combining these facts, we can get a nice representation of a negative binomial
+with a gamma prior on the overdispersion parameter, more precisely, for $m \sim
+NB\left(r, p\right)$ where $r \sim \Gamma\left(r_{1}, \frac{1}{c_{1}}\right)$.
+The first step is to write
+\begin{align}
+  m \vert l &\sim \sum^{l} \Log\left(p\right) \\
+  l \vert r &\sim \Poi\left(-r\log\left(1 - p\right)\right) \\
+  r &\sim \Gamma\left(r_{1}, \frac{1}{c_{1}}\right).
+\end{align}
+Marginalizing out $r$, we see that $l$ is also negative binomial. So, we can use
+the logarithmic representation again, which gives
+\begin{align}
+  m \vert l &\sim \sum^{l} \Log\left(p\right) \\
+  l \vert l^{\prime} &\sim \sum^{l^{\prime}} \Log\left(p^{\prime}\right) \\
+  l^{\prime} &\sim \Poi\left(-r_{1} \log\left(1 - p^{\prime}\right)\right),
+\end{align}
+where $p^{\prime} = \frac{-\log\left(1 - p\right)}{c - \log\left(1 - p\right)}$.
+
+\section{How these are useful}
+
+These calculations are not complicated, but they are definitely not obvious, and
+their implications are subsantial. First of all, by making the same arguments as
+above across partitions of the sample space, we can get a negative binomial
+process analog of the representation in the previous section,
+\begin{align}
+  X_{j} \vert G &\sim \NBP\left(G, p_{j}\right) \\
+  G &\sim \GaP\left(c, G_{0}\right)
+\end{align}
+is equivalent to
+\begin{align}
+  X_{j} \vert \Lambda_{j} &\sim \PoiP\left(\Lambda_{j}\right) \\
+  \Lambda_{j} \vert G &\sim \GaP\left(\frac{1 - p_{j}}{p_{j}}, G\right) \\
+  G &\sim \GaP\left(c, G_{0}\right),
+\end{align}
+which in turn is equivalent to
+\begin{align}
+  X_{j} \vert L_{j} &\sim \sum^{L_{j}} \Log\left(p_{j}\right) \\
+  L_{j} \vert L^{\prime} &\sim \sum^{L^{\prime}} \Log\left(p^{\prime}\right) \\
+  L^{\prime} &\sim \PoiP\left(-G_{0}\log\left(1 - p^{\prime}\right)\right),
+\end{align}
+where $p^{\prime}$ is the same transformation of $p$ discussed before. Think of
+the $L_{j}$ as per-corpus dirichlet process mixture weights, while $L^{\prime}$
+defines the shared-across-corpuses dirichlet base measure in the HDP (of course,
+these are not actually dirichlet processes, though if you consider normalizing
+the $G$'s you can see the connection).
+
+\subsection{LDA analog}
+
+The point of this representation of the NBP prior is that allows gibbs sampling
+in many natural nonparameteric mixture modeling scenarios. Consider the case
+that the base measure $G_{0}$ is discrete with $K$ atoms $\omega_{1}, \dots,
+\omega_{K}$. Then, the NBP models listed above reduce to hierarchical versions
+of common discrete distributions (this is the reason for the cavet mentioned in
+the intro). For example, $G_{0}$ can now be written as $\sum_{k = 1}^{K} r_{k}
+\delta_{\omega_{k}}$ for $r_{k}$ drawm from a $\Gamma\left(\frac{\gamma_{0}}{K},
+\frac{1}{c}\right)$.
+
+In this setting, it is natural to consider an analog of LDA. Let $x_{ji} \sim
+F\left(\omega_{z_{ji}}\right)$ be the term associated with the $i^{th}$ word in
+the $j^{th}$ document. Using an NBP prior to assign topics $z_{ji}$, and using a
+Dirichlet distribution to define the positions of atoms in the base measure, we
+have
+\begin{align}
+  x_{ji} \vert z_{ji}, \left(\omega_{k}\right) &\sim F\left(\omega_{z{ji}}\right) \\
+  \omega_{k} &\sim \Dir\left(\eta 1_{V}\right) \\
+  N_{j} \vert \left(\lambda_{jk}\right)&= \sum_{k = 1}^{K} \Poi\left(\lambda_{jk}\right) \\
+  \lambda_{jk} \vert r_{j}, p_{j} &\sim \Gamma\left(r_{j}, \frac{p_{j}}{1 - p_{j}}\right) \\
+  r_{j} &\sim \Gamma\left(\gamma_{0}, \frac{1}{c}\right)
+\end{align}
+and less crucially, we can place conjugate priors on some of hte remaining
+variables,
+\begin{align}
+  p_{j} &\sim \Bet\left(a_{0}, p_{0}\right) \\
+  \gamma_{0} &\sim \Gamma\left(e_{0}, \frac{1}{f_{0}}\right).
+\end{align}
+We can interpret the relative size of $\lambda_{jk}$'s as the ``amount'' of
+topic $k$ in document $j$. Note that we have put a natural conjugate prior on
+the $p_{j}$, but there is otherwise nothing special about this parameter (this
+is a major difference between this paper and \cite{broderick2015combinatorial}).
+
+Augmenting this description with the logarithmically distributed variables
+described before, the complete conditionals are then all available in closed
+form,
+\begin{align}
+  p_{j} \vert \dots &\sim \Bet\left(a_{0} + N_{j}, b_{0} + \sum r_{k}\right) \\
+  l_{jk} \vert \dots &\sim \CRT\left(n_{jk}, r_{k}\right) \\
+  l^{\prime}_{k} \vert \dots &\sim \CRT\left(\sum l_{jk}, \frac{\gamma_{0}}{K}\right) \\
+  \gamma_{0} \vert \dots &\sim \Gamma\left(e_{0} + \sum l^{\prime}_{k}, \frac{1}{f_{0} - \log\left(1 - p^{\prime}\right)}\right) \\
+  r_{k} \vert \dots &\sim \Gamma\left(\frac{\gamma_{0}}{K} + \sum l_{jk}, \frac{1}{c - \sum \log\left(1 - p_{j}\right)}\right) \\
+  \lambda_{jk} \vert \dots &\sim \Gamma\left(r_{k} + n_{jk}, p_{j}\right).
+\end{align}
+
+
+Note that we could alternatively work in terms of the $N_{j}$'s, so we only
+really need word counts. This just collapses the state-space for the sampler (we
+no longer need the $z_{ji}$'s).
+
+They note a few extensions of this model,
+\begin{itemize}
+\item It's possible to put a beta process prior on the $p_{j}$'s, to encourage sharing among them.
+  \item Instead of $r_{j}$'s you can use $RZ_{j}$ where the $Z_{j}$'s are
+    bernoulli, to induce zero inflation.
+\end{itemize}
+
+\subsection{Zero-Inflation}
+
+Since zero-inflation is of direct interest to our lab, we write the model in
+more detail. Inference is described in the appendix of the paper, and is very
+similar to the description written above. The main difference is that there is a
+$b_{jk}$ binary variable that specifies whether a particular topic ever appears
+within a given document.
+
+\begin{align}
+  n_{jk} \vert \lambda_{jk} &\sim \Poi\left(\lambda_{jk}\right) \\
+  \lambda_{jk} \vert b_{jk}, r_{j}, p_{j} &\sim \Gamma\left(r_{k}b_{jk}, \frac{p_{j}}{1 - p_{j}}\right) \\
+  r_{k} &\sim \Gamma\left(\gamma_{0}, \frac{1}{c}\right) \\
+  b_{jk} &\sim \Ber\left(\pi_{k}\right) \\
+  \pi_{k} &\sim \Bet\left(\frac{c}{K}, c\left(1 - \frac{1}{K}\right)\right)
+\end{align}
+
+\bibliographystyle{plainnat}
+\bibliography{refs.bib}
+\end{document}
