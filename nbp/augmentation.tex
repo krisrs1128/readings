@@ -1,0 +1,46 @@
+\documentclass{article}
+\usepackage{natbib}
+\usepackage{graphicx}
+\input{preamble.tex}
+
+\title{Notes on Sampling NBP with Augmentation}
+\author{Kris Sankaran}
+
+\begin{document}
+
+This is a brief summary of \citep{zhou2012augment}, just for future reference.
+The overall goal of the paper is to leverage a relatively less well-known
+representation of the negative binomial distribution in order to facilitate
+sampling of a NBP with a hierarchical GaP prior on the overdispersion parameter.
+This model has an interpretation as the unnormalized, completely random measure
+analog of the hierarchical dirichlet process \citep{teh2005sharing}. The main
+advantage of the NBP here is that, when properly augmented, it's possible to do
+exact gibbs sampling, which makes implementation more straightforwards than for
+the HDP. One point not emphasized so much in the paper, but which is how their
+sampler is actually implemented, is that their exact sampler is for a
+hierarchical dirichlet distribution with large $K$, not actually an HDP. Since
+the hierarchical dirichlet distribution is actually pretty useful in practice
+\citep{wallach2006topic}, I have no problem with this, but just be aware that
+some of the advertising in the paper is a little misleading. Anyways, onto the
+actual summary.
+
+The first main point is that an elementary property of marked poisson processes
+allows a connection between count and mixture modeling. Informally, count
+modeling is reflected by the counts of arrivals in a poisson process. If we mark
+each arrival with color $k$ with probability $p_{k}$ and then condition on the
+total number of arrivals, the resulting distribution is multinomial with
+probabilities $p_{k}$ -- i.e., the conditioned process can be interpreted as a
+mixture model. Using the notation of the paper, if $X_{j}\left(\cdot\right)$ are
+$J$ different $\PoiP\left(G\right)$ ($G$ is a potentially inhomegenous rate
+function), then for any partition $A_{1}, \dots, A_{q}$, we have for each $j$
+
+\begin{align}
+  \left(X_{j}\left(A_{1}\right), \dots, X_{j}\left(A_{q}\right)\right) \vert X_{j}\left(\Omega\right) \sim \Mult\left(\X_{j}\left(\Omega\right), \tilde{G}\left(A_{1}\right), \dots, \tilde{G}\left(A_{q}\right)\right),
+\end{align}
+where $\tilde{G}$ is the normalized rate measure, $tilde{G} =
+\frac{G}{G\left(\Omega\right)}$.
+
+\bibliographystyle{plainnat}
+\bibliography{refs.bib}
+
+\end{document}
