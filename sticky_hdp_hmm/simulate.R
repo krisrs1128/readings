@@ -43,7 +43,7 @@ sbp <- function(alpha, K) {
 
 #' @examples
 #' P <- trans_mat(10, 50)
-trans_mat <- function(alpha, K, kappa = 0) {
+trans_mat <- function(alpha, K) {
   P <- matrix(0, K, K)
   for (k in seq_len(K)) {
     P[k, ] <- sbp(alpha, K)
