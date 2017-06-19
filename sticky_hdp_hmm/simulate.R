@@ -88,3 +88,13 @@ markov_chain <- function(P, time_len = 100) {
   }
   z
 }
+
+#' @examples
+#' rnorm_inv_wishart(c(0, 0), 2, diag(c(1, 2)), 30)
+rnorm_inv_wishart <- function(mu0, lambda, Psi, eta) {
+  sigma <- rWishart(1, eta, Psi)[,, 1]
+  eigen_sigma <- eigen(sigma)
+  sigma_sqrt <- eigen_sigma$vectors %*% diag(sqrt(eigen_sigma$values)) %*% eigen_sigma$vectors
+  mu <- (sigma_sqrt / sqrt(lambda)) %*% rnorm(length(mu0), mu0)
+  list("mu" = mu, "sigma" = sigma)
+}
