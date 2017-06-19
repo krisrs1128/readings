@@ -43,10 +43,21 @@ sbp <- function(alpha, K) {
 
 #' @examples
 #' P <- trans_mat(10, 50)
-trans_mat <- function(alpha, K) {
+trans_mat <- function(alpha, K, kappa = 0) {
   P <- matrix(0, K, K)
   for (k in seq_len(K)) {
     P[k, ] <- sbp(alpha, K)
   }
   P
+}
+
+P <- trans_mat(1, 10)
+markov_chain <- function(P, time_len = 100) {
+  ## start in a random state
+  K <- nrow(P)
+  z <- c(sample(seq_len(K), 1), vector(length = time_len - 1))
+  for (i in seq_len(time_len - 1)) {
+    z[i + 1] <- sample(seq_len(K), size = 1, prob = P[z[i], ])
+  }
+  z
 }
