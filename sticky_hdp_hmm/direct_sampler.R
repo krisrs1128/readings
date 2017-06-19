@@ -50,10 +50,10 @@ prior_predictive <- function(z_prev, z_next, n, alpha, beta, kappa) {
   pzt
 }
 
-update_f <- function(yt, pzt, theta) {
+update_f <- function(yt, pzt, emission) {
   K <- length(pzt) - 1
   for (k in seq_len(K + 1)) {
-    f[k] <- f[k] * dmvt(yt, theta[k]$mu, theta[k]$sigma_sq, theta[k]$nu)
+    f[k] <- f[k] * likelihood_reweight(yt, emission[k])
   }
   f
 }
@@ -86,4 +86,11 @@ increment_emission <- function(emission_k, yt) {
     emission_k$zeta_theta %*% t(emission_k$zeta_theta) / emission_k$zeta
 
   emission_k
+}
+
+likelihood_reweight <- function(y, emission_k) {
+  theta <- (1 / emission_k$zeta) * emission_k$zeta_theta
+  d <- nrow(emission_k$theta)
+  nu_delta_coef <- (emission_k$zeta + 1) / (emission_k$zeta * (emission_k$nu - d - 1))
+  dmvt(y, theta, nu_delta_coef * emission_k$nu_delta)
 }
