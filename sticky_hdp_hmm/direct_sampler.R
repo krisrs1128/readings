@@ -11,12 +11,40 @@
 library("mvtnorm")
 
 ## ---- utils ----
+
+sample_z <- function(y, z, emission, alpha, beta, kappa, gamma, lambda) {
+  n <- transition_counts(z)
+  time_len <- length(z)
+  for (i in seq(2, time_len - 1)) {
+    K <- max(z)
+
+    ## decrements
+    n <- update_count(n, z[i - 1], z[i], z[i + 1], -1)
+    emission[z[i]] <- update_emission(emission[z[i]], -1)
+
+    ## update according to prior predictive * likelihood
+    pzt <- prior_predictive(z[i - 1], z[i], z[i + 1], n, alpha, beta, kappa)
+    f <- update_f(y[i], pzt, emission)
+    z[i] <- sample(seq_along(f), 1, prob = f)
+
+    ## grow K, if sample new state
+    if (max(z) > K) {
+      beta <- grow_beta(beta, gamma)
+      emission <- c(emission, emission_prior(lambda))
+    }
+
+    ## increment
+    n <- update_count(n, z[i - 1], z[i], z[i + 1], 1)
+    emission[z[i]] <- update_emission(emission[z[i]], y[i], 1)
+  }
+}
+
 #' @examples
 #' z <- c(1, 1, 2, 1, 1, 3, 3, 3, 1)
 #' transition_counts(z)
 transition_counts <- function(z) {
   K <- max(z)
-  n <- matrix(0, nrow = K, ncol = K)
+  n <- matrix(0, nrow = K + 1, ncol = K + 1)
   time_len <- length(z)
 
   for (i in seq_len(time_len - 1)) {
@@ -25,14 +53,9 @@ transition_counts <- function(z) {
   n
 }
 
-decrement_count <- function(n, z_prev, z_cur, z_next) {
-  n[z_prev, z_cur] <- n[z_prev, z_cur] - 1
-  n[z_cur, z_next] <- n[z_cur, z_next] - 1
-}
-
-increment_count <- function(n, z_prev, z_cur, z_next) {
-  n[z_prev, z_cur] <- n[z_prev, z_cur] + 1
-  n[z_cur, z_next] <- n[z_cur, z_next] + 1
+update_count <- function(n, z_prev, z_cur, z_next, s) {
+  n[z_prev, z_cur] <- n[z_prev, z_cur] + s
+  n[z_cur, z_next] <- n[z_cur, z_next] + s
 }
 
 prior_predictive <- function(z_prev, z_next, n, alpha, beta, kappa) {
@@ -66,26 +89,24 @@ grow_beta <- function(beta, gamma) {
 
 #' single term emission updates for the normal inverse wishart prior
 #' see page 217 of Emily Fox's thesis
-decrement_emission <- function(emission_k, yt) {
-  emission_k$zeta <- emission_k$zeta - 1
-  emission_k$nu <- emission_k$nu - 1
+update_emission <- function(emission_k, yt, s) {
+  emission_k$zeta <- emission_k$zeta + s
+  emission_k$nu <- emission_k$nu + s
   old_zeta_theta <- emission_k$zeta_theta
-  emission_k$zeta_theta <- emission_k$zeta_theta - yt
-  emission_k$nu_delta <- emission_k$nu_delta - yt %*% t(yt) + old_zeta_theta -
+  emission_k$zeta_theta <- emission_k$zeta_theta + s * yt
+  emission_k$nu_delta <- emission_k$nu_delta + s * yt %*% t(yt) + old_zeta_theta -
     emission_k$zeta_theta %*% t(emission_k$zeta_theta) / emission_k$zeta
 
   emission_k
 }
 
-increment_emission <- function(emission_k, yt) {
-  emission_k$zeta <- emission_k$zeta + 1
-  emission_k$nu <- emission_k$nu + 1
-  old_zeta_theta <- emission_k$zeta_theta
-  emission_k$zeta_theta <- emission_k$zeta_theta + yt
-  emission_k$nu_delta <- emission_k$nu_delta + yt %*% t(yt) + old_zeta_theta -
-    emission_k$zeta_theta %*% t(emission_k$zeta_theta) / emission_k$zeta
-
-  emission_k
+emission_prior <- function(lambda) {
+  list(
+    "zeta" = lambda$zeta,
+    "nu" = lambda$nu,
+    "zeta_theta" = lambda$zeta * lambda$theta,
+    "nu_delta" = lambda$nu * lambda$delta
+  )
 }
 
 likelihood_reweight <- function(y, emission_k) {
