@@ -63,3 +63,27 @@ grow_beta <- function(beta, gamma) {
   beta_new <- rbeta(1, gamma) * beta[K + 1]
   c(beta[-(K + 1)], beta_new, 1 - sum(beta[-(K + 1)]) - beta_new)
 }
+
+#' single term emission updates for the normal inverse wishart prior
+#' see page 217 of Emily Fox's thesis
+decrement_emission <- function(emission_k, yt) {
+  emission_k$zeta <- emission_k$zeta - 1
+  emission_k$nu <- emission_k$nu - 1
+  old_zeta_theta <- emission_k$zeta_theta
+  emission_k$zeta_theta <- emission_k$zeta_theta - yt
+  emission_k$nu_delta <- emission_k$nu_delta - yt %*% t(yt) + old_zeta_theta -
+    emission_k$zeta_theta %*% t(emission_k$zeta_theta) / emission_k$zeta
+
+  emission_k
+}
+
+increment_emission <- function(emission_k, yt) {
+  emission_k$zeta <- emission_k$zeta + 1
+  emission_k$nu <- emission_k$nu + 1
+  old_zeta_theta <- emission_k$zeta_theta
+  emission_k$zeta_theta <- emission_k$zeta_theta + yt
+  emission_k$nu_delta <- emission_k$nu_delta + yt %*% t(yt) + old_zeta_theta -
+    emission_k$zeta_theta %*% t(emission_k$zeta_theta) / emission_k$zeta
+
+  emission_k
+}
