@@ -52,7 +52,14 @@ prior_predictive <- function(z_prev, z_next, n, alpha, beta, kappa) {
 
 update_f <- function(yt, pzt, theta) {
   K <- length(pzt) - 1
-  for (k in seq_len(K)) {
+  for (k in seq_len(K + 1)) {
     f[k] <- f[k] * dmvt(yt, theta[k]$mu, theta[k]$sigma_sq, theta[k]$nu)
   }
+  f
+}
+
+grow_beta <- function(beta, gamma) {
+  K <- length(beta) - 1
+  beta_new <- rbeta(1, gamma) * beta[K + 1]
+  c(beta[-(K + 1)], beta_new, 1 - sum(beta[-(K + 1)]) - beta_new)
 }
