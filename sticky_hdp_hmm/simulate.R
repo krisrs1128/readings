@@ -66,11 +66,12 @@ sticky_hdp_given_G0 <- function(alpha, kappa, j, beta0) {
 }
 
 #' @examples
-#' P <- trans_mat(10, 50)
-trans_mat <- function(alpha, K) {
-  P <- matrix(0, K, K)
+#' P <- trans_mat(3, 3, 15, 1.5)
+trans_mat <- function(gamma, alpha, K, kappa) {
+  P <- matrix(0, K + 1, K + 1)
+  beta0 <- sbp(gamma, K) ## weights from G0
   for (k in seq_len(K)) {
-    P[k, ] <- sbp(alpha, K)
+    P[k, ] <- sticky_hdp_given_G0(alpha, kappa, k, beta0)
   }
   P
 }
