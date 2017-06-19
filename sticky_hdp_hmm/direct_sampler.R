@@ -12,6 +12,11 @@ library("mvtnorm")
 
 ## ---- utils ----
 
+K <- 50
+gamma <- 4
+alpha <- 4
+kappa <- 1.4
+
 sample_z <- function(y, z, emission, alpha, beta, kappa, gamma, lambda) {
   n <- transition_counts(z)
   time_len <- length(z)
