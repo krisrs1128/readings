@@ -31,14 +31,38 @@ tidy_melt <- function(x, row_var = "row", col_var = "col", value_name = "value")
 #'   geom_point(aes(x = k, y = value), alpha = 0.05, size = 0.3)
 sbp <- function(alpha, K) {
   stick_remaining <- 1
-  pi <- vector(length = K)
-  for (k in seq_len(K - 1)) {
+  pi <- vector(length = K + 1)
+  for (k in seq_len(K)) {
     pi[k] <- rbeta(1, 1, alpha) * stick_remaining
     stick_remaining <- stick_remaining - pi[k]
   }
-  pi[K] <- stick_remaining
+  pi[K + 1] <- stick_remaining
 
   pi
+}
+
+#' @examples
+#' beta0 <- sbp(1, 10) ## weights associated with draw from G0
+#' pi_j <- sticky_hdp_masses(5, 0.5, 3, beta0)
+sticky_hdp_given_G0 <- function(alpha, kappa, j, beta0) {
+  K <- length(beta0) - 1
+  if (j > K) {
+    stop("sticky transition index must be smaller than K")
+  }
+  beta1 <- sbp(alpha + kappa, K)
+  pi_j <- vector(length = K + 1)
+
+  for (k in seq_len(K)) {
+    sticky_indic <- runif(1) < kappa / (alpha + kappa)
+    if (sticky_indic) {
+      pi_j[j] <- pi_j[j] + beta1[k]
+    } else {
+      cur_atom <- sample(seq_len(K + 1), 1, prob = beta0) ## a draw from G_{0}
+      pi_j[cur_atom] <- pi_j[cur_atom] + beta1[k]
+    }
+  }
+
+  pi_j
 }
 
 #' @examples
