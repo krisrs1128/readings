@@ -76,7 +76,9 @@ trans_mat <- function(gamma, alpha, K, kappa) {
   P
 }
 
-P <- trans_mat(1, 10)
+#' @examples
+#' P <- trans_mat(3, 3, 15, 1.5)
+#' z <- markov_chain(P)
 markov_chain <- function(P, time_len = 100) {
   ## start in a random state
   K <- nrow(P)
