@@ -25,7 +25,7 @@ opts <- list(
 f_stats <- list()
 i <- 1
 for (n in seq(40, 250, length.out = 5)) {
-  for (p in seq(2, 1000, length.out = 5)) {
+  for (p in seq(2, 100, length.out = 5)) {
     cat(sprintf("regime n: %f \t p: %f\n", n, p))
     opts <- modifyList(opts, list("n" = n, "p" = p))
     mod <- gaussian_null(opts, permutations = n_perm)
@@ -43,10 +43,10 @@ f_stats <- list()
 i <- 1
 opts$n <- 100
 opts$p <- 1000
-for (k in seq(2, 20, length.out = 5)) {
+for (k in seq(2, 75, length.out = 6)) {
   cat(sprintf("regime k: %f\n", k))
   opts <- modifyList(opts, list("K" = k))
-  mod <- gaussian_null(opts, permutations = n_perm)
+  mod <- low_rank_null(opts, permutations = n_perm)
   f_stats[[i]] <- perm_data(mod, opts)
   i <- i + 1
 }
@@ -67,17 +67,17 @@ for (cur_perm in 10 ^ (seq(2, 4, length.out = 4))) {
 }
 
 p <- perm_histo(f_stats) +
-  facet_wrap(~ n_perm, scales = "free")
+  facet_grid(n_perm ~ ., scales = "free")
 save_fig(p, "vary_perms.png")
 
 ## ---- negative-binomial ----
 f_stats <- list()
 i <- 1
 opts$distance <- "bray"
-for (p in seq(0.01, 0.9, length.out = 5)) {
-  for (size in seq(1, 1000, length.out = 5)) {
-    cat(sprintf("regime p: %f \t size: %f \n", p, size))
-    opts <- modifyList(opts, list("prob" = p, "size" = size))
+for (prob in seq(0.01, 0.99, length.out = 5)) {
+  for (size in seq(1, 500, length.out = 5)) {
+    cat(sprintf("regime p: %f \t size: %f \n", prob, size))
+    opts <- modifyList(opts, list("prob" = prob, "size" = size))
     mod <- nb_null(opts, permutations = n_perm)
     f_stats[[i]] <- perm_data(mod, opts)
     i <- i + 1
@@ -85,21 +85,22 @@ for (p in seq(0.01, 0.9, length.out = 5)) {
 }
 
 p <- perm_histo(f_stats) +
-  facet_grid(p ~ size)
+  facet_grid(prob ~ size, scales = "free")
 save_fig(p, "vary_nb_params.png")
 
 ## ---- many-factors ----
 i <- 1
 f_stats <- list()
 opts$distance <- "euclidean"
-for (p2 in seq(2, 500, length.out = 4)) {
+opts$n <- 500
+for (p2 in seq(2, 450, length.out = 4)) {
   cat(sprintf("regime p2: %f\n", p2))
-  opts <- modifyList(opts, list("p_levels" = rep(list(c(0.5, 0.5)), p2)))
+  opts$p_levels <- rep(list(c(0.5, 0.5)), p2)
   mod <- gaussian_null(opts, permutations = n_perm)
   f_stats[[i]] <- perm_data(mod, opts)
   i <- i + 1
 }
 
 p <- perm_histo(f_stats) +
-  facet_grid(~ p2)
+  facet_wrap(~ p2, scales = "free")
 save_fig(p, "vary_factors.png")
