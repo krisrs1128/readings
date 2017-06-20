@@ -1,0 +1,31 @@
+#! /usr/bin/env Rscript
+
+## File description -------------------------------------------------------------
+## Functions to accompany the study of nonparametric ANOVA.
+##
+## author: sankaran.kris@gmail.com
+## date: 06/19/2017
+
+factor_x <- function(n_rows, p_levels) {
+  factors <- vector("list", length = length(p_levels))
+  for (j in seq_along(factors)) {
+    K <- length(p_levels[[j]])
+    factors[[j]] <- sample(
+      LETTERS[1:K],
+      n_rows,
+      prob = p_levels[[j]],
+      replace = TRUE
+    )
+  }
+  names(factors) <- paste0("factor_", seq_along(factors))
+  as_data_frame(factors)
+}
+
+gaussian_null <- function(opts, ...) {
+  Y <- matrix(
+    rnorm(opts$n * opts$p, opts$mu, opts$sigma),
+    opts$n, opts$p
+  )
+  X <- factor_x(opts$n, opts$p_levels)
+  adonis(Y ~ ., data = X, ...)
+}
