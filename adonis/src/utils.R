@@ -53,7 +53,8 @@ nb_null <- function(opts, ...) {
   adonis(Y ~ ., data = X, ...)
 }
 
-plot_perms <- function(mod) {
-  ggplot(as_data_frame(mod$f.perms)) +
+plot_perms <- function(mod, fname, output_dir = "../doc/figure/") {
+  p <- ggplot(as_data_frame(mod$f.perms)) +
     geom_histogram(aes(x = V1), bins = 500)
+  ggsave(file.path(output_dir, fname), p)
 }
