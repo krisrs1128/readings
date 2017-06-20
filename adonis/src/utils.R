@@ -59,6 +59,16 @@ plot_perms <- function(mod, fname, output_dir = "../doc/figure/") {
   ggsave(file.path(output_dir, fname), p)
 }
 
+perm_histo <- function(f_stats) {
+  f_stats <- do.call(bind_rows, f_list)
+  ggplot(f_stats) +
+    geom_histogram(aes(x = f_perm))
+}
+
+save_fig <- function(p, fname, output_dir = "../doc/figure/") {
+  ggsave(file.path(output_dir, fname), p)
+}
+
 perm_data <- function(mod, opts) {
   f_data <- mod$f.perms %>%
     as_data_frame() %>%
