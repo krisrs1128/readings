@@ -60,9 +60,9 @@ plot_perms <- function(mod, fname, output_dir = "../doc/figure/") {
 }
 
 perm_histo <- function(f_stats) {
-  f_stats <- do.call(bind_rows, f_list)
+  f_stats <- do.call(bind_rows, f_stats)
   ggplot(f_stats) +
-    geom_histogram(aes(x = f_perm))
+    geom_histogram(aes(x = f_perm), bins = 100)
 }
 
 save_fig <- function(p, fname, output_dir = "../doc/figure/") {
