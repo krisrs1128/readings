@@ -162,3 +162,17 @@ delete_unused_modes <- function(z, beta, emission) {
     "emission" = emission[emission != "delete_flag"]
   )
 }
+
+sample_m <- function(z, alpha, beta) {
+  K <- length(beta) - 1
+  m <- matrix(0, K, K)
+  n <- transition_counts(z)
+
+  for (j in seq_len(K)) {
+    for (k in seq_len(K)) {
+      m[j, k] <- sample_m_coord(n[j, k], alpha, beta[k])
+    }
+  }
+
+  m
+}
