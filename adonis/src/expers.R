@@ -34,9 +34,9 @@ for (n in seq(40, 1000, length.out = 5)) {
   }
 }
 
-ggplot(f_stats) +
-  geom_histogram(aes(x = f_perm)) +
+p <- perm_histo(f_list) +
   facet_grid(n ~ p)
+save_fig(p, "vary_n_p.png")
 
 ## ---- low-rank ----
 f_list <- list()
@@ -51,9 +51,9 @@ for (k in seq(2, 20, length.out = 5)) {
   i <- i + 1
 }
 
-ggplot(f_stats) +
-  geom_histogram(aes(x = f_perm)) +
-  facet_grid(~ k)
+p <- perm_histo(f_list) +
+  facet_wrap(~ K)
+save_fig(p, "vary_rank.png")
 
 ## ---- num-perms ----
 f_list <- list()
@@ -66,25 +66,25 @@ for (nperm in 10 ^ (2:5)) {
   i <- i + 1
 }
 
-ggplot(f_stats) +
-  geom_histogram(aes(x = f_perm)) +
-  facet_grid(~ n_perm)
+p <- perm_histo(f_list) +
+  facet_wrap(~ n_perm)
+save_fig(p, "vary_perms.png")
 
 ## ---- negative-binomial ----
 f_list <- list()
 i <- 1
 for (p in seq(0.01, 0.9, length.out = 5)) {
   for (size in seq(1, 1000, length.out = 5)) {
-    opts <- modifyList(opts, list("prob" = 0.01, "size" = 100))
+    opts <- modifyList(opts, list("prob" = p, "size" = size))
     mod <- nb_null(opts, permutations = n_perm)
     f_stats[[i]] <- perm_data(mod, opts)
     i <- i + 1
   }
 }
 
-ggplot(f_stats) +
-  geom_histogram(aes(x = f_perm)) +
-  facet_grid(~ p)
+p <- perm_histo(f_list) +
+  facet_grid(p ~ size)
+save_fig(p, "vary_factors.png")
 
 ## ---- many-factors ----
 i <- 1
@@ -97,6 +97,6 @@ for (p2 in seq(2, 500, length.out = 4)) {
   i <- i + 1
 }
 
-ggplot(f_stats) +
-  geom_histogram(aes(x = f_perm)) +
+p <- perm_histo(f_list) +
   facet_grid(~ p2)
+save_fig(p, "vary_factors.png")
