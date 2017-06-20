@@ -43,7 +43,7 @@ opts <- modifyList(opts, list("n" = 20, "p" = 2000, "K" = 10))
 mod <- low_rank_null(opts, method = "euclidean", permutations = n_perm)
 plot_perms(mod, "low_rank_20_20000.png")
 
-## ---- negative-binomial ---
+## ---- negative-binomial ----
 opts <- modifyList(opts, list("prob" = 0.01, "size" = 1))
 mod <- nb_null(opts, permutations = n_perm)
 plot_perms(mod, "nb_01_1.png")
