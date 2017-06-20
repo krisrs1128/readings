@@ -11,7 +11,6 @@
 library("mvtnorm")
 
 ## ---- utils ----
-
 K <- 20
 gamma <- 2
 alpha <- 2
@@ -136,4 +135,30 @@ likelihood_reweight <- function(y, emission_k) {
   d <- length(y)
   nu_delta_coef <- (emission_k$zeta + 1) / (emission_k$zeta * (emission_k$nu - d - 1))
   dmvt(y, theta, nu_delta_coef * emission_k$nu_delta, log = FALSE)
+}
+
+#' @examples
+#' z <- c(1, 2, 3, 1, 5)
+#' beta <- c(.1, .1, .2, .1, .1, .4)
+#' emission <- rep(list("emission_params"), 6)
+#' delete_unused_modes(z, beta, emission)
+delete_unused_modes <- function(z, beta, emission) {
+  K <- length(emission) - 1
+  mapping <- cbind(sort(c(unique(z), K + 1)), seq_along(c(K + 1, unique(z))))
+  z_new <- vector(length = length(z))
+  for (k in seq_len(K + 1)) {
+    if (k != K + 1 && !(k %in% mapping[, 1])) {
+      emission[[k]] <- "delete_flag"
+      beta[K + 1] <- beta[K + 1] + beta[k]
+      beta[k] <- 0
+    }
+
+    z_new[z == k] <- mapping[mapping[, 1] == k, 2]
+  }
+
+  list(
+    "z" = z,
+    "beta" = beta[beta != 0],
+    "emission" = emission[emission != "delete_flag"]
+  )
 }
