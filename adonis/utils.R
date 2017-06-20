@@ -29,3 +29,22 @@ gaussian_null <- function(opts, ...) {
   X <- factor_x(opts$n, opts$p_levels)
   adonis(Y ~ ., data = X, ...)
 }
+
+low_rank_null <- function(opts, ...) {
+  Y <- matrix(
+    rnorm(opts$n * opts$p, opts$mu, opts$sigma),
+    opts$n, opts$p
+  )
+  svd_y <- svd(Y)
+  d <- svd_y$d
+  d[-c(1:K)] <- 0
+  Y_hat <- svd_y$u %*% diag(d) %*% t(svd_y$v)
+
+  X <- factor_x(opts$n, opts$p_levels)
+  adonis(Y_hat ~ ., data = X, ...)
+}
+
+plot_perms <- function(mod) {
+  ggplot(as_data_frame(mod$f.perms)) +
+    geom_histogram(aes(x = V1), bins = 100)
+}
