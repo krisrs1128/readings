@@ -73,6 +73,7 @@ save_fig(p, "vary_perms.png")
 ## ---- negative-binomial ----
 f_list <- list()
 i <- 1
+opts$distance <- "bray"
 for (p in seq(0.01, 0.9, length.out = 5)) {
   for (size in seq(1, 1000, length.out = 5)) {
     opts <- modifyList(opts, list("prob" = p, "size" = size))
@@ -84,11 +85,12 @@ for (p in seq(0.01, 0.9, length.out = 5)) {
 
 p <- perm_histo(f_list) +
   facet_grid(p ~ size)
-save_fig(p, "vary_factors.png")
+save_fig(p, "vary_nb_params.png")
 
 ## ---- many-factors ----
 i <- 1
 f_list <- list()
+opts$distance <- "euclidean"
 for (p2 in seq(2, 500, length.out = 4)) {
   cat(sprintf("regime p2: %f\n", p2))
   opts <- modifyList(opts, list("p_levels" = rep(list(c(0.5, 0.5)), p2)))
