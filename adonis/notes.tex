@@ -19,6 +19,10 @@ microbiome studies. The goal of this note is to brainstorm and summarize some
 simulation and mathetical experiments towards understanding the behavior of this
 method.
 
+\section{Summary}
+
+establish notation and describe the method
+
 \section{Simulation ideas}
 
 \subsection{Under the null}
@@ -30,9 +34,46 @@ example, it would be useful to know whether there are any types of concentration
 phenomena that arise under different $\frac{p}{n}$ regimes or how highly
 non-normal, zero-inflated, or outlier-contaminated data affect the null.
 
-Here is a list of possible experimental directions.
+We can approach these questions through comprehensive simulations. Here are some
+parameters that might be worth considering.
+
+\begin{itemize}
+  \item Distributions: Consider gaussian, gamma, and negative binomial
+    distributed response matrices $Y$. For each of these, we can consider
+    variation across distributional parameters (does the method behave the same
+    when counts are large vs. small?)
+  \item Distances: What happens when we use euclidean, bray-curtis, unifrac distances, ...
+  \item Dimensionality in $Y$: What happens when the ratio for the number of
+    samples vs. species changes? What happens when, fixing this ratio, the total
+    number of species and samples change?
+  \item Dimensionality in $X$: What happens when we change the number of factors
+    upon which we are looking for an association?
+  \item Contamination: What happens when we contaminate with outliers, or add
+    zero-inflation?
+  \item Dependency: What happens when many of the species in $Y$ are correlated?
+    For example, what if $Y$ is low-rank? What happens when the factors under
+    consideration are correlated?
+\end{itemize}
+
+Under the ordinary gaussian case with euclidean distance, how does the
+permutation $F$-statistic compare with that from standard MANOVA theory?
 
 \subsection{Under alternatives}
+
+Every data generation mechanism under the null model (count matrices $Y$
+unrelated to factors $X$) can be studied in the case where there is an
+association between the factors and the response. But it is also possible to
+introduce further complexity, by varying the relationship between $X$ and $Y$.
+For example, we can control
+\begin{itemize}
+\item Signal strength: Assuming a particular association between $X$ and $Y$, we
+  can modify the underlying effect size.
+\item Noise structure: What happens when we have low vs. high noise in the
+  relationship between $X$ and $Y$?
+\item Structural form: What happens when we assume a linear association? A
+  nonlinear association? An association with some columns of $Y$, but not with
+  others? An association with only a subset of samples?
+\end{itemize}
 
 \bibliographystyle{plainnat}
 \bibliography{refs.bib}
