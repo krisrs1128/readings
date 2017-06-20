@@ -37,7 +37,7 @@ low_rank_null <- function(opts, ...) {
   )
   svd_y <- svd(Y)
   d <- svd_y$d
-  d[-c(1:K)] <- 0
+  d[-c(1:opts$K)] <- 0
   Y_hat <- svd_y$u %*% diag(d) %*% t(svd_y$v)
 
   X <- factor_x(opts$n, opts$p_levels)
