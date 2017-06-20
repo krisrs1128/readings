@@ -55,14 +55,10 @@ direct_sampler <- function(y, alpha, kappa, gamma, lambda, n_iter = 1000) {
     beta <- sample_beta(m, w, gamma)
 
     state <- list("z" = z, "beta" = beta, "m" = m, "w" = w, "emission" = emission)
-    write_state("sampler_data", state)
+    write_state("sampler_data", state, i)
   }
 
   state
-}
-
-write_state <- function(out_dir, state) {
-  dir.create(out_dir, recursive = TRUE)
 }
 
 sample_z <- function(y, z, emission, alpha, beta, kappa, gamma, lambda) {
@@ -251,4 +247,37 @@ sample_beta <- function(m, w, gamma) {
   m_bar <- m
   diag(m_bar) <- diag(m_bar) - w
   rdirichlet(1, c(colSums(m_bar), gamma))[1, ]
+}
+
+append_to_file <- function(name, x) {
+  write.table(
+    x, name,
+    append = TRUE,
+    sep = ",",
+    row.names = FALSE,
+    col.names = !file.exists(name)
+  )
+}
+
+write_state <- function(out_dir, state, iter) {
+  dir.create(out_dir, recursive = TRUE)
+  z_mat <- cbind(iter, t(as.matrix(state$z)))
+  colnames(z_mat) <- c("iter", paste0("time_", seq_along(z)))
+  append_to_file(file.path(out_dir, "z.csv"),)
+
+  beta_mat <- cbind(iter, t(as.matrix(state$beta)))
+  colnames(z_mat) <- c("iter", paste0("k_", seq_along(beta)))
+  append_to_file(file.path(out_dir, "beta.csv"),)
+
+  w_mat <- cbind(iter, t(as.matrix(state$w)))
+  colnames(w_mat) <- c("iter", paste0("k_", seq_along(w)))
+  append_to_file(file.path(out_dir, "w.csv"),)
+
+  em <- state$emission
+  em$iter <- iter
+  cat(toJSON(em), file = file.path(out_dir, "emissions.json"), append = TRUE)
+
+  m_mat <- cbind(iter, t(as.matrix(state$m)))
+  colnames(m_mat) <- c("iter", paste0("k_", seq_len(ncol(m))))
+  append_to_file(file.path(out_dir, "m.csv"))
 }
