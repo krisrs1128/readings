@@ -27,7 +27,7 @@ gaussian_null <- function(opts, ...) {
     opts$n, opts$p
   )
   X <- factor_x(opts$n, opts$p_levels)
-  adonis(Y ~ ., data = X, ...)
+  adonis(Y ~ ., data = X, method = opts$distance, ...)
 }
 
 low_rank_null <- function(opts, ...) {
@@ -50,7 +50,7 @@ nb_null <- function(opts, ...) {
     opts$n, opts$p
   )
   X <- factor_x(opts$n, opts$p_levels)
-  adonis(Y ~ ., data = X, ...)
+  adonis(Y ~ ., data = X, method = opts$distance, ...)
 }
 
 plot_perms <- function(mod, fname, output_dir = "../doc/figure/") {
@@ -64,8 +64,8 @@ perm_data <- function(mod, opts) {
     as_data_frame() %>%
     rownames_to_column("iter") %>%
     gather(dimension, f_perm, -iter)
-  opts_df <- as_data_frame(opts) %>%
-    group_by(n, p, mu_x, sigma_x) %>%
-    summarise(x_cols = n())
+  opts$p2 <- length(opts$p_levels)
+  opts$p_levels <- NULL
+  opts_df <- as_data_frame(opts)
   bind_cols(opts_df[rep(1, nrow(f_data)), ], f_data)
 }
