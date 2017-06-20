@@ -58,3 +58,14 @@ plot_perms <- function(mod, fname, output_dir = "../doc/figure/") {
     geom_histogram(aes(x = V1), bins = 500)
   ggsave(file.path(output_dir, fname), p)
 }
+
+perm_data <- function(mod, opts) {
+  f_data <- mod$f.perms %>%
+    as_data_frame() %>%
+    rownames_to_column("iter") %>%
+    gather(dimension, f_perm, -iter)
+  opts_df <- as_data_frame(opts) %>%
+    group_by(n, p, mu_x, sigma_x) %>%
+    summarise(x_cols = n())
+  bind_cols(opts_df[rep(1, nrow(f_data)), ], f_data)
+}
