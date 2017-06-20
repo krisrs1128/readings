@@ -23,7 +23,7 @@ factor_x <- function(n_rows, p_levels) {
 
 gaussian_null <- function(opts, ...) {
   Y <- matrix(
-    rnorm(opts$n * opts$p, opts$mu, opts$sigma),
+    rnorm(opts$n * opts$p, opts$mu_x, opts$sigma_x),
     opts$n, opts$p
   )
   X <- factor_x(opts$n, opts$p_levels)
@@ -32,7 +32,7 @@ gaussian_null <- function(opts, ...) {
 
 low_rank_null <- function(opts, ...) {
   Y <- matrix(
-    rnorm(opts$n * opts$p, opts$mu, opts$sigma),
+    rnorm(opts$n * opts$p, opts$mu_x, opts$sigma_x),
     opts$n, opts$p
   )
   svd_y <- svd(Y)
@@ -44,7 +44,16 @@ low_rank_null <- function(opts, ...) {
   adonis(Y_hat ~ ., data = X, ...)
 }
 
+nb_null <- function(opts, ...) {
+  Y <- matrix(
+    rnbinom(opts$n * opts$p, opts$size, opts$prob),
+    opts$n, opts$p
+  )
+  X <- factor_x(opts$n, opts$p_levels)
+  adonis(Y ~ ., data = X, ...)
+}
+
 plot_perms <- function(mod) {
   ggplot(as_data_frame(mod$f.perms)) +
-    geom_histogram(aes(x = V1), bins = 100)
+    geom_histogram(aes(x = V1), bins = 500)
 }
