@@ -22,16 +22,17 @@ lambda <- list(zeta = 2, theta = c(0, 0), nu = 10, Delta = diag(c(0.01, 0.01)))
 theta <- emission_parameters(K, lambda)
 y <- emissions(z, theta)
 
-z <- rep(1, length(y))
 emission <- lapply(1:2, function(i) emission_prior(lambda))
+emission[[1]]$zeta <- emission[[2]]$zeta + nrow(y)
+emission[[1]]$nu <- emission[[2]]$nu + nrow(y)
 beta <- c(0.1, 0.9)
-#sample_z(y, rep(1, length(y)), emission, alpha, beta, kappa, gamma, lambda)
+sample_z(y, rep(1, nrow(y)), emission, alpha, beta, kappa, gamma, lambda)
 
 sample_z <- function(y, z, emission, alpha, beta, kappa, gamma, lambda) {
-  n <- transition_counts(z)
   time_len <- length(z)
   for (i in seq(2, time_len - 1)) {
     K <- max(z)
+    n <- transition_counts(z)
 
     ## decrements
     n <- update_count(n, z[i - 1], z[i], z[i + 1], -1)
@@ -109,11 +110,13 @@ grow_beta <- function(beta, gamma) {
 #' single term emission updates for the normal inverse wishart prior
 #' see page 217 of Emily Fox's thesis
 update_emission <- function(emission_k, yt, s) {
+  old_zeta_theta <- emission_k$zeta_theta
+  old_zeta <- emission_k$zeta
+
   emission_k$zeta <- emission_k$zeta + s
   emission_k$nu <- emission_k$nu + s
-  old_zeta_theta <- emission_k$zeta_theta
   emission_k$zeta_theta <- emission_k$zeta_theta + s * yt
-  emission_k$nu_delta <- emission_k$nu_delta + s * yt %*% t(yt) + old_zeta_theta -
+  emission_k$nu_delta <- emission_k$nu_delta + s * yt %*% t(yt) + old_zeta_theta %*% t(old_zeta_theta) / old_zeta-
     emission_k$zeta_theta %*% t(emission_k$zeta_theta) / emission_k$zeta
 
   emission_k
