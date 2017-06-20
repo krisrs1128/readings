@@ -124,7 +124,7 @@ emission_parameters <- function(K, lambda) {
 emissions <- function(z, theta) {
   time_len <- length(z)
   K <- length(theta)
-  y <- matrix(nrow = time_len, ncol = length(theta[[k]]$mu))
+  y <- matrix(nrow = time_len, ncol = length(theta[[1]]$mu))
   for (k in seq_len(K)) {
     n_in_state <- sum(z == k)
     if (n_in_state > 0) {
