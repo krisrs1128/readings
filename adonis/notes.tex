@@ -7,17 +7,21 @@
 \author{Kris Sankaran}
 
 \begin{document}
+\maketitle
 
 Can we try to understand the method described in \citep{anderson2001new} from a
 careful statistical point of view? In what settings is it appropriate? Is it
 possible to characterize \textit{why} hypotheses get rejected, and provide a
 sense of effect sizes, rather than focusing only on overall significance? Though
 the method is based on ANOVA -- one of the most well-understood techniques in
-statistics -- there remains something of an air of mystery surrounding ADONIS,
-especially with the sort of distances and data that appear frequently in
-microbiome studies. The goal of this note is to brainstorm and summarize some
-simulation and mathetical experiments towards understanding the behavior of this
-method.
+statistics -- there remains something of an air of mystery surrounding ADONIS.
+The need for a more careful study is compounded by the fact that, though the
+original method was developed on a data that has a very different form from that
+of microbiome studies, it has become particularly popular in the microbiome
+analysis community. If for nothing else, it would be comforting to know that
+ADONIS behaves similarly in both microbiome and classical ecological settings.
+The goal of this note is to brainstorm and summarize some simulation and
+mathetical experiments towards understanding the behavior of this method.
 
 \section{Summary}
 
