@@ -27,6 +27,44 @@ emission[[1]]$nu <- emission[[2]]$nu + nrow(y)
 beta <- c(0.1, 0.9)
 sample_z(y, rep(1, nrow(y)), emission, alpha, beta, kappa, gamma, lambda)
 
+direct_sampler <- function(y, alpha, kappa, gamma, lambda, n_iter = 1000) {
+
+  ## initialize markov chain state space
+  z <- rep(1, nrow(y))
+  emission <- lapply(1:2, function(i) emission_prior(lambda))
+  emission[[1]]$zeta <- emission[[2]]$zeta + nrow(y)
+  emission[[1]]$nu <- emission[[2]]$nu + nrow(y)
+  beta <- c(1 - gamma, gamma)
+
+  for (i in seq_len(n_iter)) {
+
+    ## step 1: sample the state sequence
+    z <- sample_z(y, z, emission, alpha,b eta, kappa, gamma, lambda)
+
+    ## step 2: delete unused modes
+    deleted_modes <- delete_unused_modes(z, emission_beta)
+    z <- deleted_modes$z
+    emission <- deleted_modes$emission
+    beta <- deleted_modes$beta
+
+    ## step 3: sample auxiliary varaibles
+    m <- sample_m(z, alpha, beta, kappa)
+    w <- sample_override(diag(m), kappa / (kappa + alpha), beta)
+
+    ## step 4: sample global transition distribution
+    beta <- sample_beta(m, w, gamma)
+
+    state <- list("z" = z, "beta" = beta, "m" = m, "w" = w, "emission" = emission)
+    write_state("sampler_data", state)
+  }
+
+  state
+}
+
+write_state <- function(out_dir, state) {
+  dir.create(out_dir, recursive = TRUE)
+}
+
 sample_z <- function(y, z, emission, alpha, beta, kappa, gamma, lambda) {
   time_len <- length(z)
   for (i in seq(2, time_len - 1)) {
