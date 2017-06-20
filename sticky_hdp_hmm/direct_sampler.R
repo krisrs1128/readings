@@ -163,6 +163,18 @@ delete_unused_modes <- function(z, beta, emission) {
   )
 }
 
+sample_m_coord <- function(n_jk, alpha, beta_k, kappa, k, j) {
+  m_jk <- 0
+  for (n in seq_len(n_jk)) {
+    p <- (alpha * beta_k + kappa * (k == j)) /
+      (n + alpha * beta_k + kappa * (k == j))
+    if (runif(1) < p) {
+      m_jk <- m_jk + 1
+    }
+  }
+  m_jk
+}
+
 sample_m <- function(z, alpha, beta) {
   K <- length(beta) - 1
   m <- matrix(0, K, K)
@@ -170,7 +182,9 @@ sample_m <- function(z, alpha, beta) {
 
   for (j in seq_len(K)) {
     for (k in seq_len(K)) {
-      m[j, k] <- sample_m_coord(n[j, k], alpha, beta[k])
+      m[j, k] <- sample_m_coord(
+        n[j, k], alpha, beta[k], kappa, k, j
+      )
     }
   }
 
