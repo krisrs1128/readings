@@ -175,7 +175,7 @@ sample_m_coord <- function(n_jk, alpha, beta_k, kappa, k, j) {
   m_jk
 }
 
-sample_m <- function(z, alpha, beta) {
+sample_m <- function(z, alpha, beta, kappa) {
   K <- length(beta) - 1
   m <- matrix(0, K, K)
   n <- transition_counts(z)
@@ -189,4 +189,28 @@ sample_m <- function(z, alpha, beta) {
   }
 
   m
+}
+
+sample_override <- function(m_diag, rho, beta) {
+  K <- length(m_diag)
+  w <- vector(length = K)
+  for (k in seq_len(K)) {
+    w[k] <- rbinom(1, m_diag[k], rho / (rho + beta[k] * (1 - rho)))
+  }
+
+  w
+}
+
+#' From MCMCpack library
+rdirichlet <- function (n, alpha) {
+  l <- length(alpha)
+  x <- matrix(rgamma(l * n, alpha), ncol = l, byrow = TRUE)
+  sm <- x %*% rep(1, l)
+  x / as.vector(sm)
+}
+
+sample_beta <- function(m, w, gamma) {
+  m_bar <- m
+  diag(m_bar) <- diag(m_bar) - w
+  rdirichlet(1, c(colSums(m_bar), gamma))[1, ]
 }
