@@ -94,39 +94,42 @@ markov_chain <- function(P, time_len = 100) {
   z
 }
 
+#' See definition on page 54 of Emily Fox's thesis
 #' @examples
-#' rnorm_inv_wishart(c(0, 0), 2, diag(c(1, 2)), 30)
-rnorm_inv_wishart <- function(mu0, lambda, Psi, eta) {
-  sigma <- rWishart(1, eta, Psi)[,, 1]
-  eigen_sigma <- eigen(sigma)
-  sigma_sqrt <- eigen_sigma$vectors %*% diag(sqrt(eigen_sigma$values)) %*% eigen_sigma$vectors
-  mu <- (sigma_sqrt / sqrt(lambda)) %*% rnorm(length(mu0), mu0)
-  list("mu" = mu, "sigma" = sigma)
+#' rnorm_inv_wishart(2, c(0, 0), 3, diag(c(.1, .1)))
+rnorm_inv_wishart <- function(zeta, theta, nu, Delta) {
+  Sigma <- rWishart(1, nu, Delta)[,, 1]
+  mu <- rmvnorm(1, theta, (1 / zeta) * Sigma)
+  list("mu" = mu, "Sigma" = Sigma)
 }
 
-#' @examples
-#' emission_parameters(10, 1, 1)
-emission_parameters <- function(K, tau = 2, alpha = 1, lambda = 1) {
-  mu <- rnorm(K, sd = tau)
-  sigma_sq <- rgamma(K, alpha, lambda)
-  res <- mapply(c, mu, sigma_sq, SIMPLIFY = FALSE)
-  names(res) <- paste0("theta_", seq_len(K))
-  res
+emission_parameters <- function(K, lambda) {
+  emissions <- list()
+  for (k in seq_len(K)) {
+    emissions[[k]] <- rnorm_inv_wishart(lambda$zeta, lambda$theta, lambda$nu, lambda$Delta)
+  }
+  emissions
 }
 
 #' @examples
 #' K <- 50
-#' z <- markov_chain(trans_mat(4, 4, K, 3))
-#' theta <- emission_parameters(K, 1.4, 2, 5)
+#' z <- markov_chain(trans_mat(3, 3, K, 2.5))
+#' lambda <- list(zeta = 2, theta = c(0, 0), nu = 3, Delta = diag(c(0.01, 0.01)))
+#' theta <- emission_parameters(K, lambda)
 #' y <- emissions(z, theta)
-#' plot(y, col = z)
+#' plot(y, col = z, asp = 1)
+#' lines(y, col = "grey")
+#' points(y, col = z)
+#' plot(y[, 1], col = z)
 emissions <- function(z, theta) {
   time_len <- length(z)
   K <- length(theta)
-  y <- vector(length = time_len)
+  y <- matrix(nrow = time_len, ncol = length(theta[[1]]$mu))
   for (k in seq_len(K)) {
     n_in_state <- sum(z == k)
-    y[z == k] <- rnorm(n_in_state, theta[[k]][1], theta[[k]][2])
+    if (n_in_state > 0) {
+      y[z == k, ] <- rmvnorm(n_in_state, theta[[k]]$mu, theta[[k]]$Sigma)
+    }
   }
   y
 }
