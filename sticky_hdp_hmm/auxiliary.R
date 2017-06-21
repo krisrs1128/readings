@@ -1,4 +1,12 @@
+#! /usr/bin/env Rscript
 
+## File description -------------------------------------------------------------
+## Functions used to sample the auxiliary variables in the HDP-HMM. These are in
+## their own file because this step is shared in both the direct assignment and
+## the block samplers.
+##
+## author: sankaran.kris@gmail.com
+## date: 6/21/2017
 
 #' Random CRT distributed variable
 #'

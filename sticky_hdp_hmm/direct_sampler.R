@@ -10,6 +10,8 @@
 ## ---- libraries ----
 library("mvtnorm")
 library("jsonlite")
+source("auxiliary.R")
+source("utils.R")
 
 ## ---- utils ----
 #' @examples

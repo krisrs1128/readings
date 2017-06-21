@@ -1,3 +1,10 @@
+#! /usr/bin/env Rscript
+
+## File description -------------------------------------------------------------
+## Non sampler-specific utilities that we use in the HDP-HMM samplers.
+##
+## author: sankaran.kris@gmail.com
+## date: 6/21/2017
 
 append_to_file <- function(name, x) {
   write.table(
@@ -12,7 +19,7 @@ append_to_file <- function(name, x) {
 write_state <- function(out_dir, state, iter) {
   dir.create(out_dir, recursive = TRUE)
   z_mat <- cbind(iter, t(as.matrix(state$z)))
-  ## colnames(z_mat) <- c("iter", paste0("time_", seq_along(state$z)))
+  colnames(z_mat) <- c("iter", paste0("time_", seq_along(state$z)))
   append_to_file(file.path(out_dir, "z.csv"), z_mat)
 
   beta_mat <- cbind(iter, t(as.matrix(state$beta)))
