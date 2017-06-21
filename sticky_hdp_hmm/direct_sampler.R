@@ -9,40 +9,49 @@
 
 ## ---- libraries ----
 library("mvtnorm")
+library("jsonlite")
 
 ## ---- utils ----
 K <- 20
 gamma <- 2
 alpha <- 2
-kappa <- 4
+kappa <- 3
 
 z <- markov_chain(trans_mat(gamma, gamma, K, kappa))
-lambda <- list(zeta = 2, theta = c(0, 0), nu = 10, Delta = diag(c(0.01, 0.01)))
+lambda <- list(zeta = .1, theta = c(0, 0), nu = 10, Delta = diag(c(0.1, 0.1)))
 theta <- emission_parameters(K, lambda)
 y <- emissions(z, theta)
+plot(y[, 1], col = z)
 
-emission <- lapply(1:2, function(i) emission_prior(lambda))
-emission[[1]]$zeta <- emission[[2]]$zeta + nrow(y)
-emission[[1]]$nu <- emission[[2]]$nu + nrow(y)
-beta <- c(0.1, 0.9)
-sample_z(y, rep(1, nrow(y)), emission, alpha, beta, kappa, gamma, lambda)
+direct_sampler(y, alpha, kappa, gamma, lambda)
+
+## emission <- lapply(1:2, function(i) emission_prior(lambda))
+## emission[[1]]$zeta <- emission[[2]]$zeta + nrow(y)
+## emission[[1]]$nu <- emission[[2]]$nu + nrow(y)
+## beta <- c(0.1, 0.9)
+## sample_z(y, rep(1, nrow(y)), emission, alpha, beta, kappa, gamma, lambda)
 
 direct_sampler <- function(y, alpha, kappa, gamma, lambda, n_iter = 1000) {
-
   ## initialize markov chain state space
   z <- rep(1, nrow(y))
   emission <- lapply(1:2, function(i) emission_prior(lambda))
   emission[[1]]$zeta <- emission[[2]]$zeta + nrow(y)
   emission[[1]]$nu <- emission[[2]]$nu + nrow(y)
-  beta <- c(1 - gamma, gamma)
+  beta <- c(0.1, 0.1)
 
   for (i in seq_len(n_iter)) {
+    ## if (i %% 50 == 0) {
+      cat(sprintf("iteration %s\n", i))
+    ## }
 
     ## step 1: sample the state sequence
-    z <- sample_z(y, z, emission, alpha,b eta, kappa, gamma, lambda)
+    z_updates <- sample_z(y, z, emission, alpha, beta, kappa, gamma, lambda)
+    z <- z_updates$z
+    beta <- z_updates$beta
+    emission <- z_updates$emission
 
     ## step 2: delete unused modes
-    deleted_modes <- delete_unused_modes(z, emission_beta)
+    deleted_modes <- delete_unused_modes(z, beta, emission)
     z <- deleted_modes$z
     emission <- deleted_modes$emission
     beta <- deleted_modes$beta
@@ -64,7 +73,7 @@ direct_sampler <- function(y, alpha, kappa, gamma, lambda, n_iter = 1000) {
 sample_z <- function(y, z, emission, alpha, beta, kappa, gamma, lambda) {
   time_len <- length(z)
   for (i in seq(2, time_len - 1)) {
-    K <- max(z)
+    K <- length(emission) - 1
     n <- transition_counts(z)
 
     ## decrements
@@ -74,6 +83,11 @@ sample_z <- function(y, z, emission, alpha, beta, kappa, gamma, lambda) {
     ## update according to prior predictive * likelihood
     pzt <- prior_predictive(z[i - 1], z[i + 1], n, alpha, beta, kappa)
     f <- update_f(y[i, ], pzt, emission)
+
+    if (any(is.na(f))) {
+      f <- rep(1 / (K + 1), K + 1) ## somehow this is broken...
+    }
+    print(f)
     z[i] <- sample(seq_along(f), 1, prob = f)
 
     ## grow K, if sample new state
@@ -168,7 +182,8 @@ likelihood_reweight <- function(y, emission_k) {
   theta <- (1 / emission_k$zeta) * emission_k$zeta_theta
   d <- length(y)
   nu_delta_coef <- (emission_k$zeta + 1) / (emission_k$zeta * (emission_k$nu - d - 1))
-  dmvt(y, theta, nu_delta_coef * emission_k$nu_delta, log = FALSE)
+  t_dens <- dmvt(y, theta, nu_delta_coef * emission_k$nu_delta, log = FALSE)
+  ifelse(is.na(t_dens), 0, t_dens)
 }
 
 #' @examples
@@ -184,7 +199,7 @@ delete_unused_modes <- function(z, beta, emission) {
     if (k != K + 1 && !(k %in% mapping[, 1])) {
       emission[[k]] <- "delete_flag"
       beta[K + 1] <- beta[K + 1] + beta[k]
-      beta[k] <- 0
+      beta[k] <- NA
     }
 
     z_new[z == k] <- mapping[mapping[, 1] == k, 2]
@@ -192,7 +207,7 @@ delete_unused_modes <- function(z, beta, emission) {
 
   list(
     "z" = z,
-    "beta" = beta[beta != 0],
+    "beta" = beta[!is.na(beta)],
     "emission" = emission[emission != "delete_flag"]
   )
 }
@@ -246,6 +261,7 @@ rdirichlet <- function (n, alpha) {
 sample_beta <- function(m, w, gamma) {
   m_bar <- m
   diag(m_bar) <- diag(m_bar) - w
+  K <- length(w)
   rdirichlet(1, c(colSums(m_bar), gamma))[1, ]
 }
 
@@ -262,22 +278,22 @@ append_to_file <- function(name, x) {
 write_state <- function(out_dir, state, iter) {
   dir.create(out_dir, recursive = TRUE)
   z_mat <- cbind(iter, t(as.matrix(state$z)))
-  colnames(z_mat) <- c("iter", paste0("time_", seq_along(z)))
-  append_to_file(file.path(out_dir, "z.csv"),)
+  ## colnames(z_mat) <- c("iter", paste0("time_", seq_along(state$z)))
+  append_to_file(file.path(out_dir, "z.csv"), z_mat)
 
   beta_mat <- cbind(iter, t(as.matrix(state$beta)))
-  colnames(z_mat) <- c("iter", paste0("k_", seq_along(beta)))
-  append_to_file(file.path(out_dir, "beta.csv"),)
+  ## colnames(z_mat) <- c("iter", paste0("k_", seq_along(state$beta)))
+  append_to_file(file.path(out_dir, "beta.csv"), beta_mat)
 
   w_mat <- cbind(iter, t(as.matrix(state$w)))
-  colnames(w_mat) <- c("iter", paste0("k_", seq_along(w)))
-  append_to_file(file.path(out_dir, "w.csv"),)
+  ## colnames(w_mat) <- c("iter", paste0("k_", seq_along(state$w)))
+  append_to_file(file.path(out_dir, "w.csv"), w_mat)
 
   em <- state$emission
   em$iter <- iter
   cat(toJSON(em), file = file.path(out_dir, "emissions.json"), append = TRUE)
 
   m_mat <- cbind(iter, t(as.matrix(state$m)))
-  colnames(m_mat) <- c("iter", paste0("k_", seq_len(ncol(m))))
-  append_to_file(file.path(out_dir, "m.csv"))
+  ## colnames(m_mat) <- c("iter", paste0("k_", seq_len(ncol(m_mat))))
+  append_to_file(file.path(out_dir, "m.csv"), m_mat)
 }
