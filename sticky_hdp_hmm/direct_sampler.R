@@ -108,8 +108,9 @@ sample_z <- function(y, z, emission, alpha, beta, kappa, gamma, lambda) {
 #' z <- c(1, 1, 2, 1, 1, 3, 3, 3, 1)
 #' transition_counts(z)
 transition_counts <- function(z) {
-  K <- max(z)
-  n <- matrix(0, nrow = K + 1, ncol = K + 1)
+  modes <- c(unique(z), "new")
+  K <- length(modes) - 1
+  n <- matrix(0, nrow = K + 1, ncol = K + 1, dimnames = list(modes, modes))
   time_len <- length(z)
 
   for (i in seq_len(time_len - 1)) {
@@ -150,8 +151,12 @@ update_f <- function(yt, pzt, emission) {
 
 grow_beta <- function(beta, gamma) {
   K <- length(beta) - 1
-  beta_new <- rbeta(1, 1, gamma) * beta[K + 1]
-  c(beta[-(K + 1)], beta_new, 1 - sum(beta[-(K + 1)]) - beta_new)
+  modes <- as.numeric(names(beta[1:K]))
+  beta_new <- rbeta(1, 1, gamma) * beta["new"]
+
+  beta_update <- c(beta[1:K], beta_new, 1 - sum(beta[1:K]) - beta_new)
+  names(beta_update) <- c(modes, max(modes) + 1, "new")
+  beta_update
 }
 
 #' single term emission updates for the normal inverse wishart prior
