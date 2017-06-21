@@ -10,27 +10,29 @@
 ## ---- libraries ----
 library("mvtnorm")
 library("jsonlite")
+source("auxiliary.R")
+source("utils.R")
 
 ## ---- utils ----
-K <- 20
-gamma <- 2
-alpha <- 2
-kappa <- 3
-
-z <- markov_chain(trans_mat(gamma, gamma, K, kappa))
-lambda <- list(zeta = .1, theta = c(0, 0), nu = 10, Delta = diag(c(0.1, 0.1)))
-theta <- emission_parameters(K, lambda)
-y <- emissions(z, theta)
-plot(y[, 1], col = z)
-
-direct_sampler(y, alpha, kappa, gamma, lambda)
-
-## emission <- lapply(1:2, function(i) emission_prior(lambda))
-## emission[[1]]$zeta <- emission[[2]]$zeta + nrow(y)
-## emission[[1]]$nu <- emission[[2]]$nu + nrow(y)
-## beta <- c(0.1, 0.9)
-## sample_z(y, rep(1, nrow(y)), emission, alpha, beta, kappa, gamma, lambda)
-
+#' @examples
+#' K <- 20
+#' gamma <- 2
+#' alpha <- 2
+#' kappa <- 3
+#'
+#' z <- markov_chain(trans_mat(gamma, gamma, K, kappa))
+#' lambda <- list(zeta = .1, theta = c(0, 0), nu = 10, Delta = diag(c(0.1, 0.1)))
+#' theta <- emission_parameters(K, lambda)
+#' y <- emissions(z, theta)
+#' plot(y[, 1], col = z)
+#'
+#' direct_sampler(y, alpha, kappa, gamma, lambda)
+#'
+#' emission <- lapply(1:2, function(i) emission_prior(lambda))
+#' emission[[1]]$zeta <- emission[[2]]$zeta + nrow(y)
+#' emission[[1]]$nu <- emission[[2]]$nu + nrow(y)
+#' beta <- c(0.1, 0.9)
+#' sample_z(y, rep(1, nrow(y)), emission, alpha, beta, kappa, gamma, lambda)
 direct_sampler <- function(y, alpha, kappa, gamma, lambda, n_iter = 1000) {
   ## initialize markov chain state space
   z <- rep(1, nrow(y))
@@ -83,11 +85,6 @@ sample_z <- function(y, z, emission, alpha, beta, kappa, gamma, lambda) {
     ## update according to prior predictive * likelihood
     pzt <- prior_predictive(z[i - 1], z[i + 1], n, alpha, beta, kappa)
     f <- update_f(y[i, ], pzt, emission)
-
-    if (any(is.na(f))) {
-      f <- rep(1 / (K + 1), K + 1) ## somehow this is broken...
-    }
-    print(f)
     z[i] <- sample(seq_along(f), 1, prob = f)
 
     ## grow K, if sample new state
@@ -108,8 +105,9 @@ sample_z <- function(y, z, emission, alpha, beta, kappa, gamma, lambda) {
 #' z <- c(1, 1, 2, 1, 1, 3, 3, 3, 1)
 #' transition_counts(z)
 transition_counts <- function(z) {
-  K <- max(z)
-  n <- matrix(0, nrow = K + 1, ncol = K + 1)
+  modes <- c(unique(z), "new")
+  K <- length(modes) - 1
+  n <- matrix(0, nrow = K + 1, ncol = K + 1, dimnames = list(modes, modes))
   time_len <- length(z)
 
   for (i in seq_len(time_len - 1)) {
@@ -150,8 +148,12 @@ update_f <- function(yt, pzt, emission) {
 
 grow_beta <- function(beta, gamma) {
   K <- length(beta) - 1
-  beta_new <- rbeta(1, 1, gamma) * beta[K + 1]
-  c(beta[-(K + 1)], beta_new, 1 - sum(beta[-(K + 1)]) - beta_new)
+  modes <- as.numeric(names(beta[1:K]))
+  beta_new <- rbeta(1, 1, gamma) * beta["new"]
+
+  beta_update <- c(beta[1:K], beta_new, 1 - sum(beta[1:K]) - beta_new)
+  names(beta_update) <- c(modes, max(modes) + 1, "new")
+  beta_update
 }
 
 #' single term emission updates for the normal inverse wishart prior
@@ -190,64 +192,17 @@ likelihood_reweight <- function(y, emission_k) {
 #' z <- c(1, 2, 3, 1, 5)
 #' beta <- c(.1, .1, .2, .1, .1, .4)
 #' emission <- rep(list("emission_params"), 6)
+#' names(emission) <- as.character(1:6)
 #' delete_unused_modes(z, beta, emission)
 delete_unused_modes <- function(z, beta, emission) {
-  K <- length(emission) - 1
-  mapping <- cbind(sort(c(unique(z), K + 1)), seq_along(c(K + 1, unique(z))))
-  z_new <- vector(length = length(z))
-  for (k in seq_len(K + 1)) {
-    if (k != K + 1 && !(k %in% mapping[, 1])) {
-      emission[[k]] <- "delete_flag"
-      beta[K + 1] <- beta[K + 1] + beta[k]
-      beta[k] <- NA
-    }
-
-    z_new[z == k] <- mapping[mapping[, 1] == k, 2]
-  }
+  z_fact <- factor(z, levels = names(emission))
+  z_counts <- table(z_fact)
+  unused_modes <- names(z_counts)[z_counts == 0]
 
   list(
-    "z" = z,
-    "beta" = beta[!is.na(beta)],
-    "emission" = emission[emission != "delete_flag"]
+    "beta" = beta[setdiff(names(beta), unused_modes)]
+    "emission" = emission[setdiff(names(emission), unused_modes)]
   )
-}
-
-sample_m_coord <- function(n_jk, alpha, beta_k, kappa, k, j) {
-  m_jk <- 0
-  for (n in seq_len(n_jk)) {
-    p <- (alpha * beta_k + kappa * (k == j)) /
-      (n + alpha * beta_k + kappa * (k == j))
-    if (runif(1) < p) {
-      m_jk <- m_jk + 1
-    }
-  }
-  m_jk
-}
-
-sample_m <- function(z, alpha, beta, kappa) {
-  K <- length(beta) - 1
-  m <- matrix(0, K, K)
-  n <- transition_counts(z)
-
-  for (j in seq_len(K)) {
-    for (k in seq_len(K)) {
-      m[j, k] <- sample_m_coord(
-        n[j, k], alpha, beta[k], kappa, k, j
-      )
-    }
-  }
-
-  m
-}
-
-sample_override <- function(m_diag, rho, beta) {
-  K <- length(m_diag)
-  w <- vector(length = K)
-  for (k in seq_len(K)) {
-    w[k] <- rbinom(1, m_diag[k], rho / (rho + beta[k] * (1 - rho)))
-  }
-
-  w
 }
 
 #' From MCMCpack library
@@ -263,37 +218,4 @@ sample_beta <- function(m, w, gamma) {
   diag(m_bar) <- diag(m_bar) - w
   K <- length(w)
   rdirichlet(1, c(colSums(m_bar), gamma))[1, ]
-}
-
-append_to_file <- function(name, x) {
-  write.table(
-    x, name,
-    append = TRUE,
-    sep = ",",
-    row.names = FALSE,
-    col.names = !file.exists(name)
-  )
-}
-
-write_state <- function(out_dir, state, iter) {
-  dir.create(out_dir, recursive = TRUE)
-  z_mat <- cbind(iter, t(as.matrix(state$z)))
-  ## colnames(z_mat) <- c("iter", paste0("time_", seq_along(state$z)))
-  append_to_file(file.path(out_dir, "z.csv"), z_mat)
-
-  beta_mat <- cbind(iter, t(as.matrix(state$beta)))
-  ## colnames(z_mat) <- c("iter", paste0("k_", seq_along(state$beta)))
-  append_to_file(file.path(out_dir, "beta.csv"), beta_mat)
-
-  w_mat <- cbind(iter, t(as.matrix(state$w)))
-  ## colnames(w_mat) <- c("iter", paste0("k_", seq_along(state$w)))
-  append_to_file(file.path(out_dir, "w.csv"), w_mat)
-
-  em <- state$emission
-  em$iter <- iter
-  cat(toJSON(em), file = file.path(out_dir, "emissions.json"), append = TRUE)
-
-  m_mat <- cbind(iter, t(as.matrix(state$m)))
-  ## colnames(m_mat) <- c("iter", paste0("k_", seq_len(ncol(m_mat))))
-  append_to_file(file.path(out_dir, "m.csv"), m_mat)
 }
