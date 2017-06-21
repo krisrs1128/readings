@@ -217,16 +217,15 @@ delete_unused_modes <- function(z, beta, emission) {
   )
 }
 
-sample_m_coord <- function(n_jk, alpha, beta_k, kappa, k, j) {
-  m_jk <- 0
-  for (n in seq_len(n_jk)) {
-    p <- (alpha * beta_k + kappa * (k == j)) /
-      (n + alpha * beta_k + kappa * (k == j))
-    if (runif(1) < p) {
-      m_jk <- m_jk + 1
-    }
-  }
-  m_jk
+#' Random CRT distributed variable
+#'
+#' This is the distribution of the number of tables associated with a CRP after
+#' m people have been seated.
+#'
+#' See https://dukespace.lib.duke.edu/dspace/handle/10161/7204
+rcrt <- function(gamma, m) {
+  probs <- gamma / (seq_len(m) - 1 + gamma)
+  sum(rbinom(m, 1, probs))
 }
 
 sample_m <- function(z, alpha, beta, kappa) {
@@ -236,9 +235,7 @@ sample_m <- function(z, alpha, beta, kappa) {
 
   for (j in seq_len(K)) {
     for (k in seq_len(K)) {
-      m[j, k] <- sample_m_coord(
-        n[j, k], alpha, beta[k], kappa, k, j
-      )
+      m[j, k] <- rcrt(n[j, k], alpha * beta[k] + kappa * (j == k))
     }
   }
 
