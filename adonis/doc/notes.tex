@@ -1,0 +1,126 @@
+\documentclass{article}
+\usepackage{natbib}
+\usepackage{graphicx}
+\input{preamble.tex}
+
+\title{Experiments with Nonparametric ANOVA}
+\author{Kris Sankaran}
+
+\begin{document}
+\maketitle
+
+Can we try to understand the method described in \citep{anderson2001new} from a
+careful statistical point of view? In what settings is it appropriate? Is it
+possible to characterize \textit{why} hypotheses get rejected, and provide a
+sense of effect sizes, rather than focusing only on overall significance? Though
+the method is based on ANOVA -- one of the most well-understood techniques in
+statistics -- there remains something of an air of mystery surrounding ADONIS.
+The need for a more careful study is compounded by the fact that, though the
+original method was developed on a data that has a very different form from that
+of microbiome studies, it has become particularly popular in the microbiome
+analysis community. If for nothing else, it would be comforting to know that
+ADONIS behaves similarly in both microbiome and classical ecological settings.
+The goal of this note is to brainstorm and summarize some simulation and
+mathetical experiments towards understanding the behavior of this method.
+
+\section{Summary}
+
+establish notation and describe the method
+
+\section{Approach}
+
+\subsection{Under the null}
+
+By definition, under the null, the $p$-values created by ADONIS are uniform.
+Nonetheless, it is still worth studying the permutation distribution of the
+distance-based $F$-statistic under different data-generation scenarios. For
+example, it would be useful to know whether there are any types of concentration
+phenomena that arise under different $\frac{p}{n}$ regimes or how highly
+non-normal, zero-inflated, or outlier-contaminated data affect the null.
+
+We can approach these questions through comprehensive simulations. Here are some
+parameters that might be worth considering.
+
+\begin{itemize}
+  \item Distributions: Consider gaussian, gamma, and negative binomial
+    distributed response matrices $Y$. For each of these, we can consider
+    variation across distributional parameters (does the method behave the same
+    when counts are large vs. small?)
+  \item Distances: What happens when we use euclidean, bray-curtis, unifrac distances, ...
+  \item Dimensionality in $Y$: What happens when the ratio for the number of
+    samples vs. species changes? What happens when, fixing this ratio, the total
+    number of species and samples change?
+  \item Dimensionality in $X$: What happens when we change the number of factors
+    upon which we are looking for an association?
+  \item Contamination: What happens when we contaminate with outliers, or add
+    zero-inflation?
+  \item Dependency: What happens when many of the species in $Y$ are correlated?
+    For example, what if $Y$ is low-rank? What happens when the factors under
+    consideration are correlated?
+\end{itemize}
+
+Under the ordinary gaussian case with euclidean distance, how does the
+permutation $F$-statistic compare with that from standard MANOVA theory?
+
+\subsection{Under alternatives}
+
+Every data generation mechanism under the null model (count matrices $Y$
+unrelated to factors $X$) can be studied in the case where there is an
+association between the factors and the response. But it is also possible to
+introduce further complexity, by varying the relationship between $X$ and $Y$.
+For example, we can control
+\begin{itemize}
+\item Signal strength: Assuming a particular association between $X$ and $Y$, we
+  can modify the underlying effect size.
+\item Noise structure: What happens when we have low vs. high noise in the
+  relationship between $X$ and $Y$?
+\item Structural form: What happens when we assume a linear association? A
+  nonlinear association? An association with some columns of $Y$, but not with
+  others? An association with only a subset of samples?
+\end{itemize}
+
+\section{Results}
+
+\subsection{Under the null}
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=0.9\textwidth]{figure/vary_n_p}
+  \caption{Varying the $\frac{p}{n}$ ratio in the null gaussian
+    setup. ($p$ along columns, $n$ along rows)\label{fig:label} }
+\end{figure}
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=0.9\textwidth]{figure/vary_rank}
+  \caption{Varying the rank $k$ in the null gaussian setup.\label{fig:label} }
+\end{figure}
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=0.9\textwidth]{figure/vary_rank}
+  \caption{Varying the number of permutations used in the null gaussian
+    setup.\label{fig:label} }
+\end{figure}
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=0.9\textwidth]{figure/vary_nb_params}
+  \caption{Simulating counts with a negative binomial distribution, and varying
+    probability and dispersion parameters.
+    setup.\label{fig:label}}
+\end{figure}
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=0.9\textwidth]{figure/vary_factors}
+  \caption{Varying the number of (null) factors in a gaussian
+    setup. \label{fig:label}}
+\end{figure}
+
+\subsection{Under alternatives}
+
+\bibliographystyle{plainnat}
+\bibliography{refs.bib}
+
+\end{document}
