@@ -26,7 +26,7 @@ source("utils.R")
 #' y <- emissions(z, theta)
 #' plot(y[, 1], col = z)
 #'
-#' direct_sampler(y, alpha, kappa, gamma, lambda)
+#' res <- direct_sampler(y, alpha, kappa, gamma, lambda)
 #'
 #' emission <- lapply(1:2, function(i) emission_prior(lambda))
 #' emission[[1]]$zeta <- emission[[2]]$zeta + nrow(y)
@@ -37,14 +37,13 @@ direct_sampler <- function(y, alpha, kappa, gamma, lambda, n_iter = 1000) {
   ## initialize markov chain state space
   z <- rep(1, nrow(y))
   emission <- lapply(1:2, function(i) emission_prior(lambda))
-  emission[[1]]$zeta <- emission[[2]]$zeta + nrow(y)
-  emission[[1]]$nu <- emission[[2]]$nu + nrow(y)
-  beta <- c(0.1, 0.1)
+  emission[[2]]$zeta <- emission[[2]]$zeta + nrow(y)
+  emission[[2]]$nu <- emission[[2]]$nu + nrow(y)
+  names(emission) <- c("new", "1")
+  beta <- c("1" = 0.1, "new" = 0.1)
 
   for (i in seq_len(n_iter)) {
-    ## if (i %% 50 == 0) {
-      cat(sprintf("iteration %s\n", i))
-    ## }
+    cat(sprintf("iteration %s\n", i))
 
     ## step 1: sample the state sequence
     z_updates <- sample_z(y, z, emission, alpha, beta, kappa, gamma, lambda)
@@ -54,7 +53,6 @@ direct_sampler <- function(y, alpha, kappa, gamma, lambda, n_iter = 1000) {
 
     ## step 2: delete unused modes
     deleted_modes <- delete_unused_modes(z, beta, emission)
-    z <- deleted_modes$z
     emission <- deleted_modes$emission
     beta <- deleted_modes$beta
 
@@ -65,8 +63,8 @@ direct_sampler <- function(y, alpha, kappa, gamma, lambda, n_iter = 1000) {
     ## step 4: sample global transition distribution
     beta <- sample_beta(m, w, gamma)
 
-    state <- list("z" = z, "beta" = beta, "m" = m, "w" = w, "emission" = emission)
-    write_state("sampler_data", state, i)
+    state <- list("z" = z, "beta" = beta, "emission" = emission)
+    #write_state("sampler_data", state, i)
   }
 
   state
@@ -75,48 +73,39 @@ direct_sampler <- function(y, alpha, kappa, gamma, lambda, n_iter = 1000) {
 sample_z <- function(y, z, emission, alpha, beta, kappa, gamma, lambda) {
   time_len <- length(z)
   for (i in seq(2, time_len - 1)) {
-    K <- length(emission) - 1
     n <- transition_counts(z)
 
     ## decrements
     n <- update_count(n, z[i - 1], z[i], z[i + 1], -1)
-    emission[[z[i]]] <- update_emission(emission[[z[i]]], y[i, ], -1)
+    zi_char <- as.character(z[i])
+    emission[[zi_char]] <- update_emission(emission[[zi_char]], y[i, ], -1)
 
     ## update according to prior predictive * likelihood
     pzt <- prior_predictive(z[i - 1], z[i + 1], n, alpha, beta, kappa)
     f <- update_f(y[i, ], pzt, emission)
     z[i] <- sample(seq_along(f), 1, prob = f)
+    zi_char <- as.character(z[i])
 
     ## grow K, if sample new state
-    if (max(z) > K) {
-      beta <- grow_beta(beta, gamma)
-      emission <- c(emission, list(emission_prior(lambda)))
+    if (!(zi_char %in% names(emission))) {
+      beta <- grow_beta(beta, gamma, zi_char)
+      new_emission = list(emission_prior(lambda))
+      names(new_emission) <- zi_char
+      emission <- c(emission, new_emission)
     }
 
     ## increment
-    n <- update_count(n, z[i - 1], z[i], z[i + 1], 1)
-    emission[[z[i]]] <- update_emission(emission[[z[i]]], y[i, ], 1)
+    n <- transition_counts(z)
+    emission[[zi_char]] <- update_emission(emission[[zi_char]], y[i, ], 1)
   }
 
   list("z" = z, "beta" = beta, "emission" = emission)
 }
 
-#' @examples
-#' z <- c(1, 1, 2, 1, 1, 3, 3, 3, 1)
-#' transition_counts(z)
-transition_counts <- function(z) {
-  modes <- c(unique(z), "new")
-  K <- length(modes) - 1
-  n <- matrix(0, nrow = K + 1, ncol = K + 1, dimnames = list(modes, modes))
-  time_len <- length(z)
-
-  for (i in seq_len(time_len - 1)) {
-    n[z[i], z[i + 1]] <- n[z[i], z[i + 1]] + 1
-  }
-  n
-}
-
 update_count <- function(n, z_prev, z_cur, z_next, s) {
+  z_prev <- as.character(z_prev)
+  z_cur <- as.character(z_cur)
+  z_next <- as.character(z_next)
   n[z_prev, z_cur] <- n[z_prev, z_cur] + s
   n[z_cur, z_next] <- n[z_cur, z_next] + s
   n
@@ -124,35 +113,38 @@ update_count <- function(n, z_prev, z_cur, z_next, s) {
 
 prior_predictive <- function(z_prev, z_next, n, alpha, beta, kappa) {
   K <- nrow(n) - 1
-  pzt <- vector(length = K + 1)
+  pzt <- setNames(rep(0, K + 1), rownames(n))
 
   ## equation (A10, page 216)
-  for (k in seq_len(K)) {
-    pzt[k] <- (alpha * beta[k] + n[z_prev, k] + kappa * (z_prev == k)) *
-      (alpha * beta[z_next] + n[k, z_next] + kappa * (z_next == k) + (z_prev == k) * (z_next == k)) *
-      (alpha + sum(n[k, ]) + kappa + (z_prev == k)) ^ (-1)
+  z_prev <- as.character(z_prev)
+  z_next <- as.character(z_next)
+  for (k in names(pzt)) {
+    if (k != "new") {
+      pzt[k] <- (alpha * beta[k] + n[z_prev, k] + kappa * (z_prev == k)) *
+        (alpha * beta[z_next] + n[k, z_next] + kappa * (z_next == k) + (z_prev == k) * (z_next == k)) *
+        (alpha + sum(n[k, ]) + kappa + (z_prev == k)) ^ (-1)
+    }
   }
-  pzt[K + 1] <- (alpha ^ 2 * beta[K + 1] * beta[z_next]) / (alpha + kappa)
+  pzt["new"] <- (alpha ^ 2 * beta[K + 1] * beta[z_next]) / (alpha + kappa)
 
   pzt / sum(pzt)
 }
 
 update_f <- function(yt, pzt, emission) {
-  K <- length(pzt) - 1
-  f <- vector(length = K + 1)
-  for (k in seq_len(K + 1)) {
+  f <- setNames(rep(0, length(pzt)), names(pzt))
+  for (k in names(pzt)) {
     f[k] <- pzt[k] * likelihood_reweight(yt, emission[[k]])
   }
   f / sum(f)
 }
 
-grow_beta <- function(beta, gamma) {
+grow_beta <- function(beta, gamma, new_name) {
   K <- length(beta) - 1
   modes <- as.numeric(names(beta[1:K]))
   beta_new <- rbeta(1, 1, gamma) * beta["new"]
 
   beta_update <- c(beta[1:K], beta_new, 1 - sum(beta[1:K]) - beta_new)
-  names(beta_update) <- c(modes, max(modes) + 1, "new")
+  names(beta_update) <- c(modes, new_name, "new")
   beta_update
 }
 
@@ -165,7 +157,7 @@ update_emission <- function(emission_k, yt, s) {
   emission_k$zeta <- emission_k$zeta + s
   emission_k$nu <- emission_k$nu + s
   emission_k$zeta_theta <- emission_k$zeta_theta + s * yt
-  emission_k$nu_delta <- emission_k$nu_delta + s * yt %*% t(yt) + old_zeta_theta %*% t(old_zeta_theta) / old_zeta-
+  emission_k$nu_delta <- emission_k$nu_delta + s * yt %*% t(yt) + old_zeta_theta %*% t(old_zeta_theta) / old_zeta -
     emission_k$zeta_theta %*% t(emission_k$zeta_theta) / emission_k$zeta
 
   emission_k
@@ -197,25 +189,18 @@ likelihood_reweight <- function(y, emission_k) {
 delete_unused_modes <- function(z, beta, emission) {
   z_fact <- factor(z, levels = names(emission))
   z_counts <- table(z_fact)
-  unused_modes <- names(z_counts)[z_counts == 0]
+  used_modes <- c("new", names(z_counts)[z_counts != 0])
 
   list(
-    "beta" = beta[setdiff(names(beta), unused_modes)]
-    "emission" = emission[setdiff(names(emission), unused_modes)]
+    "beta" = beta[used_modes],
+    "emission" = emission[used_modes]
   )
-}
-
-#' From MCMCpack library
-rdirichlet <- function (n, alpha) {
-  l <- length(alpha)
-  x <- matrix(rgamma(l * n, alpha), ncol = l, byrow = TRUE)
-  sm <- x %*% rep(1, l)
-  x / as.vector(sm)
 }
 
 sample_beta <- function(m, w, gamma) {
   m_bar <- m
   diag(m_bar) <- diag(m_bar) - w
-  K <- length(w)
-  rdirichlet(1, c(colSums(m_bar), gamma))[1, ]
+  beta <- rdirichlet(1, c(colSums(m_bar), gamma))[1, ]
+  names(beta) <- c(colnames(m), "new")
+  beta
 }
