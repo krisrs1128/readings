@@ -37,6 +37,7 @@ block_sampler <- function(y, hyper = list(), lambda = list()) {
   lambda <- merge_default_lambda(lambda)
 
   ## initialize state space
+  L <- hyper$L
   Pi <- matrix(1 / L, L, L, dimnames = list(1:L, 1:L))
   init_clust <- kmeans(y, L)
   z <- init_clust$cluster
@@ -112,24 +113,45 @@ sample_pi <- function(z, alpha, beta, kappa) {
 }
 
 sample_mu <- function(mu0, sigma0, y, sigma) {
+  if (nrow(y) == 0) {
+    return (rmvnorm(1, mu0, sigma0)[1, ])
+  }
+
   sigma_bar <- solve(solve(sigma0) + nrow(y) * solve(sigma))
-  mu_bar <- sigma_bar %*% (solve(sigma0) %*% mu0 + sigma %*% rowSums(y))
-  rnorm(1, mu_bar, sigma_bar)
+  mu_bar <- sigma_bar %*% (solve(sigma0) %*% mu0 + solve(sigma) %*% colSums(y))
+  rmvnorm(1, mu_bar, sigma_bar)[1, ]
 }
 
 sample_sigma <- function(nu, delta, y, mu) {
+  if (nrow(y) == 0) {
+    return (riwish(nu, nu * delta))
+  }
+
   nu_bar <- nu + nrow(y)
   e <- y - rep(1, nrow(y)) %*% matrix(mu, nrow = 1)
   nu_delta_bar <- nu * delta + t(e) %*% e
-  riwishart(nu_delta_bar, nu_bar)
+  riwish(nu_bar, nu_delta_bar)
 }
 
 sample_theta <- function(y, z, theta, lambda, n_iter) {
   modes <- names(theta)
+  z <- as.character(z)
+
   for (i in seq_len(n_iter)) {
     for (l in modes) {
-      theta[[l]]$mu <- sample_mu(lambda$mu0, lambda$sigma0, y[z == l, ], theta[[l]]$sigma)
-      theta[[l]]$sigma <- sample_sigma(lambda$nu, lambda$delta, y[z == l, ], theta[[l]]$mu)
+      theta[[l]]$mu <- sample_mu(
+        lambda$mu0,
+        lambda$sigma0,
+        y[z == l,, drop = FALSE],
+        theta[[l]]$sigma
+      )
+
+      theta[[l]]$sigma <- sample_sigma(
+        lambda$nu,
+        lambda$delta,
+        y[z == l,, drop = FALSE],
+        theta[[l]]$mu
+      )
     }
   }
 
