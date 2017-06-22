@@ -20,13 +20,14 @@ rcrt <- function(gamma, m) {
 }
 
 sample_m <- function(z, alpha, beta, kappa) {
-  K <- length(beta) - 1
-  m <- matrix(0, K, K)
+  modes <- setdiff(names(beta), "new")
+  m <- matrix(0, length(modes), length(modes),
+              dimnames = list(modes, modes))
   n <- transition_counts(z)
 
-  for (j in seq_len(K)) {
-    for (k in seq_len(K)) {
-      m[j, k] <- rcrt(n[j, k], alpha * beta[k] + kappa * (j == k))
+  for (j in modes) {
+    for (k in modes) {
+      m[j, k] <- rcrt(alpha * beta[k] + kappa * (j == k), n[j, k])
     }
   }
 
