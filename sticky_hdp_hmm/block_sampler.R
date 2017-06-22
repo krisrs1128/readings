@@ -29,8 +29,7 @@ multi_dmvnorm <- function(yt, emission) {
   L <- length(emission)
   y_dens <- vector(length = L)
   for (l in seq_len(L)) {
-    nu_delta_coef <- (emission[[l]]$zeta + 1) / (emission[[l]]$zeta * (emission[[l]]$nu - d - 1))
-    y_dens[l] <- dmvnorm(emission[[l]]$theta, nu_delta_coef * emission[[l]]$nu_delta)
+    y_dens[l] <- dmvnorm(emission[[l]]$mu, emission[[l]]$sigma)
   }
   y_dens
 }
@@ -57,7 +56,32 @@ sample_pi <- function(alpha, beta, kappa, n) {
   for (l in seq_len(L)) {
     u <- alpha * beta + n[l, ]
     u[l] <- mu[l] + kappa
-    Pi[l, ] <- rdirichlet(u)
+    Pi[l, ] <- rdirichlet(u)[1, ]
   }
   Pi
+}
+
+sample_mu <- function(mu0, sigma0, y, sigma) {
+  sigma_bar <- solve(solve(sigma0) + nrow(y) * solve(sigma))
+  mu_bar <- sigma_bar %*% (solve(sigma0) %*% mu0 + sigma %*% rowSums(y))
+  rnorm(1, mu_bar, sigma_bar)
+}
+
+sample_sigma <- function(nu, delta, y, mu) {
+  nu_bar <- nu + nrow(y)
+  e <- y - rep(1, nrow(y)) %*% matrix(mu, nrow = 1)
+  nu_delta_bar <- nu * delta + t(e) %*% e
+  riwishart(nu_delta_bar, nu_bar)
+}
+
+update_emission <- function(y, z, emission, nu, delta, sigma0, mu0) {
+  L <- length(emission)
+  for (i in seq_len(n_iter)) {
+    for (l in seq_along(L)) {
+      emission[[l]]$mu <- sample_mu(mu0, sigma0, y[z == l, ], emission[[l]]$sigma)
+      emission[[l]]$sigma <- sample_sigma(nu, delta, y[z == l, ], emission[[l]]$mu)
+    }
+  }
+
+  emission
 }
