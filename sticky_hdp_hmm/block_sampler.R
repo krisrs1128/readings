@@ -45,3 +45,19 @@ sample_z <- function(Pi, y, emission, m) {
   }
   z
 }
+
+sample_beta <- function(gamma, m_bar) {
+  L <- ncol(m_bar)
+  rdirichlet(1, gamma / L + colSums(m_bar))[1, ]
+}
+
+sample_pi <- function(alpha, beta, kappa, n) {
+  L <- length(beta)
+  Pi <- matrix(L, L)
+  for (l in seq_len(L)) {
+    u <- alpha * beta + n[l, ]
+    u[l] <- mu[l] + kappa
+    Pi[l, ] <- rdirichlet(u)
+  }
+  Pi
+}
