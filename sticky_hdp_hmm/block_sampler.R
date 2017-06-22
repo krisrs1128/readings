@@ -34,3 +34,14 @@ multi_dmvnorm <- function(yt, emission) {
   }
   y_dens
 }
+
+sample_z <- function(Pi, y, emission, m) {
+  time_len <- nrow(y)
+  z <- vector(length = time_len)
+  for (i in seq(2, time_len)) {
+    y_dens <- multi_dvmnorm(y[i, ], emission)
+    f <- Pi[z[i -1], ] * y_dens * m[i, ]
+    z[i] <- sample(seq_along(f), f / sum(f))
+  }
+  z
+}
