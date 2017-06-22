@@ -61,10 +61,10 @@ merge_default_lambda <- function(opts = list()) {
 }
 
 multi_dmvnorm <- function(yt, theta) {
-  L <- length(theta)
-  y_dens <- vector(length = L)
-  for (l in seq_len(L)) {
-    y_dens[l] <- dmvnorm(theta[[l]]$mu, theta[[l]]$sigma)
+  modes <- names(theta)
+  y_dens <- setNames(seq_along(modes), modes)
+  for (l in modes) {
+    y_dens[l] <- dmvnorm(yt, theta[[l]]$mu, theta[[l]]$sigma)
   }
   y_dens
 }

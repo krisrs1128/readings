@@ -23,8 +23,8 @@ source("simulate.R")
 #'
 #' z <- c(rep(1, 10), rep(2, 5), rep(1, 10), rep(3, 3), rep(2, 10))
 #' lambda <- list(zeta = .02, theta = c(0, 0), nu = 10, Delta = diag(c(0.1, 0.1)))
-#' theta <- theta_parameters(K, lambda)
-#' y <- thetas(z, theta)
+#' theta <- emission_parameters(K, lambda)
+#' y <- emissions(z, theta)
 #' plot(y[, 1], col = z)
 #' z_clust <- kmeans(y, 20)$cluster
 #' plot(y[, 1], col = 'white', asp = 1)
@@ -38,9 +38,14 @@ block_sampler <- function(y, hyper = list(), lambda = list()) {
 
   ## initialize state space
   Pi <- matrix(1 / L, L, L, dimnames = list(1:L, 1:L))
-  z <- kmeans(y, L)
+  init_clust <- kmeans(y, L)
+  z <- init_clust$cluster
   beta <- setNames(rep(0.1, L), 1:L)
-  theta <- rep(list(lambda), L)
+
+  theta <- list()
+  for (l in as.character(1:L)) {
+    theta[[l]] <- list("mu" = init_clust$centers[l, ], "sigma" = 0.75 * cov(y))
+  }
 
   for (i in seq_len(hyper$n_iter)) {
     cat(sprintf("iteration %s\n", i))
@@ -60,9 +65,10 @@ block_sampler <- function(y, hyper = list(), lambda = list()) {
 }
 
 messages <- function(Pi, y, theta) {
-  L <- nrow(Pi)
   time_len <- nrow(y)
-  m <- matrix(1, time_len, L)
+  modes <- colnames(Pi)
+  m <- matrix(1, time_len, nrow(Pi),
+              dimnames = list(1:time_len, modes))
 
   for (i in seq(time_len - 1, 1)) {
     y_dens <- multi_dmvnorm(y[i, ], theta)
@@ -119,9 +125,9 @@ sample_sigma <- function(nu, delta, y, mu) {
 }
 
 sample_theta <- function(y, z, theta, lambda, n_iter) {
-  L <- length(theta)
+  modes <- names(theta)
   for (i in seq_len(n_iter)) {
-    for (l in seq_along(L)) {
+    for (l in modes) {
       theta[[l]]$mu <- sample_mu(lambda$mu0, lambda$sigma0, y[z == l, ], theta[[l]]$sigma)
       theta[[l]]$sigma <- sample_sigma(lambda$nu, lambda$delta, y[z == l, ], theta[[l]]$mu)
     }
@@ -129,4 +135,3 @@ sample_theta <- function(y, z, theta, lambda, n_iter) {
 
   theta
 }
-
