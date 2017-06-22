@@ -102,21 +102,6 @@ sample_z <- function(y, z, emission, alpha, beta, kappa, gamma, lambda) {
   list("z" = z, "beta" = beta, "emission" = emission)
 }
 
-#' @examples
-#' z <- c(1, 1, 2, 1, 1, 3, 3, 3, 1)
-#' transition_counts(z)
-transition_counts <- function(z) {
-  modes <- c(unique(z), "new")
-  n <- matrix(0, nrow = length(modes), ncol = length(modes), dimnames = list(modes, modes))
-  time_len <- length(z)
-
-  z <- as.character(z)
-  for (i in seq_len(time_len - 1)) {
-    n[z[i], z[i + 1]] <- n[z[i], z[i + 1]] + 1
-  }
-  n
-}
-
 update_count <- function(n, z_prev, z_cur, z_next, s) {
   z_prev <- as.character(z_prev)
   z_cur <- as.character(z_cur)
