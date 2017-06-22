@@ -26,7 +26,7 @@ source("utils.R")
 #' y <- emissions(z, theta)
 #' plot(y[, 1], col = z)
 #'
-#' direct_sampler(y, alpha, kappa, gamma, lambda)
+#' res <- direct_sampler(y, alpha, kappa, gamma, lambda)
 #'
 #' emission <- lapply(1:2, function(i) emission_prior(lambda))
 #' emission[[1]]$zeta <- emission[[2]]$zeta + nrow(y)
