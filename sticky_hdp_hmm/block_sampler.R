@@ -69,7 +69,7 @@ messages <- function(Pi, y, theta) {
   time_len <- nrow(y)
   modes <- colnames(Pi)
   log_msg <- matrix(0, time_len, nrow(Pi),
-              dimnames = list(1:time_len, modes))
+                    dimnames = list(1:time_len, modes))
 
   for (i in seq(time_len - 1, 1)) {
     log_y_dens <- multi_dmvnorm(y[i, ], theta)
