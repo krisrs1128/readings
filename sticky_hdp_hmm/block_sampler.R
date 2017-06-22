@@ -26,10 +26,29 @@ source("simulate.R")
 #' theta <- emission_parameters(K, lambda)
 #' y <- emissions(z, theta)
 #' plot(y[, 1], col = z)
-block_sampler <- function(y, L = 20) {
+#' z_clust <- kmeans(y, 20)$cluster
+#' plot(y[, 1], col = 'white', asp = 1)
+#' text(y[, 1], labels = z_clust)
+#'
+#' block_sampler(y)
+block_sampler <- function(y, hyper = list(), lambda = list()) {
   ## initialize state space
-  Pi = matrix(1 / L, L, L)
+  Pi <- matrix(1 / L, L, L)
   z <- kmeans(y, L)
+  beta <- rep(0.1, L)
+  theta <- theta_prior(L, lambda)
+
+  for (i in seq_len(hyper$n_iter)) {
+    m <- messages(Pi, y, theta)
+    z <- sample_z(Pi, y, theta, m)
+    m <- sample_m(z, hyper$alpha, beta, hyper$kappa)
+    beta <- sample_beta(gamma, colMeans(m))
+    Pi <- sample_pi(z, beta, hyper$alpha, hyper$kappa)
+    theta <- sample_theta(y, z, theta, lambda)
+    state <- list(z = z, beta = beta, theta = theta)
+  }
+
+  state
 }
 
 messages <- function(Pi, y, emission) {
@@ -69,7 +88,8 @@ sample_beta <- function(gamma, m_bar) {
   rdirichlet(1, gamma / L + colSums(m_bar))[1, ]
 }
 
-sample_pi <- function(alpha, beta, kappa, n) {
+sample_pi <- function(z, beta, alpha, beta, kappa) {
+  n <- transition_counts(z)
   L <- length(beta)
   Pi <- matrix(L, L)
   for (l in seq_len(L)) {
@@ -93,14 +113,14 @@ sample_sigma <- function(nu, delta, y, mu) {
   riwishart(nu_delta_bar, nu_bar)
 }
 
-update_emission <- function(y, z, emission, nu, delta, sigma0, mu0) {
-  L <- length(emission)
+sample_theta <- function(y, z, theta, lambda) {
+  L <- length(theta)
   for (i in seq_len(n_iter)) {
     for (l in seq_along(L)) {
-      emission[[l]]$mu <- sample_mu(mu0, sigma0, y[z == l, ], emission[[l]]$sigma)
-      emission[[l]]$sigma <- sample_sigma(nu, delta, y[z == l, ], emission[[l]]$mu)
+      theta[[l]]$mu <- sample_mu(lambda$mu0, lambda$sigma0, y[z == l, ], theta[[l]]$sigma)
+      theta[[l]]$sigma <- sample_sigma(lambda$nu, lambda$delta, y[z == l, ], theta[[l]]$mu)
     }
   }
 
-  emission
+  theta
 }
