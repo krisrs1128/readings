@@ -66,6 +66,16 @@ merge_default_hyper <- function(opts = list()) {
   modifyList(default_opts, opts)
 }
 
+merge_default_lambda <- function(opts = list()) {
+  default_opts <- list(
+    "mu0" = 0,
+    "sigma0" = 1,
+    "nu" = 0.1,
+    "delta" = matrix(c(1, 0, 0, 1), nrow = 2)
+  )
+  modifyList(default_opts, opts)
+}
+
 messages <- function(Pi, y, emission) {
   L <- nrow(Pi)
   time_len <- nrow(y)
