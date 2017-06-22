@@ -12,6 +12,25 @@ library("mvtnorm")
 library("jsonlite")
 source("auxiliary.R")
 source("utils.R")
+source("simulate.R")
+
+## ---- functions ----
+#' @examples
+#' K <- 20
+#' gamma <- 2
+#' alpha <- 0.9
+#' kappa <- 3
+#'
+#' z <- c(rep(1, 10), rep(2, 5), rep(1, 10), rep(3, 3), rep(2, 10))
+#' lambda <- list(zeta = .02, theta = c(0, 0), nu = 10, Delta = diag(c(0.1, 0.1)))
+#' theta <- emission_parameters(K, lambda)
+#' y <- emissions(z, theta)
+#' plot(y[, 1], col = z)
+block_sampler <- function(y, L = 20) {
+  ## initialize state space
+  Pi = matrix(1 / L, L, L)
+  z <- kmeans(y, L)
+}
 
 messages <- function(Pi, y, emission) {
   L <- nrow(Pi)
