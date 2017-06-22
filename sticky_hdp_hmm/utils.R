@@ -32,7 +32,10 @@ write_state <- function(out_dir, state, iter) {
 
   em <- state$emission
   em$iter <- iter
-  cat(toJSON(em), file = file.path(out_dir, "emissions.json"), append = TRUE)
+  cat(
+    jsonlite::toJSON(em), file = file.path(out_dir, "emissions.json"),
+    append = TRUE
+  )
 
   m_mat <- cbind(iter, t(as.matrix(state$m)))
   colnames(m_mat) <- c("iter", paste0("k_", seq_len(ncol(m_mat))))
@@ -65,7 +68,12 @@ multi_dmvnorm <- function(yt, theta) {
   modes <- names(theta)
   y_dens <- setNames(seq_along(modes), modes)
   for (l in modes) {
-    y_dens[l] <- dmvnorm(yt, theta[[l]]$mu, theta[[l]]$sigma, log = TRUE)
+    y_dens[l] <- mvtnorm::dmtvnorm(
+                            yt,
+                            theta[[l]]$mu,
+                            theta[[l]]$sigma,
+                            log = TRUE
+                          )
   }
   y_dens
 }

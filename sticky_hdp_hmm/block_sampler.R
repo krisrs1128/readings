@@ -54,7 +54,11 @@ block_sampler <- function(y, hyper = list(), lambda = list()) {
     z <- sample_z(Pi, y, theta, msg)
 
     m <- sample_m(z, hyper$alpha, beta, hyper$kappa)
-    w <- sample_override(diag(m), hyper$kappa / (hyper$kappa + hyper$alpha), beta)
+    w <- sample_override(
+      diag(m),
+      hyper$kappa / (hyper$kappa + hyper$alpha),
+      beta
+    )
     beta <- sample_beta(m, w, gamma)
 
     Pi <- sample_pi(z, hyper$alpha, beta, hyper$kappa)
@@ -83,7 +87,7 @@ sample_z <- function(Pi, y, theta, msg) {
   z <- rep(1, time_len)
   for (i in seq(2, time_len)) {
     log_y_dens <- multi_dmvnorm(y[i, ], theta)
-    f <- exp(log(Pi[z[i -1], ]) + log_y_dens + msg[i, ])
+    f <- exp(log(Pi[z[i - 1], ]) + log_y_dens + msg[i, ])
     z[i] <- sample(seq_along(f), 1, prob = f / sum(f))
   }
   z

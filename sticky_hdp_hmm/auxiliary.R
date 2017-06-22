@@ -52,7 +52,8 @@ transition_counts <- function(z, modes = NULL) {
     modes <- c(unique(z), "new")
   }
 
-  n <- matrix(0, nrow = length(modes), ncol = length(modes), dimnames = list(modes, modes))
+  n <- matrix(0, nrow = length(modes), ncol = length(modes),
+              dimnames = list(modes, modes))
   time_len <- length(z)
 
   z <- as.character(z)
