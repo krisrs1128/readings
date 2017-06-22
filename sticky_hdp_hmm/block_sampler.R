@@ -19,10 +19,18 @@ messages <- function(Pi, y, emission) {
   m <- matrix(1, time_len, L)
 
   for (i in seq(time_len - 1, 1)) {
-    y_dens <- multi_dvmnorm(y[i, ], emission)
+    y_dens <- multi_dmvnorm(y[i, ], emission)
     m[i, ] <- Pi %*% (y_dens * m[i + 1, ])
   }
   m
 }
 
-
+multi_dmvnorm <- function(yt, emission) {
+  L <- length(emission)
+  y_dens <- vector(length = L)
+  for (l in seq_len(L)) {
+    nu_delta_coef <- (emission[[l]]$zeta + 1) / (emission[[l]]$zeta * (emission[[l]]$nu - d - 1))
+    y_dens[l] <- dmvnorm(emission[[l]]$theta, nu_delta_coef * emission[[l]]$nu_delta)
+  }
+  y_dens
+}
