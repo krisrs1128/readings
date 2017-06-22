@@ -23,8 +23,8 @@ source("simulate.R")
 #'
 #' z <- c(rep(1, 10), rep(2, 5), rep(1, 10), rep(3, 3), rep(2, 10))
 #' lambda <- list(zeta = .02, theta = c(0, 0), nu = 10, Delta = diag(c(0.1, 0.1)))
-#' theta <- emission_parameters(K, lambda)
-#' y <- emissions(z, theta)
+#' theta <- theta_parameters(K, lambda)
+#' y <- thetas(z, theta)
 #' plot(y[, 1], col = z)
 #' z_clust <- kmeans(y, 20)$cluster
 #' plot(y[, 1], col = 'white', asp = 1)
@@ -37,90 +37,70 @@ block_sampler <- function(y, hyper = list(), lambda = list()) {
   lambda <- merge_default_lambda(lambda)
 
   ## initialize state space
-  Pi <- matrix(1 / L, L, L)
+  Pi <- matrix(1 / L, L, L, dimnames = list(1:L, 1:L))
   z <- kmeans(y, L)
-  beta <- rep(0.1, L)
-  theta <- theta_prior(L, lambda)
+  beta <- setNames(rep(0.1, L), 1:L)
+  theta <- rep(list(lambda), L)
 
   for (i in seq_len(hyper$n_iter)) {
+    cat(sprintf("iteration %s\n", i))
     msg <- messages(Pi, y, theta)
     z <- sample_z(Pi, y, theta, msg)
 
     m <- sample_m(z, hyper$alpha, beta, hyper$kappa)
-    beta <- sample_beta(gamma, colMeans(m))
+    w <- sample_override(diag(m), hyper$kappa / (hyper$kappa + hyper$alpha), beta)
+    beta <- sample_beta(m, w, gamma)
 
-    Pi <- sample_pi(z, beta, hyper$alpha, hyper$kappa)
-    theta <- sample_theta(y, z, theta, lambda)
+    Pi <- sample_pi(z, hyper$alpha, beta, hyper$kappa)
+    theta <- sample_theta(y, z, theta, lambda, hyper$theta_iter)
     state <- list(z = z, beta = beta, theta = theta)
   }
 
   state
 }
 
-merge_default_hyper <- function(opts = list()) {
-  default_opts <- list(
-    "n_iter" = 1000,
-    "kappa" = 1,
-    "alpha" = 1,
-  )
-  modifyList(default_opts, opts)
-}
-
-merge_default_lambda <- function(opts = list()) {
-  default_opts <- list(
-    "mu0" = 0,
-    "sigma0" = 1,
-    "nu" = 0.1,
-    "delta" = matrix(c(1, 0, 0, 1), nrow = 2)
-  )
-  modifyList(default_opts, opts)
-}
-
-messages <- function(Pi, y, emission) {
+messages <- function(Pi, y, theta) {
   L <- nrow(Pi)
   time_len <- nrow(y)
   m <- matrix(1, time_len, L)
 
   for (i in seq(time_len - 1, 1)) {
-    y_dens <- multi_dmvnorm(y[i, ], emission)
+    y_dens <- multi_dmvnorm(y[i, ], theta)
     m[i, ] <- Pi %*% (y_dens * m[i + 1, ])
   }
   m
 }
 
-multi_dmvnorm <- function(yt, emission) {
-  L <- length(emission)
-  y_dens <- vector(length = L)
-  for (l in seq_len(L)) {
-    y_dens[l] <- dmvnorm(emission[[l]]$mu, emission[[l]]$sigma)
-  }
-  y_dens
-}
-
-sample_z <- function(Pi, y, emission, m) {
+sample_z <- function(Pi, y, theta, msg) {
   time_len <- nrow(y)
-  z <- vector(length = time_len)
+  z <- rep(1, time_len)
   for (i in seq(2, time_len)) {
-    y_dens <- multi_dvmnorm(y[i, ], emission)
-    f <- Pi[z[i -1], ] * y_dens * m[i, ]
-    z[i] <- sample(seq_along(f), f / sum(f))
+    y_dens <- multi_dmvnorm(y[i, ], theta)
+    f <- Pi[z[i -1], ] * y_dens * msg[i, ]
+    z[i] <- sample(seq_along(f), 1, prob = f / sum(f))
   }
   z
 }
 
-sample_beta <- function(gamma, m_bar) {
-  L <- ncol(m_bar)
-  rdirichlet(1, gamma / L + colSums(m_bar))[1, ]
+sample_beta <- function(m, w, gamma) {
+  m_bar <- m
+  diag(m_bar) <- diag(m_bar) - w
+
+  setNames(
+    rdirichlet(1, gamma / ncol(m_bar) + colSums(m_bar))[1, ],
+    colnames(m)
+  )
 }
 
-sample_pi <- function(z, beta, alpha, beta, kappa) {
-  n <- transition_counts(z)
-  L <- length(beta)
-  Pi <- matrix(L, L)
-  for (l in seq_len(L)) {
+sample_pi <- function(z, alpha, beta, kappa) {
+  modes <- names(beta)
+  n <- transition_counts(z, modes)
+  Pi <- matrix(0, length(modes), length(modes),
+               dimnames = list(modes, modes))
+  for (l in modes) {
     u <- alpha * beta + n[l, ]
-    u[l] <- mu[l] + kappa
-    Pi[l, ] <- rdirichlet(u)[1, ]
+    u[l] <- u[l] + kappa
+    Pi[l, ] <- rdirichlet(1, u)[1, ]
   }
   Pi
 }
@@ -138,7 +118,7 @@ sample_sigma <- function(nu, delta, y, mu) {
   riwishart(nu_delta_bar, nu_bar)
 }
 
-sample_theta <- function(y, z, theta, lambda) {
+sample_theta <- function(y, z, theta, lambda, n_iter) {
   L <- length(theta)
   for (i in seq_len(n_iter)) {
     for (l in seq_along(L)) {
@@ -149,3 +129,4 @@ sample_theta <- function(y, z, theta, lambda) {
 
   theta
 }
+

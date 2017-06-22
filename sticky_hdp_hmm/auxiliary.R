@@ -23,7 +23,7 @@ sample_m <- function(z, alpha, beta, kappa) {
   modes <- setdiff(names(beta), "new")
   m <- matrix(0, length(modes), length(modes),
               dimnames = list(modes, modes))
-  n <- transition_counts(z)
+  n <- transition_counts(z, modes)
 
   for (j in modes) {
     for (k in modes) {
@@ -47,8 +47,11 @@ sample_override <- function(m_diag, rho, beta) {
 #' @examples
 #' z <- c(1, 1, 2, 1, 1, 3, 3, 3, 1)
 #' transition_counts(z)
-transition_counts <- function(z) {
-  modes <- c(unique(z), "new")
+transition_counts <- function(z, modes = NULL) {
+  if (is.null(modes)) {
+    modes <- c(unique(z), "new")
+  }
+
   n <- matrix(0, nrow = length(modes), ncol = length(modes), dimnames = list(modes, modes))
   time_len <- length(z)
 

@@ -197,14 +197,6 @@ delete_unused_modes <- function(z, beta, emission) {
   )
 }
 
-#' From MCMCpack library
-rdirichlet <- function (n, alpha) {
-  l <- length(alpha)
-  x <- matrix(rgamma(l * n, alpha), ncol = l, byrow = TRUE)
-  sm <- x %*% rep(1, l)
-  x / as.vector(sm)
-}
-
 sample_beta <- function(m, w, gamma) {
   m_bar <- m
   diag(m_bar) <- diag(m_bar) - w

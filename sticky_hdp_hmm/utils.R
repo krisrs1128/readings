@@ -38,3 +38,40 @@ write_state <- function(out_dir, state, iter) {
   colnames(m_mat) <- c("iter", paste0("k_", seq_len(ncol(m_mat))))
   append_to_file(file.path(out_dir, "m.csv"), m_mat)
 }
+
+## ---- block-sampler-utils ----
+merge_default_hyper <- function(opts = list()) {
+  default_opts <- list(
+    "n_iter" = 1000,
+    "theta_iter" = 10,
+    "kappa" = 1,
+    "alpha" = 1
+  )
+  modifyList(default_opts, opts)
+}
+
+merge_default_lambda <- function(opts = list()) {
+  default_opts <- list(
+    "mu0" = c(0, 0),
+    "sigma0" = diag(2),
+    "nu" = 0.1,
+    "delta" = matrix(c(1, 0, 0, 1), nrow = 2)
+  )
+  modifyList(default_opts, opts)
+}
+
+multi_dmvnorm <- function(yt, theta) {
+  L <- length(theta)
+  y_dens <- vector(length = L)
+  for (l in seq_len(L)) {
+    y_dens[l] <- dmvnorm(theta[[l]]$mu, theta[[l]]$sigma)
+  }
+  y_dens
+}
+
+rdirichlet <- function (n, alpha) {
+    l <- length(alpha)
+    x <- matrix(rgamma(l * n, alpha), ncol = l, byrow = TRUE)
+    sm <- x %*% rep(1, l)
+    x / as.vector(sm)
+}
