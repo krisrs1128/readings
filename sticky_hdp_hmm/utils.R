@@ -42,8 +42,9 @@ write_state <- function(out_dir, state, iter) {
 ## ---- block-sampler-utils ----
 merge_default_hyper <- function(opts = list()) {
   default_opts <- list(
+    "L" = 20,
     "n_iter" = 1000,
-    "theta_iter" = 10,
+    "theta_iter" = 2,
     "kappa" = 1,
     "alpha" = 1
   )
@@ -54,7 +55,7 @@ merge_default_lambda <- function(opts = list()) {
   default_opts <- list(
     "mu0" = c(0, 0),
     "sigma0" = diag(2),
-    "nu" = 0.1,
+    "nu" = 3,
     "delta" = matrix(c(1, 0, 0, 1), nrow = 2)
   )
   modifyList(default_opts, opts)
@@ -67,11 +68,4 @@ multi_dmvnorm <- function(yt, theta) {
     y_dens[l] <- dmvnorm(yt, theta[[l]]$mu, theta[[l]]$sigma)
   }
   y_dens
-}
-
-rdirichlet <- function (n, alpha) {
-    l <- length(alpha)
-    x <- matrix(rgamma(l * n, alpha), ncol = l, byrow = TRUE)
-    sm <- x %*% rep(1, l)
-    x / as.vector(sm)
 }
