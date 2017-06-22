@@ -32,6 +32,10 @@ source("simulate.R")
 #'
 #' block_sampler(y)
 block_sampler <- function(y, hyper = list(), lambda = list()) {
+  ## merge default opts
+  hyper <- merge_default_hyper(hyper)
+  lambda <- merge_default_lambda(lambda)
+
   ## initialize state space
   Pi <- matrix(1 / L, L, L)
   z <- kmeans(y, L)
@@ -39,16 +43,27 @@ block_sampler <- function(y, hyper = list(), lambda = list()) {
   theta <- theta_prior(L, lambda)
 
   for (i in seq_len(hyper$n_iter)) {
-    m <- messages(Pi, y, theta)
-    z <- sample_z(Pi, y, theta, m)
+    msg <- messages(Pi, y, theta)
+    z <- sample_z(Pi, y, theta, msg)
+
     m <- sample_m(z, hyper$alpha, beta, hyper$kappa)
     beta <- sample_beta(gamma, colMeans(m))
+
     Pi <- sample_pi(z, beta, hyper$alpha, hyper$kappa)
     theta <- sample_theta(y, z, theta, lambda)
     state <- list(z = z, beta = beta, theta = theta)
   }
 
   state
+}
+
+merge_default_hyper <- function(opts = list()) {
+  default_opts <- list(
+    "n_iter" = 1000,
+    "kappa" = 1,
+    "alpha" = 1,
+  )
+  modifyList(default_opts, opts)
 }
 
 messages <- function(Pi, y, emission) {
