@@ -65,7 +65,7 @@ multi_dmvnorm <- function(yt, theta) {
   modes <- names(theta)
   y_dens <- setNames(seq_along(modes), modes)
   for (l in modes) {
-    y_dens[l] <- dmvnorm(yt, theta[[l]]$mu, theta[[l]]$sigma)
+    y_dens[l] <- dmvnorm(yt, theta[[l]]$mu, theta[[l]]$sigma, log = TRUE)
   }
   y_dens
 }

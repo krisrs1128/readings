@@ -27,10 +27,10 @@ source("simulate.R")
 #' y <- emissions(z, theta)
 #' plot(y[, 1], col = z)
 #' z_clust <- kmeans(y, 20)$cluster
-#' plot(y[, 1], col = 'white', asp = 1)
-#' text(y[, 1], labels = z_clust)
+#' plot(y, col = 'white', asp = 1)
+#' text(y, labels = z_clust)
 #'
-#' block_sampler(y)
+#' res <- block_sampler(y)
 block_sampler <- function(y, hyper = list(), lambda = list()) {
   ## merge default opts
   hyper <- merge_default_hyper(hyper)
@@ -68,22 +68,22 @@ block_sampler <- function(y, hyper = list(), lambda = list()) {
 messages <- function(Pi, y, theta) {
   time_len <- nrow(y)
   modes <- colnames(Pi)
-  m <- matrix(1, time_len, nrow(Pi),
+  log_msg <- matrix(0, time_len, nrow(Pi),
               dimnames = list(1:time_len, modes))
 
   for (i in seq(time_len - 1, 1)) {
-    y_dens <- multi_dmvnorm(y[i, ], theta)
-    m[i, ] <- Pi %*% (y_dens * m[i + 1, ])
+    log_y_dens <- multi_dmvnorm(y[i, ], theta)
+    log_msg[i, ] <- log(Pi %*% exp(log_y_dens + log_msg[i + 1, ]))
   }
-  m
+  log_msg
 }
 
 sample_z <- function(Pi, y, theta, msg) {
   time_len <- nrow(y)
   z <- rep(1, time_len)
   for (i in seq(2, time_len)) {
-    y_dens <- multi_dmvnorm(y[i, ], theta)
-    f <- Pi[z[i -1], ] * y_dens * msg[i, ]
+    log_y_dens <- multi_dmvnorm(y[i, ], theta)
+    f <- exp(log(Pi[z[i -1], ]) + log_y_dens + msg[i, ])
     z[i] <- sample(seq_along(f), 1, prob = f / sum(f))
   }
   z
