@@ -1,0 +1,101 @@
+\documentclass{article}
+\usepackage{natbib}
+\usepackage{graphicx}
+\input{preamble.tex}
+
+\title{Notes}
+\author{Kris Sankaran}
+\maketitle
+
+\begin{document}
+
+\subsection{Counting binary trees}
+
+\begin{itemize}
+  \item Want $\beta_{n}:=\#\left\{\text{binary trees on } n \text{ vertices}\right\}$.
+  \item Since subtrees are still binary trees, determine recurrence and use generating functions.
+  \item By dividing into cases for the number of vertices in each subtree, derive the recurrence,
+    \begin{align}
+      \beta_{0} = 1 \\
+      \beta_{n} = \sum_{i = 0}^{n - 1} \beta_{i}\beta_{n - i - 1}
+    \end{align}
+  \item Relating this to the earlier problem of counting ways to triangulate $n$-gons, we get
+    \begin{align}
+      \beta_{n} = \frac{1}{n}{2n \choose n},
+    \end{align}
+    which is coincidentally the $n^{th}$ catalan number.
+\end{itemize}
+    
+\subsection{Coloring and the chromatic polynomial}
+
+
+\begin{itemize}
+  \item What's the fewest number of colors so that we can color each vertex in a
+    graph so that neighbors always get different colors? This number
+    $\chi\left(G\right)$ is the chromatic number of $G$.
+  \item If the graph is 2 colorable, it's bipartite.
+  \item The chromatic number for a complete graph is the total number of vertices.
+  \item Arguments for lower bounds are usually attempts to label vertices one by
+    one until you arrive at an edge with two colors that are necessarily the
+    same.
+  \item The chromatic polynomial is defined as $p\left(G, k\right) =
+    \#\{\text{proper }k\text{-colorings of }G\}$.
+  \item Example: To $k$-color a graph, you can choose any of $k$ colors for
+    the first node, then for each subsequent one you can choose any of $k -
+    1$ colors (any but the previous one). So the associated polynomial is
+    $k\left(k - 1\right)^{n - 1}$.
+  \item Since counting these colorings is a type of ``pattern-avoidance''
+    problem, it is often useful to use inclusion-exclusion, where you're
+    trying to avoid any edge having endpoints the same color.
+  \item This can require $2^{e\left(G\right)}$ evaluations of $N_{\geq}$
+    though, so it's useful to study recurrences.
+  \item Define a contraction operator $\cdot$ that merges two vertices connected
+    by an edge. Then you can show
+    \begin{align}
+      p\left(G, k\right) = p\left(G - e, k\right) - p\left(G \cdot e, k\right),
+    \end{align}
+    by double counting $p\left(G - e, k\right)$, conditioning on whether the
+    endpoints of $e$ are the same color or not.
+  \item These polynomials have some other nice properties: the leading
+    coefficient is always 1, the constant's coefficient is 0, the coefficient of
+    $k^{n - 1}$ is $-e\left(G\right)$ (minus the number of edges of $G$),
+    the signs alternate, and the sum of coefficients is 0. Last property has a
+    nice proof: just note that $p\left(G, 1\right) = 0$ since if you have at
+    least one edge you can't be 1-colorable.
+\end{itemize}
+
+\subsection{Ramsey theory}
+
+\begin{itemize}
+  \item General flavor: In a large structure that is constructed arbitrarily,
+    there is some concrete nonrandom structure.
+  \item Typical problem: What is the smallest $n$ so that any red-blue coloring
+    of edges in $K_{n}$, the complete graph on $n$ vertices, contains either a
+    red $K_{a}$ or a blue $K_{b}$. This number is called $R\left(a, b\right)$.
+    People sometimes write $n \arrow a, b$ if $R\left(a, b\right) = n$.
+  \item There's a clever proof for $R\left(3, 3\right)$, it starts by
+    considering three edges that must be one color and then analyzing what
+    happens on the remaining edges.
+  \item One approach to constructing upper bounds is to note $R\left(a, b\right)
+    \leq R\left(a - 1, b\right) + R\left(a, b - 1\right)$. The proof considers
+    edges incident with the first node, and dividing into the cases there are
+    $R\left(a - 1, b\right)$ red edges or $R\left(a, b - 1\right)$ blue edges
+    incident to it.
+  \item You can generalize ramsey numbers to have more colors, or to subgraphs
+    other than complete graphs.
+\end{itemize}
+
+\section{Designs and codes}
+
+\subsection{Construction methods for designs}
+
+\begin{itemize}
+  \item A combinatorial design on a set $V$ is a collection of subsets $\B$. The
+    elements of $V$ are called varieties.
+    \item A $\left(b, v, r, k, \lambda\right)$ design has $b$ blocks, $v$
+      variaties, $r$ blocks per each variety, $k$ varieties in each block, and
+      $lambda$ blocks including any given pair of varieties. If $k = v$ the
+      design is complete.
+\end{itemize}
+
+\end{document}
