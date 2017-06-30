@@ -137,5 +137,81 @@ backwards <- function(phi, qt) {
 }
 
 #' ---- smoothing-estimates ----
+#' @examples
+#' A <- diag(0.99, nrow = 1)
+#' C <- diag(1, nrow = 1)
+#' Q <- diag(0.1, nrow = 1)
+#' R <- diag(1, nrow = 1)
+#' lds <- simulate(A, C, 0, Q, R, time_len = 100)
+#' v_weights <- c(rep(1, 40), rep(0.001, 20), rep(1, 40))
+#' inf <- lds_inference(lds$y, A, C, Q, R, 0, 0.1, v_weights)
+#' inf2 <- lds_inference(lds$y, A, C, Q, R, 0, 0.1)
+#' plot(lds$y)
+#' lines(lds$x, col = "red")
+#' lines(inf$x_smooth, col = "orange")
+#' lines(inf2$x_smooth, col = "purple")
+lds_inference <- function(y, A, C, Q, R, x01, v01, v_weights = NULL) {
+  time_len <- nrow(y)
+  p <- nrow(C)
+  k <- nrow(A)
+
+  if (is.null(v_weights)) {
+    v_weights <- rep(1, time_len)
+  }
+
+  #' initialize for the forwards pass
+  x_predict <- x01
+  x_filter <- matrix(nrow = time_len, ncol = k)
+  v_predict <- array(dim = c(k, k, time_len))
+  v_predict[,, 1] <- v01
+  v_filter <- array(dim = c(k, k, time_len))
+
+  #' make the forward pass
+  for (i in seq_len(time_len)) {
+    if (i > 1) {
+      x_predict <- A %*% x_filter[i - 1, ]
+      v_predict[,, i] <- A %*% v_filter[,, i - 1] %*% t(A) + Q
+    }
+
+    K <- v_predict[,, i] %*% t(C) %*% solve(C %*% v_predict[,, i] %*% t(C) + R / v_weights[i])
+    x_filter[i, ] <- x_predict + K %*% (y[i, ] - C %*% x_predict)
+    v_filter[,, i] <- v_predict[,, i] - K %*% C %*% v_predict[,, i]
+  }
+
+  #' initialize for backwards pass
+  x_smooth <- matrix(nrow = time_len, ncol = k)
+  x_smooth[time_len, ] <- x_filter[time_len, ]
+  v_smooth <- array(dim = c(k, k, time_len))
+  v_smooth[,, time_len] <- v_filter[,, time_len]
+  v_pair <- array(dim = c(k, k, time_len - 1))
+  v_pair[,, time_len - 1] <- (diag(k) - K %*% C) %*% A %*% v_filter[,, time_len - 1]
+
+  #' make the backwards pass
+  for (i in seq(time_len, 2)) {
+    J_prev <- v_filter[,, i - 1] %*% t(A) %*% solve(v_predict[,, i])
+
+    x_smooth[i - 1, ] <- x_filter[i - 1, ] +
+      J_prev %*% (x_smooth[i, ] - A %*% x_filter[i - 1, ])
+    v_smooth[,, i - 1] <- v_filter[,, i - 1] +
+      J_prev %*% (v_smooth[,, i] - v_predict[,, i]) %*% t(J_prev)
+
+    if (i < time_len) {
+      v_pair[,, i - 1] <- v_filter[,, i] %*% t(J_prev) +
+        J_next %*% (v_pair[,, i] - A %*% v_filter[,, i]) %*% t(J_prev)
+    }
+    J_next <- J_prev
+  }
+
+  list(
+    "x_filter" = x_filter,
+    "v_filter" = v_filter,
+    "x_smooth" = x_smooth,
+    "v_smooth" = v_smooth,
+    "v_pair" = v_pair
+  )
+}
+
+
+
 #' ---- state-space-learning ----
 #' ---- hmm-learning ----
