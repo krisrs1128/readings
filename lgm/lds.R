@@ -10,7 +10,10 @@
 #' author: sankaran.kris@gmail.com
 #' date: 6/29/2017
 
+#' ---- libraries ----
 library("expm")
+
+#' ---- utils ----
 #' Simulate from an LDS
 #'
 #' x[t] = Ax[t - 1] + v[t]
@@ -18,15 +21,14 @@ library("expm")
 #'
 #' where v and w are iid normal with covariances Q and R, respectively
 #' @examples
-#' simulate()
-#' lds <- simulate(0.99, 1, 0, diag(0.1, nrow = 1), diag(1, nrow = 1), time_len = 100)
+#' A <- diag(0.99, nrow = 1)
+#' C <- diag(1, nrow = 1)
+#' Q <- diag(0.1, nrow = 1)
+#' R <- diag(1, nrow = 1)
+#' lds <- simulate(A, C, 0, Q, R, time_len = 100)
 #' plot(lds$y)
 #' points(lds$x, col = "red")
 simulate <- function(A, C, x0 = NULL, Q = NULL, R = NULL, time_len = 50) {
-  ## in case function is given scalars
-  A <- as.matrix(A)
-  C <- as.matrix(C)
-
   p <- nrow(C)
   k <- nrow(A)
 
@@ -57,7 +59,38 @@ simulate <- function(A, C, x0 = NULL, Q = NULL, R = NULL, time_len = 50) {
   list("x" = x, "y" = y)
 }
 
-lds_inference <- function(Y, A, C, Q, R, x0_1, V0_1) {
+#' @examples
+#' A <- diag(0.99, nrow = 1)
+#' C <- diag(1, nrow = 1)
+#' Q <- diag(0.1, nrow = 1)
+#' R <- diag(1, nrow = 1)
+#' lds <- simulate(A, C, 0, Q, R, time_len = 100)
+#' inf <- lds_inference(lds$y, A, C, Q, R, 0, 0.1)
+#' plot(lds$y)
+#' points(lds$x, col = "red")
+#' points(inf$x_filter, col = "blue")
+lds_inference <- function(y, A, C, Q, R, x01, v01) {
+  time_len <- nrow(y)
+  p <- nrow(C)
+  k <- nrow(A)
+  x_predict <- x01
+  v_predict <- v01
+  x_filter <- matrix(nrow = time_len, ncol = k)
+  v_filter <- array(dim = c(k, k, time_len))
+
+  #' forward pass
+  for (i in seq_len(time_len)) {
+    if (i > 1) {
+      x_predict <- A %*% x_filter[i - 1, ]
+      v_predict <- A %*% v_filter[,, i - 1] %*% t(A) + Q
+    }
+
+    K <- v_predict %*% t(C) %*% solve(C %*% v_predict %*% t(C) + R)
+    x_filter[i, ] <- x_predict + K %*% (y[i, ] - C %*% x_predict)
+    v_filter[,, i] <- v_predict - K %*% C %*% v_predict
+  }
+
+  list("x_filter" = x_filter, "v_filter" = v_filter)
 }
 
 lds_learn <- function(Y, k, c) {
