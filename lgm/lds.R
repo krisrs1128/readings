@@ -67,30 +67,58 @@ simulate <- function(A, C, x0 = NULL, Q = NULL, R = NULL, time_len = 50) {
 #' lds <- simulate(A, C, 0, Q, R, time_len = 100)
 #' inf <- lds_inference(lds$y, A, C, Q, R, 0, 0.1)
 #' plot(lds$y)
-#' points(lds$x, col = "red")
-#' points(inf$x_filter, col = "blue")
+#' lines(lds$x, col = "red")
+#' lines(inf$x_filter, col = "blue")
+#' lines(inf$x_smooth, col = "orange")
 lds_inference <- function(y, A, C, Q, R, x01, v01) {
   time_len <- nrow(y)
   p <- nrow(C)
   k <- nrow(A)
+
   x_predict <- x01
-  v_predict <- v01
   x_filter <- matrix(nrow = time_len, ncol = k)
+  v_predict <- array(dim = c(k, k, time_len))
+  v_predict[,, 1] <- v01
   v_filter <- array(dim = c(k, k, time_len))
 
   #' forward pass
   for (i in seq_len(time_len)) {
     if (i > 1) {
       x_predict <- A %*% x_filter[i - 1, ]
-      v_predict <- A %*% v_filter[,, i - 1] %*% t(A) + Q
+      v_predict[,, i] <- A %*% v_filter[,, i - 1] %*% t(A) + Q
     }
 
-    K <- v_predict %*% t(C) %*% solve(C %*% v_predict %*% t(C) + R)
+    K <- v_predict[,, i] %*% t(C) %*% solve(C %*% v_predict[,, i] %*% t(C) + R)
     x_filter[i, ] <- x_predict + K %*% (y[i, ] - C %*% x_predict)
-    v_filter[,, i] <- v_predict - K %*% C %*% v_predict
+    v_filter[,, i] <- v_predict[,, i] - K %*% C %*% v_predict[,, i]
   }
 
-  list("x_filter" = x_filter, "v_filter" = v_filter)
+  #' backwards pass
+  x_smooth <- matrix(nrow = time_len, ncol = k)
+  x_smooth[time_len, ] <- x_filter[time_len, ]
+  v_smooth <- array(dim = c(k, k, time_len))
+  v_pair <- array(dim = c(k, k, time_len - 1))
+  v_pair[,, time_len - 1] <- (diag(k) - K %*% C) %*% A %*% v_filter[,, time_len - 1]
+
+  for (i in seq(time_len, 2)) {
+    J_prev <- v_filter[,, i - 1] %*% t(A) %*% solve(v_predict[,, i])
+
+    x_smooth[i - 1, ] <- x_filter[i - 1, ] +
+      J_prev %*% (x_smooth[i, ] - A %*% x_filter[i - 1, ])
+    v_smooth[,, i - 1] <- v_filter[,, i - 1] +
+      J_prev %*% (v_smooth[,, i] - v_predict[,, i]) %*% t(J_prev)
+
+    if (i < time_len) {
+      v_pair[,, i - 1] <- v_filter[,, i] +
+        J_next %*% (v_pair[,, i] - A %*% v_filter[,, i]) %*% t(J_prev)
+    }
+    J_next <- J_prev
+  }
+
+
+
+
+  list("x_filter" = x_filter, "v_filter" = v_filter, "x_smooth" = x_smooth)
 }
 
 lds_learn <- function(Y, k, c) {
