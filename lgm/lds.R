@@ -119,11 +119,12 @@ lds_inference <- function(y, A, C, Q, R, x01, v01) {
     "x_filter" = x_filter,
     "v_filter" = v_filter,
     "x_smooth" = x_smooth,
-    "v_smooth" = v_smooth
+    "v_smooth" = v_smooth,
+    "v_pair" = v_pair
   )
 }
 
-lds_learn <- function(Y, k, c) {
+lds_learn <- function(Y, k, eps = 0.001) {
   time_len <- nrow(Y)
   p <- ncol(Y)
 
@@ -134,4 +135,51 @@ lds_learn <- function(Y, k, c) {
   R <- diag(1, p)
   x01 <- rep(0, k)
   v01 <- diag(1, k)
+
+  alpha <- t(y) %*% y
+
+  #' not calculating loglik right now...
+  for (iter in seq_len(100)) {
+
+    #' E-step
+    inf <- lds_inference(y, A, C, Q, R, x01, v01)
+    x_smooth <- inf$x_smooth
+    v_smooth <- inf$v_smooth
+    v_pair <- inf$v_pair
+
+    delta <- 0
+    gamma <- 0
+    beta <- 0
+
+    for (i in seq_len(time_len)) {
+      delta <- delta + t(y) %*% x_smooth[i, ]
+      gamma <- gamma + x_smooth[i, ] %*% x_smooth[i, ] + v_smooth[,, i]
+
+      if (i > 1) {
+        beta <- beta + x_smooth[i, ] %*% t(x_smooth[i - 1, ]) + v_pair[,, i]
+      }
+    }
+
+    gamma1 <- gamma -
+      x_smooth[time_len, ] %*% t(x_smooth[time_len, ]) - v_smooth[,, time_len]
+    gamma2 <- gamma -
+      x_smooth[1, ] %*% t(x_smooth[1, ]) - v_smooth[,, 1]
+
+    #' M-step
+    C <- delta %*% solve(gamma)
+    R <- (alpha - C %*% t(delta)) / time_len
+    A <- beta %*% solve(gamma1)
+    Q <- (gamma2 - A %*% t(beta)) / (time_len - 1)
+    x01 <- x_smooth[1, ]
+    v01 <- v_smooth[,, 1]
+  }
+
+  list(
+    "A" = A,
+    "C" = C,
+    "Q" = Q,
+    "R" = R,
+    "v01" = x01,
+    "v01" = V01
+  )
 }
