@@ -124,9 +124,9 @@ lds_inference <- function(y, A, C, Q, R, x01, v01) {
   )
 }
 
-lds_learn <- function(Y, k, eps = 0.001) {
-  time_len <- nrow(Y)
-  p <- ncol(Y)
+lds_learn <- function(y, k, eps = 0.001) {
+  time_len <- nrow(y)
+  p <- ncol(y)
 
   #' initialize parameters
   A <- diag(0.5, nrow = k)
@@ -183,3 +183,4 @@ lds_learn <- function(Y, k, eps = 0.001) {
     "v01" = V01
   )
 }
+
