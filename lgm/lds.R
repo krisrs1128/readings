@@ -115,11 +115,23 @@ lds_inference <- function(y, A, C, Q, R, x01, v01) {
     J_next <- J_prev
   }
 
-
-
-
-  list("x_filter" = x_filter, "v_filter" = v_filter, "x_smooth" = x_smooth)
+  list(
+    "x_filter" = x_filter,
+    "v_filter" = v_filter,
+    "x_smooth" = x_smooth,
+    "v_smooth" = v_smooth
+  )
 }
 
 lds_learn <- function(Y, k, c) {
+  time_len <- nrow(Y)
+  p <- ncol(Y)
+
+  #' initialize parameters
+  A <- diag(0.5, nrow = k)
+  C <- matrix(runif(p * k), p, k)
+  Q <- diag(1, k)
+  R <- diag(1, p)
+  x01 <- rep(0, k)
+  v01 <- diag(1, k)
 }
