@@ -91,6 +91,50 @@ qt_update <- function(y, mf_x, C, R, tau = 1) {
 }
 
 #' ---- ht-update ----
+ht_update <- function(qt, pi, phi, tau) {
+  log_alpha <- forwards(phi, qt, pi)
+  log_beta <- backwards(phi, qt)
+  log_ht <- log_alpha + log_beta - log(tau)
+}
+
+#' @examples
+#' phi <- matrix(c(0.25, 0.75, 0.75, 0.25), 2)
+#' lik <- matrix(runif(20), 10, 2)
+#' forwards(phi, lik, c(0.5, 0.5))
+forwards <- function(phi, qt, pi) {
+  K <- nrow(phi)
+  time_len <- nrow(qt)
+  log_alpha <- matrix(0, time_len, K)
+
+  ## base case
+  log_alpha[1, ] <- log(p0) + qt[1, ]
+  log_alpha[1, ] <- normalize_log_space(log_alpha[1, ])
+
+  for (i in seq(2, time_len)) {
+    log_alpha[i, ] <- qt[i, ] + log(t(phi) %*% exp(log_alpha[i - 1, ]))
+    log_alpha[i, ] <- normalize_log_space(log_alpha[i, ])
+  }
+
+  log_alpha
+}
+
+#' @examples
+#' phi <- matrix(c(0.25, 0.75, 0.75, 0.25), 2)
+#' lik <- matrix(runif(20), 10, 2)
+#' backwards(phi, lik)
+backwards <- function(phi, qt) {
+  K <- nrow(phi)
+  time_len <- nrow(qt)
+
+  log_beta <- matrix(0, time_len, K)
+  for (i in seq(time_len - 1, 1)) {
+    for (k in seq_len(K)) {
+      log_beta[i, k] <- lse(log_beta[i + 1, ] + qt[i + 1, ] + log(phi[k, ]))
+    }
+  }
+
+  log_beta
+}
 
 #' ---- smoothing-estimates ----
 #' ---- state-space-learning ----
