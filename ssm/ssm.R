@@ -66,3 +66,32 @@ simulate <- function(As ,Cs, s, x0 = NULL, Qs = NULL, Rs = NULL) {
 
   list("x" = x, "y" = y)
 }
+
+#' ---- qt-update ----
+trace <- function(A) {
+  sum(diag(A))
+}
+
+#' mf_x is T x P x M array of mean field estimates for x
+#' mf_xx is T x P x P x M array of mean field estimates for xx^t
+qt_update <- function(y, mf_x, C, R, tau = 1) {
+  time_len <- nrow(y)
+  M <- dim(X)[3]
+
+  log_q <- matrix(nrow = time_len, ncol = m)
+  for (m in seq_len(M)) {
+    for (i in seq_len(i)) {
+      log_q[i, m] <- t(y[i, ]) %*% solve(R) %*% y[i, ] +
+        t(y[i, ]) %*% solve(R) %*% C[,, m] %*% mf_x[i,, m] +
+        trace(t(C[,, m]) %*% solve(R) %*% t(C[,, m]) %*% mf_xx[i,,, m])
+    }
+  }
+
+  - 0.5 / tau * log_q
+}
+
+#' ---- ht-update ----
+
+#' ---- smoothing-estimates ----
+#' ---- state-space-learning ----
+#' ---- hmm-learning ----
