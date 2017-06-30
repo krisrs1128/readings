@@ -14,25 +14,40 @@
 library("expm")
 
 #' ---- utils ----
-As <- list(diag(0.999, nrow = 1), diag(0.0, nrow = 1))
-Cs <- list(diag(1, nrow = 1), diag(2, nrow = 1))
-s <- c(rep(1, 15), rep(2, 25), rep(1, 10))
-Qs <- list(diag(1, nrow = 1), diag(0.1, nrow = 1))
-res <- simulate(As, Cs, s, 0, Qs)
-plot(res$y, col = s)
-points(res$x, col = "blue")
-
-simulate <- function(As ,Cs, s, x0 = NULL, Qs = NULL, R = NULL) {
+#' @examples
+#' ## perturbation like example
+#' As <- list(diag(0.1, nrow = 1), diag(0.9, nrow = 1))
+#' Cs <- list(diag(1, nrow = 1), diag(1, nrow = 1))
+#' s <- c(rep(2, 10), rep(1, 10), rep(2, 25), rep(1, 10), rep(2, 10))
+#' Qs <- list(diag(4, nrow = 1), diag(1, nrow = 1))
+#' Rs <- list(diag(10, nrow = 1), diag(0.5, nrow = 1))
+#' res <- simulate(As, Cs, s, 0, Qs, Rs)
+#' plot(res$y)
+#' plot(res$y, col = s)
+#' lines(res$x, col = "blue")
+#'
+#' ## example from paper
+#' As <- list(diag(0.99, nrow = 1), diag(0.9, nrow = 1))
+#' Qs <- list(diag(1, nrow = 1), diag(10, nrow = 1))
+#' Cs <- list(diag(1, nrow = 1), diag(1, nrow = 1))
+#' s <- c(rep(2, 10), rep(1, 10), rep(2, 25), rep(1, 10), rep(2, 10))
+#' Rs <- list(diag(.1, nrow = 1), diag(0.1, nrow = 1))
+#' res <- simulate(As, Cs, s, 0, Qs, Rs)
+#' plot(res$y)
+#' plot(res$y, col = s)
+#' lines(res$x, col = "blue")
+simulate <- function(As ,Cs, s, x0 = NULL, Qs = NULL, Rs = NULL) {
   p <- nrow(Cs[[1]])
   k <- nrow(As[[1]])
+  m <- length(unique(s))
   time_len <- length(s)
 
   ## provide defaults
   if (is.null(Qs)) {
-    Q <- rep(diag(k), length(unique(s)))
+    Qs <- rep(diag(k), m)
   }
   if (is.null(R)) {
-    R <- diag(p)
+    Rs <- rep(diag(p), m)
   }
 
   ## initialize
@@ -43,12 +58,10 @@ simulate <- function(As ,Cs, s, x0 = NULL, Qs = NULL, R = NULL) {
   }
 
   ## sample
-  sqrtR <- sqrtm(R)
   y[1, ] <- Cs[[s[1]]] %*% x[1, ] + sqrtR %*% rnorm(p)
   for (i in seq(2, time_len)) {
-    print(As[[s[i]]])
     x[i, ] <- As[[s[i]]] %*% x[i - 1, ] + sqrtm(Qs[[s[i]]]) %*% rnorm(k)
-    y[i, ] <- Cs[[s[i]]] %*% x[i, ] + sqrtR %*% rnorm(p)
+    y[i, ] <- Cs[[s[i]]] %*% x[i, ] + sqrtm(Rs[[s[i]]]) %*% rnorm(p)
   }
 
   list("x" = x, "y" = y)
