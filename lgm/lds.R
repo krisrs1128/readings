@@ -133,10 +133,10 @@ lds_inference <- function(y, A, C, Q, R, x01, v01) {
 #' Q <- diag(0.1, nrow = 1)
 #' R <- diag(1, nrow = 1)
 #' lds <- simulate(A, C, 0, Q, R, time_len = 100)
-#' res <- lds_learn(lds$y, k = 1)
+#' res <- lds_em(lds$y, k = 1)
 #' plot(lds$y)
 #' points(res$x_smooth, col = "blue")
-lds_learn <- function(y, k, eps = 0.001) {
+lds_em <- function(y, k, eps = 0.001) {
   time_len <- nrow(y)
   p <- ncol(y)
 
