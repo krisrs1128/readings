@@ -84,7 +84,7 @@ ssm_em <- function(y, M = 2, K = 1, n_iter = 10) {
     "phi" = rdirichlet(M, rep(1, M))
   )
 
-  tau <- 10 ^ seq(2, 0, length = n_iter)
+  tau <- 2 ^ seq(5, 1, length = n_iter)
   for (iter in seq_len(n_iter)) {
     cat(sprintf("iteration %s\n", iter))
 
@@ -112,7 +112,7 @@ ssm_em <- function(y, M = 2, K = 1, n_iter = 10) {
     lds_infer <- lds_inference_multi(
       y,
       lds_param,
-      exp(log_ht) + 0.001
+      exp(log_ht)
     )
 
     ## M-step
@@ -122,7 +122,7 @@ ssm_em <- function(y, M = 2, K = 1, n_iter = 10) {
         lds_infer[[m]]$x_smooth,
         lds_infer[[m]]$v_smooth,
         lds_infer[[m]]$v_pair,
-        exp(log_ht[, m])
+        exp(log_ht)[, m]
       )
       hmm_param <- hmm_learn(y, log_xi, log_ht + log(tau[iter]))
     }
@@ -132,7 +132,8 @@ ssm_em <- function(y, M = 2, K = 1, n_iter = 10) {
     "lds_param" = lds_param,
     "hmm_param" = hmm_param,
     "log_ht" = log_ht,
-    "log_q" = log_q
+    "log_q" = log_q,
+    "lds_infer" = lds_infer
   )
 }
 
@@ -324,12 +325,12 @@ initialize_lds <- function(M, K, p) {
   lds_param <- vector(mode = "list", length = M)
   for (m in seq_len(M)) {
     lds_param[[m]] <- list()
-    lds_param[[m]]$A <- diag(runif(K, 0.3, 0.6), K)
+    lds_param[[m]]$A <- diag(1, K)
     lds_param[[m]]$C <- matrix(1, p, K)
-    lds_param[[m]]$Q <- diag(runif(K, 0.9, 1.1), K)
-    lds_param[[m]]$R <- diag(rgamma(p, 1, 5), p)
+    lds_param[[m]]$Q <- diag(1, K)
+    lds_param[[m]]$R <- diag(1, p)
     lds_param[[m]]$x01 <- rep(runif(K), K)
-    lds_param[[m]]$v01 <- diag(runif(K), K)
+    lds_param[[m]]$v01 <- diag(1, K)
   }
 
   lds_param
@@ -347,7 +348,6 @@ lds_learn <- function(y, x_smooth, v_smooth, v_pair, weights = NULL) {
 
   gamma_weighted <- 0
   gamma_unweighted <- 0
-  C <- 0
   for (i in seq_len(time_len)) {
     xx <- x_smooth[i, ] %*% t(x_smooth[i, ]) + v_smooth[,, i]
     gamma_weighted <- gamma_weighted + weights[i] * xx
