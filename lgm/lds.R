@@ -159,18 +159,10 @@ lds_learn <- function(y, k, eps = 0.001) {
     v_smooth <- inf$v_smooth
     v_pair <- inf$v_pair
 
-    delta <- 0
-    gamma <- 0
-    beta <- 0
-
-    for (i in seq_len(time_len)) {
-      delta <- delta + y[i, ] %*% t(x_smooth[i, ])
-      gamma <- gamma + x_smooth[i, ] %*% t(x_smooth[i, ]) + v_smooth[,, i]
-
-      if (i > 1) {
-        beta <- beta + x_smooth[i, ] %*% t(x_smooth[i - 1, ]) + v_pair[,, i - 1]
-      }
-    }
+    delta <- t(y) %*% x_smooth
+    gamma <- t(x_smooth) %*% x_smooth + apply(v_smooth, c(1, 2), sum)
+    beta <- t(x_smooth[-1, ]) %*% x_smooth[seq_len(time_len - 1), ] +
+      apply(v_pair, c(1, 2), sum)
 
     gamma1 <- gamma -
       x_smooth[time_len, ] %*% t(x_smooth[time_len, ]) - v_smooth[,, time_len]
@@ -197,4 +189,3 @@ lds_learn <- function(y, k, eps = 0.001) {
     "v_smooth" = v_smooth
   )
 }
-
