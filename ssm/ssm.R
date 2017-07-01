@@ -211,7 +211,42 @@ lds_inference <- function(y, A, C, Q, R, x01, v01, v_weights = NULL) {
   )
 }
 
-
-
 #' ---- state-space-learning ----
+lds_learn <- function(y, x_smooth, v_smooth, v_pair, weights = NULL) {
+  time_len <- nrow(y)
+  if (is.null(weights)) {
+    weights <- rep(1, time_len)
+  }
+
+  alpha <- t(y) %*% diag(weights) %*% y
+  delta <- t(y) %*% diag(weights) %*% x_smooth
+  gamma <- t(x_smooth) %*% diag(weights) %*% x_smooth + apply(v_smooth, c(1, 2), sum)
+  beta <- t(x_smooth[-1, ]) %*% diag(weights[-1]) %*% x_smooth[seq_len(time_len - 1), ] +
+    apply(v_pair, c(1, 2), sum)
+
+  gamma1 <- gamma -
+    weights[time_len] * x_smooth[time_len, ] %*% t(x_smooth[time_len, ]) -
+    v_smooth[,, time_len]
+  gamma2 <- gamma -
+    weights[time_len] * x_smooth[1, ] %*% t(x_smooth[1, ]) -
+    v_smooth[,, 1]
+
+  #' M-step
+  C <- delta %*% solve(gamma)
+  R <- (alpha - C %*% t(delta)) / time_len
+  A <- beta %*% solve(gamma1)
+  Q <- (gamma2 - A %*% t(beta)) / (time_len - 1)
+  x01 <- x_smooth[1, ]
+  v01 <- v_smooth[,, 1]
+
+  list(
+    "C" = C,
+    "R" = R,
+    "A" = A,
+    "Q" = Q,
+    "x01" = x01,
+    "v01" = v01
+  )
+}
+
 #' ---- hmm-learning ----
