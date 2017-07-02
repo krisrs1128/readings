@@ -93,6 +93,24 @@ filter <- function(x_prev, v_prev, y_cur, theta) {
   )
 }
 
+#' Smoother update
+#'
+#' See section A.2
+#'
+#' xs and vs refer to smoothed data and covariances. x and v are filtered
+#' analogs.
+smooth <- function(xs_next, vs_next, x_cur, v_cur, v_next, v_pair, theta) {
+  x_pred <- theta$A %*% x_cur
+  v_pred <- theta$A %*% v_cur %*% t(theta$A) + theta$Q
+  J <- v_cur %*% t(theta$A) %*% solve(v_pred)
+
+  list(
+    "xs_cur" = x_cur + J %*% (xs_next - x_pred),
+    "vs_cur" = v_cur + J %*% (vs_next - v_pred) %*% t(J),
+    "vs_pair" = v_pair + (vs_next - v_next) %*% solve(v_next) %*% v_pair
+  )
+}
+
 ###############################################################################
 ## learning
 ###############################################################################
