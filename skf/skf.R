@@ -75,6 +75,58 @@ simulate <- function(As ,Cs, s, x0 = NULL, Qs = NULL, Rs = NULL) {
 ## inference
 ###############################################################################
 
+forwards <- function(y, thetas, pi, Phi) {
+  time_len <- nrow(y)
+  J <- length(thetas)
+  K <- nrow(thetas$A)
+
+  x <- array(dim = c(time_len, K, J)) ## filtered means
+  v <- array(dim = c(time_len, K, K, J)) ## filtered covariances
+  m <- matrix(nrow = time_len, ncol = K) ## filtered state probabilities (almost)
+
+  ## initialize
+  for (j in seq_len(J)) {
+    x[1,, j] <- thetas[[j]]$mu
+    v[1,,, j] <- thetas[[j]]$Sigma
+    m[1, ] <- pi
+  }
+
+  ## make the forwards pass
+  for (cur_time in seq(2, time_len)) {
+    for (j in seq_len(J)) {
+      x_step <- vector(mode = "list", length = J)
+      v_step <- vector(mode = "list", length = J)
+      v_pairs_step <- vector(mode = "list", length = J)
+      log_lik <- vector(length = J)
+      m_pairs <- vector(length = J)
+
+      ## compute filter statistics for each possible previous i
+      for (i in seq_len(J)) {
+        filt_res <- filter(
+          x[cur_time - 1,, i],
+          v[cur_time - 1,,, i],
+          y[cur_time, ],
+          thetas[[j]]
+        )
+        x_step[i] <- filt_res$x_cur
+        v_step[i] <- filt_res$v_cur
+        v_pairs_step[i] <- filt_res$v_pair
+        log_lik[i] <- filt_res$log_lik
+      }
+
+      for (i in seq_len(J)) {
+        m_pairs[i] <- exp(log_lik[j]) * Phi[i, j] * m[cur_time - 1, i]
+      }
+      m[cur_time, j] <- sum(m_pairs)
+      collapse_res <- collapse(x_step, v_step, m_pairs / m[cur_time, j])
+      x[cur_time,, j] <- collapse_res$mu_x
+      v[cur_time,,, j] <- collapse_res$v_xy
+    }
+  }
+
+  list("x" = x, "v" = v, "m" = m)
+}
+
 #' Filter update
 #'
 #' See section A.1
@@ -84,12 +136,12 @@ filter <- function(x_prev, v_prev, y_cur, theta) {
   S <- theta$C %*% v_pred %*% t(C) + theta$R
   K <- v_pred %*% t(theta$C) %*% solve(S)
   e <- y_cur - theta$C %*% x_pred
-  log_lik <- dmvrnorm(e, 0, S)
 
   list(
    "x_cur" = x_pred + K %*% e,
    "v_cur" = v_pred - K %*% S %*% t(K),
-   "v_pair" = (diag(length(x)) - K %*% theta$C) %*% theta$A %*% v_prev
+   "v_pair" = (diag(length(x)) - K %*% theta$C) %*% theta$A %*% v_prev,
+   "log_lik" = dmvrnorm(e, 0, S)
   )
 }
 
@@ -138,11 +190,11 @@ collapse_cross <- function(mu_xs, mu_ys, v_xys, ps) {
     "v_xy" = v_xy
   )
 }
-
+  
 #' Collapsing operation
 #'
 #' See section A.3
-collapse <- function(mu_xs, v_xs, ps) {
+  collapse <- function(mu_xs, v_xs, ps) {
   collapse_cross(mu_xs, mu_xs, v_xs, ps)
 }
 
