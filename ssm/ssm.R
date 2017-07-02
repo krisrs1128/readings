@@ -72,7 +72,28 @@ simulate <- function(As ,Cs, s, x0 = NULL, Qs = NULL, Rs = NULL) {
 }
 
 ## ---- qt-update ----
-ssm_em <- function(y, M = 2, K = 1, n_iter = 10) {
+#' @examples
+#' set.seed(0701)
+#' As <- list(diag(0.99, nrow = 1), diag(0.05, nrow = 1))
+#' Cs <- list(diag(1, nrow = 1), diag(1, nrow = 1))
+#' s <- c(rep(1, 50,), rep(2, 50))
+#' Qs <- list(diag(0.5, nrow = 1), diag(0.1, nrow = 1))
+#' Rs <- list(diag(0.1, nrow = 1), diag(4, nrow = 1))
+#' res <- simulate(As, Cs, s, 1, Qs, Rs)
+#' y <- res$y
+#' plot(y)
+#'
+#' n_iter <- 100
+#' tau <- c(seq(3, 1, length.out = n_iter))
+#' ## tau <- rep(1, n_iter)
+#' test <- ssm_em(y, 2, 1, n_iter = n_iter, tau)
+#' test$lds_param[[1]]$R
+#' test$lds_param[[2]]$R
+#' plot(y)
+#' points(test$lds_infer[[1]]$x_smooth * test$lds_param[[1]]$C[1, 1], col = "blue")
+#' points(test$lds_infer[[2]]$x_smooth * test$lds_param[[2]]$C[1, 1], col = "red")
+#' print(round(exp(test$log_ht[, 1]), 3))
+ssm_em <- function(y, M = 2, K = 1, n_iter = 10, tau = rep(1, n_iter)) {
   time_len <- nrow(y)
   p <- ncol(y)
 
@@ -84,7 +105,6 @@ ssm_em <- function(y, M = 2, K = 1, n_iter = 10) {
     "phi" = rdirichlet(M, rep(1, M))
   )
 
-  tau <- rep(1, n_iter)
   for (iter in seq_len(n_iter)) {
     cat(sprintf("iteration %s\n", iter))
 
@@ -107,7 +127,7 @@ ssm_em <- function(y, M = 2, K = 1, n_iter = 10) {
     log_alpha <- forwards(hmm_param$phi, log_q, hmm_param$pi)
     log_beta <- backwards(hmm_param$phi, log_q)
     log_xi <- two_step_marginal(hmm_param$phi, log_q, log_alpha, log_beta)
-    log_ht <- normalize_log(tau[iter] * (log_alpha + log_beta))
+    log_ht <- normalize_log((1 / tau[iter]) * (log_alpha + log_beta))
 
     lds_infer <- lds_inference_multi(y, lds_param, exp(log_ht))
 
@@ -120,7 +140,7 @@ ssm_em <- function(y, M = 2, K = 1, n_iter = 10) {
         lds_infer[[m]]$v_pair,
         exp(log_ht)[, m]
       )
-      print(lds_param[[m]])
+      print(lds_param[[m]]$R)
     }
     hmm_param <- hmm_learn(log_xi, log_ht)
 
@@ -311,11 +331,11 @@ initialize_lds <- function(M, K, p) {
   lds_param <- vector(mode = "list", length = M)
   for (m in seq_len(M)) {
     lds_param[[m]] <- list()
-    lds_param[[m]]$A <- diag(1, K)
+    lds_param[[m]]$A <- diag(0, K)
     lds_param[[m]]$C <- matrix(1, p, K)
     lds_param[[m]]$Q <- diag(1, K)
     lds_param[[m]]$R <- diag(1, p)
-    lds_param[[m]]$x01 <- rep(runif(K), K)
+    lds_param[[m]]$x01 <- rep(runif(K, -0.05, 0.05), K)
     lds_param[[m]]$v01 <- diag(1, K)
   }
 
@@ -355,7 +375,7 @@ lds_learn <- function(y, x_smooth, v_smooth, v_pair, weights = NULL) {
   R <- R / sum(weights)
 
   A <- row_mult(xx_cross, weights[-1]) %*% solve(row_mult(xx[-1,,, drop = F], weights[-1]))
-  Q <- (1 / sum(weights)) * (row_mult(xx, weights) - A %*% row_mult(xx_cross, weights[-1]))
+  Q <- (1 / sum(weights[-1])) * (row_mult(xx[-1,,, drop = FALSE], weights[-1]) - A %*% row_mult(xx_cross, weights[-1]))
 
   x01 <- x_smooth[1, ]
   v01 <- v_smooth[,, 1]
