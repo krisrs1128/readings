@@ -144,6 +144,41 @@ backwards <- function(x, v, m, theta, phi) {
     ms[time_len, ] <- m[time_len, ]
   }
 
+  ## backwards pass
+  for (cur_time in seq(time_len - 1, 1)) {
+    for (j in seq_len(J)) {
+      xs_step <- vector(mode = "list", length = J)
+      vs_step <- vector(mode = "list", length = J)
+      vs_pairs_step <- vector(mode = "list", length = J)
+      log_lik <- vector(length = J)
+      ms_pairs <- vector(length = J)
+      u <- vector(length = J)
+
+      for (k in seq_len(J)) {
+        smooth_res <- smooth(
+          xs[cur_time + 1,, k],
+          vs[cur_time + 1,, k],
+          x[cur_time,, j],
+          v[cur_time,,, j],
+          v[cur_time + 1,,, j],
+          v_pairs[cur_time,,, j],
+          thetas[[k]]
+        )
+
+        xs_step[k] <- smooth_res$xs_cur
+        vs_step[k] <- smooth_res$vs_cur
+        vs_pair_step[k] <- smooth_res$vs_pair
+
+        u[k] <- m[cur_time, j] * Phi[j, k]
+
+      }
+      u <- u / sum(u)
+      ms_pairs <- u * ms[cur_time + 1, ]
+      ms[j, ] <- sum(ms_pairs)
+
+    }
+  }
+
 }
 
 #' Filter update
@@ -209,7 +244,7 @@ collapse_cross <- function(mu_xs, mu_ys, v_xys, ps) {
     "v_xy" = v_xy
   )
 }
-  
+
 #' Collapsing operation
 #'
 #' See section A.3
