@@ -111,6 +111,13 @@ smooth <- function(xs_next, vs_next, x_cur, v_cur, v_next, v_pair, theta) {
   )
 }
 
+#' Collapse-crossing operation
+#'
+#' See section A.3
+#'
+#' mu_xs, mu_ys, and v_xys are lists whose elements are the j^th mean vector /
+#' covariance matrix. Maybe we can rewrite it as arrays, but for now I'm fine
+#' with this.
 collapse_cross <- function(mu_xs, mu_ys, v_xys, ps) {
   K <- length(ps)
   mu_x <- 0
@@ -130,6 +137,13 @@ collapse_cross <- function(mu_xs, mu_ys, v_xys, ps) {
     "mu_y" = mu_y,
     "v_xy" = v_xy
   )
+}
+
+#' Collapsing operation
+#'
+#' See section A.3
+collapse <- function(mu_xs, v_xs, ps) {
+  collapse_cross(mu_xs, mu_xs, v_xs, ps)
 }
 
 ###############################################################################
