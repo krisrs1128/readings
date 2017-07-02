@@ -136,6 +136,9 @@ backwards <- function(x, v, m, theta, phi) {
   xs <- array(dim = c(time_len, K, J)) ## smoothed means
   vs <- array(dim = c(time_len, K, K, J)) ## smoothed covariances
   ms <- matrix(nrow = time_len, ncol = K) ## smoothed state probabilities (unnormalized)
+  vs_pair <- array(dim = c(time_len, K, K, J)) ## smoothed pairs of covariances
+  vs_global <- array(dim = c(time_len, K, K))
+  xs_global <- matrix(nrow = time_len, ncol = K)
 
   ## initialize
   for (j in seq_len(J)) {
@@ -146,13 +149,28 @@ backwards <- function(x, v, m, theta, phi) {
 
   ## backwards pass
   for (cur_time in seq(time_len - 1, 1)) {
+    ## x^{(j)k}_{t}'s over different j's
+    xs_step <- vector(mode = "list", length = J)
+    vs_step <- vector(mode = "list", length = J)
+    vs_pairs_step <- vector(mode = "list", length = J)
+
+    ## update mode probabilities
+    u <- matrix(nrow = J, ncol = J)
+    ms_pair <- matrix(nrow = J, ncol = J)
     for (j in seq_len(J)) {
-      xs_step <- vector(mode = "list", length = J)
-      vs_step <- vector(mode = "list", length = J)
-      vs_pairs_step <- vector(mode = "list", length = J)
+      for (k in seq_len(J)) {
+        u[j, k] <- m[j] * Phi[j, k]
+        ms_pair[j, k] <- u[j, k] * ms[cur_time + 1, k]
+      }
+    }
+    ms[cur_time, ] <- colSums(ms_pair)
+
+    for (j in seq_len(J)) {
+      ## x^{(j)k}_{t}'s, for a single j, over different k's
+      xs_step[[j]] <- vector(mode = "list", length = J)
+      vs_step[[j]] <- vector(mode = "list", length = J)
+      vs_pairs_step[[j]] <- vector(mode = "list", length = J)
       log_lik <- vector(length = J)
-      ms_pairs <- vector(length = J)
-      u <- vector(length = J)
 
       for (k in seq_len(J)) {
         smooth_res <- smooth(
@@ -165,20 +183,36 @@ backwards <- function(x, v, m, theta, phi) {
           thetas[[k]]
         )
 
-        xs_step[k] <- smooth_res$xs_cur
-        vs_step[k] <- smooth_res$vs_cur
-        vs_pair_step[k] <- smooth_res$vs_pair
-
-        u[k] <- m[cur_time, j] * Phi[j, k]
-
+        xs_step[[j]][[k]] <- smooth_res$xs_cur
+        vs_step[[j]][[k]] <- smooth_res$vs_cur
+        vs_pair_step[[j]][[k]] <- smooth_res$vs_pair
       }
-      u <- u / sum(u)
-      ms_pairs <- u * ms[cur_time + 1, ]
-      ms[j, ] <- sum(ms_pairs)
 
+      collapse_res <- collapse(xs_step[[j]], vs_step[[j]], ms_pair[j, ] / sum(ms_pair[j, ]))
+      xs[cur_time,, j] <- collapse_res$mu_x
+      vs[cur_time,,, j] <- collapse_res$v_xy
+    }
+
+    for (k in seq_len(J)) {
+      xs_step_k <- lapply(xs_step, function(z) { return z[[k]] })
+      vs_step_k <- lapply(vs_step, function(z) { return z[[k]] })
+      vs_pair[cur_time ,,, j] <- collapse_cross(x[cur_time + 1,, k] xs_step_k, vs_step_k, u[, k])
+    }
+
+    weighted_x <- vector(length = J)
+    for (k in seq_len(J)) {
+      xs_step_k <- lapply(xs_step, function(z) { return z[[k]] })
+      for (j in seq_len(J)) {
+        weighted_x[k] <- weighted_x[k] + xs_step_k[j] * u[j, k]
+      }
+      vs_global[cur_time,,, k] <- collapse_cross(
+        x_cur_time[,, k],
+        weighted_x,
+        vs_pair[cur_time ,,, k],
+        ms[cur_time + 1, ]
+      )
     }
   }
-
 }
 
 #' Filter update
