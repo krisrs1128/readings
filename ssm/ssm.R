@@ -84,7 +84,7 @@ ssm_em <- function(y, M = 2, K = 1, n_iter = 10) {
     "phi" = rdirichlet(M, rep(1, M))
   )
 
-  tau <- 2 ^ seq(5, 1, length = n_iter)
+  tau <- rep(1, n_iter)
   for (iter in seq_len(n_iter)) {
     cat(sprintf("iteration %s\n", iter))
 
@@ -106,14 +106,10 @@ ssm_em <- function(y, M = 2, K = 1, n_iter = 10) {
 
     log_alpha <- forwards(hmm_param$phi, log_q, hmm_param$pi)
     log_beta <- backwards(hmm_param$phi, log_q)
-    log_ht <- normalize_log(log_alpha + log_beta) - log(tau[iter])
     log_xi <- two_step_marginal(hmm_param$phi, log_q, log_alpha, log_beta)
+    log_ht <- normalize_log(log_alpha + log_beta) - log(tau[iter])
 
-    lds_infer <- lds_inference_multi(
-      y,
-      lds_param,
-      exp(log_ht)
-    )
+    lds_infer <- lds_inference_multi(y, lds_param, exp(log_ht))
 
     ## M-step
     for (m in seq_len(M)) {
@@ -124,8 +120,9 @@ ssm_em <- function(y, M = 2, K = 1, n_iter = 10) {
         lds_infer[[m]]$v_pair,
         exp(log_ht)[, m]
       )
-      hmm_param <- hmm_learn(y, log_xi, log_ht + log(tau[iter]))
+      print(lds_param[[m]])
     }
+    hmm_param <- hmm_learn(log_xi, log_ht)
 
   }
   list(
@@ -145,24 +142,12 @@ qt_update <- function(y, x, v, C, R, tau = 1) {
   log_q <- vector(length = time_len)
   for (i in seq_len(time_len)) {
     xx <- x[i, ] %*% t(x[i, ]) + v[,, i]
-    log_q[i] <- - t(y[i, ]) %*% solve(R) %*% y[i, ] +
+    log_q[i] <- - (1 / 2) * t(y[i, ]) %*% solve(R) %*% y[i, ] +
       t(y[i, ]) %*% solve(R) %*% C %*% x[i, ] -
-      (1 / 2) * trace(t(C) %*% solve(R) %*% t(C) %*% t(xx))
+      (1 / 2) * trace(t(C) %*% solve(R) %*% t(C) %*% xx)
   }
 
-  1 / (2 * tau) * log_q
-}
-
-## ---- ht-update ----
-ht_update <- function(log_q, pi, phi, tau) {
-  log_alpha <- forwards(phi, log_q, pi)
-  log_beta <- backwards(phi, log_q)
-  log_gamma <- log_alpha + log_beta
-  for (i in seq_len(nrow(log_gamma))) {
-    log_gamma[i, ] <- log_gamma[i, ] - lse(log_gamma[i, ])
-  }
-
-  log_gamma
+  1 / (tau) * log_q
 }
 
 ## @examples
@@ -249,6 +234,7 @@ lds_inference <- function(y, A, C, Q, R, x01, v01, v_weights = NULL) {
   if (is.null(v_weights)) {
     v_weights <- rep(1, time_len)
   }
+  v_weights[v_weights < 1e-4] <- 1e-4
 
   ## initialize for the forwards pass
   x_predict <- x01
@@ -342,6 +328,7 @@ lds_learn <- function(y, x_smooth, v_smooth, v_pair, weights = NULL) {
   if (is.null(weights)) {
     weights <- rep(1, time_len)
   }
+  weights[weights < 1e-4] <- 1e-4
 
   alpha <- t(y) %*% diag(weights) %*% y
   delta <- t(y) %*% diag(weights) %*% x_smooth
@@ -372,14 +359,7 @@ lds_learn <- function(y, x_smooth, v_smooth, v_pair, weights = NULL) {
   x01 <- x_smooth[1, ]
   v01 <- v_smooth[,, 1]
 
-  list(
-    "C" = C,
-    "R" = R,
-    "A" = A,
-    "Q" = Q,
-    "x01" = x01,
-    "v01" = v01
-  )
+  list("C" = C, "R" = R, "A" = A, "Q" = Q, "x01" = x01, "v01" = v01)
 }
 
 ## ---- hmm-learning ----
@@ -397,7 +377,7 @@ expected_njk <- function(log_xi) {
 
 ## gamma is time_len x K matrix of smoothing probabilities
 ## xi is the (time_len  - 1) x K x K two step marginal array
-hmm_learn <- function(y, log_xi, log_gamma) {
+hmm_learn <- function(log_xi, log_gamma) {
   phi <- expected_njk(log_xi)
   phi <- phi / rowSums(phi)
   pi <- exp(log_gamma[1, ])
