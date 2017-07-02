@@ -111,6 +111,27 @@ smooth <- function(xs_next, vs_next, x_cur, v_cur, v_next, v_pair, theta) {
   )
 }
 
+collapse_cross <- function(mu_xs, mu_ys, v_xys, ps) {
+  K <- length(ps)
+  mu_x <- 0
+  for (j in seq_along(ps)) {
+    mu_x <- mu_x + ps[j] * mu_xs[[j]]
+    mu_y <- mu_y + ps[j] * mu_ys[[j]]
+  }
+
+  v_xy <- matrix(0, ncol(v_xys[[1]]), nrow(v_xys[[2]]))
+  for (j in seq_along(ps)) {
+    v_xy <- v_xy +
+      ps[j] * (v_xys[[j]] + (mu_xs[[j]] - mu_x) %*% t(mu_ys[[j]] - mu_y))
+  }
+
+  list(
+    "mu_x" = mu_x,
+    "mu_y" = mu_y,
+    "v_xy" = v_xy
+  )
+}
+
 ###############################################################################
 ## learning
 ###############################################################################
