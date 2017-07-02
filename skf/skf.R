@@ -77,12 +77,12 @@ simulate <- function(As ,Cs, s, x0 = NULL, Qs = NULL, Rs = NULL) {
 
 forwards <- function(y, thetas, pi, Phi) {
   time_len <- nrow(y)
-  J <- length(thetas)
+  J <- nrow(Phi)
   K <- nrow(thetas$A)
 
   x <- array(dim = c(time_len, K, J)) ## filtered means
   v <- array(dim = c(time_len, K, K, J)) ## filtered covariances
-  m <- matrix(nrow = time_len, ncol = K) ## filtered state probabilities (almost)
+  m <- matrix(nrow = time_len, ncol = K) ## filtered state probabilities (unnormalized)
 
   ## initialize
   for (j in seq_len(J)) {
@@ -125,6 +125,25 @@ forwards <- function(y, thetas, pi, Phi) {
   }
 
   list("x" = x, "v" = v, "m" = m)
+}
+
+
+backwards <- function(x, v, m, theta, phi) {
+  time_len <- nrow(y)
+  J <- nrow(Phi)
+  K <- nrow(thetas$A)
+
+  xs <- array(dim = c(time_len, K, J)) ## smoothed means
+  vs <- array(dim = c(time_len, K, K, J)) ## smoothed covariances
+  ms <- matrix(nrow = time_len, ncol = K) ## smoothed state probabilities (unnormalized)
+
+  ## initialize
+  for (j in seq_len(J)) {
+    xs[time_len,, j] <- x[time_len,, j]
+    vs[time_len,,, j] <- v[time_len,, j]
+    ms[time_len, ] <- m[time_len, ]
+  }
+
 }
 
 #' Filter update
