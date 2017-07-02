@@ -72,6 +72,21 @@ simulate <- function(As ,Cs, s, x0 = NULL, Qs = NULL, Rs = NULL) {
 }
 
 ## ---- qt-update ----
+#' @examples
+#' As <- list(diag(1, nrow = 1), diag(1, nrow = 1))
+#' Cs <- list(diag(1, nrow = 1), diag(1, nrow = 1))
+#' s <- c(rep(1, 50), rep(2, 50))
+#' Qs <- list(diag(0.1, nrow = 1), diag(0.1, nrow = 1))
+#' Rs <- list(diag(5, nrow = 1), diag(0.5, nrow = 1))
+#' res <- simulate(As, Cs, s, 0, Qs, Rs)
+#' y <- res$y
+#'
+#' test <- ssm_em(y, 2, 1, n_iter = 25)
+#' test$lds_param[[1]]$R
+#' test$lds_param[[2]]$R
+#' plot(y)
+#' points(test$lds_infer[[1]]$x_smooth * test$lds_param[[1]]$C[1, 1], col = "blue")
+#' points(test$lds_infer[[2]]$x_smooth * test$lds_param[[2]]$C[1, 1], col = "red")
 ssm_em <- function(y, M = 2, K = 1, n_iter = 10) {
   time_len <- nrow(y)
   p <- ncol(y)
