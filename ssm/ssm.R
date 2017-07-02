@@ -85,11 +85,9 @@ simulate <- function(As ,Cs, s, x0 = NULL, Qs = NULL, Rs = NULL) {
 #'
 #' n_iter <- 100
 #' tau <- c(seq(3, 1, length.out = n_iter))
-#' ## tau <- rep(1, n_iter)
 #' test <- ssm_em(y, 2, 1, n_iter = n_iter, tau)
 #' test$lds_param[[1]]$R
 #' test$lds_param[[2]]$R
-#' plot(y)
 #' points(test$lds_infer[[1]]$x_smooth * test$lds_param[[1]]$C[1, 1], col = "blue")
 #' points(test$lds_infer[[2]]$x_smooth * test$lds_param[[2]]$C[1, 1], col = "red")
 #' print(round(exp(test$log_ht[, 1]), 3))
