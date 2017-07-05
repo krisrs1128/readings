@@ -138,7 +138,6 @@ ssm_em <- function(y, M = 2, K = 1, n_iter = 10, tau = rep(1, n_iter)) {
         lds_infer[[m]]$v_pair,
         exp(log_ht)[, m]
       )
-      print(lds_param[[m]]$R)
     }
     hmm_param <- hmm_learn(log_xi, log_ht)
 
