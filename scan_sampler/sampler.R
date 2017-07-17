@@ -168,5 +168,34 @@ forward_scan <- function(y, u, Ct, M_inv, K, C) {
     y[i, ] <- y[i, ] - delta
   }
 
-  y
+  list("y" = y, "u" = u)
+}
+
+#' @examples
+#' A <- diag(0.9, nrow = 1)
+#' C <- diag(1, nrow = 1)
+#' Q <- diag(2, nrow = 1)
+#' R <- diag(1, nrow = 1)
+#' res <- simulate(A, C, 0, Q, R)
+#' filt <- kalman_filter(res$y, A, C, R, Q)
+#' back <- backwards_pass(res$y, filt$mu_pred, filt$sigma_pred, filt$K, A, C, R)
+#' fw <- forward_scan(res$y, back$u, back$Ct, back$M_inv, filt$K, C)
+#' bw <- backward_scan(fw$y, fw$u, back$Ct, back$M_inv, filt$K, C)
+#' plot(res$y)
+#' points(fw$y, col = "green")
+#' points(bw$y, col = "purple")
+backward_scan <- function(y, u, Ct, M_inv, K, C) {
+  k <- ncol(u)
+  time_len <- nrow(u)
+  b <- matrix(0, time_len, k)
+
+  for (i in seq(time_len, 1)) {
+    u[i, ] <- u[i, ] - K[,, i] %*% b[i, ]
+    delta <- M_inv[,, i] %*% u[i, ] + sqrtm(as.matrix(M_inv[,, i])) %*% rnorm(k)
+    u[i, ] <- u[i, ] - solve(M_inv[,, i]) %*% delta
+    b[i - 1] <- t(A - K[,, i] %*% C) %*% b[i, ] - Ct[,, i] %*% delta
+    y[i, ] <- y[i, ] - delta
+  }
+
+  list("y" = y, "u" = u)
 }
