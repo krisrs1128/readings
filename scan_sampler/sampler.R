@@ -121,15 +121,17 @@ backwards_pass <- function(y, mu_pred, sigma_pred, K, A, C, R) {
   M_inv <- array(0, dim = c(k, k, time_len))
   Ct <- array(0, dim = c(k, k, time_len))
 
-  for (i in seq(time_len, 2)) {
+  for (i in seq(time_len, 1)) {
     v_pred_inv <- solve(C %*% sigma_pred[,, i] %*% t(C) + R)
     M <- v_pred_inv + t(K[,, i]) %*% N[,, i] %*% K[,, i]
     M_inv[,, i] <- solve(M)
     u[i] <- v_pred_inv %*% (y[i, ] - mu_pred[i, ]) - t(K[,, i]) %*% r[i, ]
     Ct[,, i] <- M %*% C - t(K[,, i]) %*% N[,, i] %*% A
 
-    r[i - 1] <- t(C) %*% u[i] + t(A) %*% r[i]
-    N[,, i - 1] <- t(C) %*% v_pred_inv %*% C + t(A - K[,, i] %*% C) %*% N[,, i] %*% (A - K[,, i] %*% C)
+    if (i > 1) {
+      r[i - 1] <- t(C) %*% u[i] + t(A) %*% r[i]
+      N[,, i - 1] <- t(C) %*% v_pred_inv %*% C + t(A - K[,, i] %*% C) %*% N[,, i] %*% (A - K[,, i] %*% C)
+    }
 
   }
 
@@ -140,4 +142,31 @@ backwards_pass <- function(y, mu_pred, sigma_pred, K, A, C, R) {
     "M_inv" = M_inv,
     "Ct" = Ct
   )
+}
+
+#' @examples
+#' A <- diag(0.9, nrow = 1)
+#' C <- diag(1, nrow = 1)
+#' Q <- diag(2, nrow = 1)
+#' R <- diag(1, nrow = 1)
+#' res <- simulate(A, C, 0, Q, R)
+#' filt <- kalman_filter(res$y, A, C, R, Q)
+#' back <- backwards_pass(res$y, filt$mu_pred, filt$sigma_pred, filt$K, A, C, R)
+#' y_prime <- forward_scan(res$y, back$u, back$Ct, back$M_inv, filt$K, C)
+#' plot(res$y)
+#' points(y_prime, col = "green")
+forward_scan <- function(y, u, Ct, M_inv, K, C) {
+  k <- ncol(u)
+  time_len <- nrow(u)
+  b <- matrix(0, time_len, k)
+
+  for (i in seq_len(time_len)) {
+    u[i, ] <- u[i, ] - Ct[,, i] %*% b[i, ]
+    delta <- M_inv[,, i] %*% u[i, ] + sqrtm(as.matrix(M_inv[,, i])) %*% rnorm(k)
+    u[i, ] <- u[i, ] - solve(M_inv[,, i]) %*% delta
+    b[i + 1] <- t(A - K[,, i] %*% C) %*% b[i, ] - K[,, i] %*% delta
+    y[i, ] <- y[i, ] - delta
+  }
+
+  y
 }
