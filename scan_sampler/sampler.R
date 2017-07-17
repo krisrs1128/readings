@@ -100,3 +100,27 @@ kalman_filter <- function(y, A, C, R, Q) {
   )
 
 }
+
+#' @examples
+#' A <- diag(0.9, nrow = 1)
+#' C <- diag(1, nrow = 1)
+#' Q <- diag(2, nrow = 1)
+#' R <- diag(1, nrow = 1)
+#' res <- simulate(A, C, 0, Q, R)
+#' filt <- kalman_filter(res$y, A, C, R, Q)
+#' backwards_pass(res$y, filt$mu_pred, filt$sigma_pred, filt$K, A, C, R)
+backwards_pass <- function(y, mu_pred, sigma_pred, K, A, C, R) {
+  time_len <- length(y)
+  k <- nrow(A)
+  p <- nrow(C)
+  r <- matrix(0, time_len, k)
+  N <- array(0, dim = c(k, k, time_len))
+
+  for (i in seq(time_len, 2)) {
+    v_pred_inv <- solve(C %*% sigma_pred[,, i] %*% t(C) + R)
+    r[i - 1] <- t(C) %*% (v_pred_inv %*% (y[i, ] - mu_pred[i, ]) - t(K[,, i]) %*% r[i]) + t(A) %*% r[i]
+    N[,, i - 1] <- t(C) %*% v_pred_inv %*% C + t(A - K[,, i] %*% C) %*% N[,, i] %*% (A - K[,, i] %*% C)
+  }
+
+  list("r" = r, "N" = N)
+}
