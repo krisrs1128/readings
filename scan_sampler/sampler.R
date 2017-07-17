@@ -25,7 +25,7 @@ library("expm")
 #' ## perturbation like example
 #' A <- diag(0.9, nrow = 1)
 #' C <- diag(1, nrow = 1)
-#' Q <- diag(4, nrow = 1)
+#' Q <- diag(2, nrow = 1)
 #' R <- diag(1, nrow = 1)
 #' res <- simulate(A, C, 0, Q, R)
 #' plot(res$y)
@@ -57,4 +57,46 @@ simulate <- function(A ,C, x0 = NULL, Q = NULL, R = NULL, time_len = 100) {
   }
 
   list("x" = x, "y" = y)
+}
+
+
+#' @examples
+#' A <- diag(0.9, nrow = 1)
+#' C <- diag(1, nrow = 1)
+#' Q <- diag(2, nrow = 1)
+#' R <- diag(1, nrow = 1)
+#' res <- simulate(A, C, 0, Q, R)
+#' filt <- kalman_filter(res$y, A, C, R, Q)
+#' points(filt$mu, col = "red")
+#' points(filt$mu_pred, col = "red")
+kalman_filter <- function(y, A, C, R, Q) {
+  time_len <- length(y)
+  p <- nrow(C)
+  k <- nrow(A)
+
+  sigma <- array(0, dim = c(k, k, time_len))
+  sigma_pred <- array(0, dim = c(k, k, time_len))
+  K <- array(0, dim = c(k, k, time_len))
+  mu <- matrix(0, time_len, k)
+  mu_pred <- matrix(0, time_len, k)
+
+  for (i in seq(2, time_len)) {
+    ## predict
+    mu_pred[i, ] <- A %*% mu[i - 1, ]
+    sigma_pred[,, i] <- A %*% sigma[,, i - 1] %*% t(A) + Q
+    K[,, i] <- solve(solve(sigma_pred[,, i]) + t(C) %*% R %*% t(C)) %*% t(C) %*% solve(R)
+
+    ## update
+    sigma[,, i] <- (diag(k) - K[,, i]) %*% C %*% sigma_pred[,, i]
+    mu[i, ] <- mu_pred[i, ] + K[,, i] %*% (y[i, ] - C %*% mu_pred[i, ])
+  }
+
+  list(
+    "mu" = mu,
+    "sigma" = sigma,
+    "mu_pred" = mu_pred,
+    "sigma_pred" = sigma_pred,
+    "K" = K
+  )
+
 }
