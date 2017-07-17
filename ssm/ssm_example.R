@@ -36,14 +36,14 @@ y_df <- data_frame(
   "i" = seq_len(nrow(y)),
   "y" = y[, 1],
   "state" = as_factor(as.character(s)),
-  "x1" = res$x[, 1]
+  "x" = res$x[, 1]
 )
 p <- ggplot(y_df) +
   geom_point(aes(x = i, y = y)) +
   geom_line(aes(x = i, y = x), alpha = 0.5) +
   theme(axis.text = element_text(size = 10),
         axis.title = element_text(size = 10))
-ggsave("~/Desktop/lab_meetings/20170705/figure/ssm_truth.pdf", p)
+ggsave("~/Desktop/lab_meetings/20170705/figure/ssm_truth.pdf", p, height = 3.4, width = 6)
 
 ###############################################################################
 ## fit an SSM
@@ -64,5 +64,6 @@ p <- ggplot(y_df) +
   geom_line(aes(x = i, y = ssm1, col = p), size = 1) +
   scale_color_gradient2(low ="#008071", midpoint = 0.5, high = "#710080") +
   theme(axis.text = element_text(size = 10),
-        axis.title = element_text(size = 10))
-ggsave("~/Desktop/lab_meetings/20170705/figure/ssm_fit.pdf", p)
+        axis.title = element_text(size = 10),
+        legend.position = "none")
+ggsave("~/Desktop/lab_meetings/20170705/figure/ssm_fit.pdf", p, height = 3.4, width = 6)
