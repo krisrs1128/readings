@@ -116,11 +116,28 @@ backwards_pass <- function(y, mu_pred, sigma_pred, K, A, C, R) {
   r <- matrix(0, time_len, k)
   N <- array(0, dim = c(k, k, time_len))
 
+  ## derivable from other variables, but stored for convenience
+  u <- matrix(0, time_len, k)
+  M_inv <- array(0, dim = c(k, k, time_len))
+  Ct <- array(0, dim = c(k, k, time_len))
+
   for (i in seq(time_len, 2)) {
     v_pred_inv <- solve(C %*% sigma_pred[,, i] %*% t(C) + R)
-    r[i - 1] <- t(C) %*% (v_pred_inv %*% (y[i, ] - mu_pred[i, ]) - t(K[,, i]) %*% r[i]) + t(A) %*% r[i]
+    M <- v_pred_inv + t(K[,, i]) %*% N[,, i] %*% K[,, i]
+    M_inv[,, i] <- solve(M)
+    u[i] <- v_pred_inv %*% (y[i, ] - mu_pred[i, ]) - t(K[,, i]) %*% r[i, ]
+    Ct[,, i] <- M %*% C - t(K[,, i]) %*% N[,, i] %*% A
+
+    r[i - 1] <- t(C) %*% u[i] + t(A) %*% r[i]
     N[,, i - 1] <- t(C) %*% v_pred_inv %*% C + t(A - K[,, i] %*% C) %*% N[,, i] %*% (A - K[,, i] %*% C)
+
   }
 
-  list("r" = r, "N" = N)
+  list(
+    "r" = r,
+    "N" = N,
+    "u" = u,
+    "M_inv" = M_inv,
+    "Ct" = Ct
+  )
 }
