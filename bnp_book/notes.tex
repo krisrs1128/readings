@@ -1,0 +1,90 @@
+\documentclass{article}
+\usepackage{natbib}
+\usepackage{graphicx}
+\input{preamble.tex}
+
+\title{Notes on Bayesian Nonparametrics (Cambridge Series)}
+\author{Kris Sankaran}
+
+\begin{document}
+\maketitle
+
+\section{Chapter 1}
+
+They begin with some taxonomizing,
+
+\begin{itemize}
+\item Frequentist parametrics: $p$-values, confidence intervals, derived from
+  analytical calculations and large sample approximations. Lots of optimality
+  theory.
+  \item Bayesian parametrics: Stems from Bayes' theorem, with finite (small)
+    number of parameters. Became much more popular with the development of MCMC
+    methods.
+  \item Frequentist nonparametrics: Model-free (e.g., rank-based) tests, the
+    bootstrap, unknown densities. All have infinite dimensional parameter spaces
+    (e.g., all CDFs $F$)
+  \item Bayesian nonparametrics: Place probability measure on infinite
+    dimensional parameter spaces.
+\end{itemize}
+
+First two approaches are actually very similar in large samples, as made precise
+by Bernstein-von Mises theorems. But caution should be exercised in bayesian
+nonparametrics -- don't always have consistency or Bernstein-von Mises theorems.
+
+We care both about the construction and the study (performance, comparisons,
+etc.) of different procedures. The ideas we develop borrow from literature on
+both non/semi parametrics as well as simulation. Also note that the ``two
+cultures'' of statistics are both present in BNP, and create some tension.
+
+They review some of the history, give a brief description of other books, and
+describe some general research directions.
+
+\section{Motivation and Ideas}
+
+``It is instructive to think of all Bayesians as constructing priors on spaces
+of density functions'' (e.g., normal assumption has normal shaped densities, BNP
+assumptions take wider class of shapes).
+
+A short rant against empirical bayesians.
+
+One approach to specify nonparametric priors is to match moments of observed data to what
+is expected, when sampling data from the prior, e.g.,
+
+\begin{align}
+  \mu_{1}\left(x\right) &= \int \Gsn\left(x \vert \theta, \sigma^{2}\right) \pi\left(d\theta, d\sigma\right)
+\end{align}
+
+To frame BNP ideas decision theoretically, consider quantifying the distance
+between the true prior density and some parametric family $\left(f\left(x;
+\theta\right)\right)$,
+
+\begin{align}
+d\left(f\left(\cdot; \theta\right), f\left(\cdot\right)\right),
+\end{align}
+e.g., the KL divergence. Choose $\theta$ to minimize the expected distance,
+under the posterior. If you take $\Pi\left(f\right)$ to be the Bayesian
+bootstrap (sample from ECDF), then the $\hat{\theta}$ that is the MLE.
+
+A rant against Doob's theorem.
+
+Prior serves two purpose: in addition to encoding prior beliefs, it fully
+specifies the learning model (in predictive / posterior distribution terms).
+
+Here's an idea: consider encoding the loss of choosing $\mu$ as the posterior,
+using
+\begin{align}
+  \sum_{i} l\left(\mu, X_{i}\right) + l\left(\mu, \Pi\right)
+\end{align}
+for some as yet unspecified loss functions $l$. Of course the most common
+version of this just takes $\mu$ to be parametric and uses $-\log f\left(X;
+\theta\right)$ and $-\log\pi\left(\theta\right)$. Minimizing this gives the
+posterior mode.
+
+To be nonparametric about things, consider a KL divergence instead. It's useful
+to consider losses for particular densities $f$, then average according to
+$\mu$. Minimizing the resulting loss gives the full posterior.
+
+If you mix the two optimization problems, you recover a pseudoposterior. Can be
+used to ensure consistency in more cases than if you only use posterior.
+
+\end{document}
