@@ -83,7 +83,7 @@ kalman_filter <- function(y, A, C, Q, R) {
     ## predict
     mu_pred[i, ] <- A %*% mu[i - 1, ]
     sigma_pred[,, i] <- A %*% sigma[,, i - 1] %*% t(A) + Q
-    K[,, i] <- solve(solve(sigma_pred[,, i]) + t(C) %*% R %*% t(C)) %*% t(C) %*% solve(R)
+    K[,, i] <- solve(solve(sigma_pred[,, i]) + t(C) %*% R %*% C) %*% t(C) %*% solve(R) # eq 18.39 in Murphy Machine Learning
 
     ## update
     sigma[,, i] <- (diag(k) - K[,, i]) %*% C %*% sigma_pred[,, i]
@@ -97,7 +97,6 @@ kalman_filter <- function(y, A, C, Q, R) {
     "sigma_pred" = sigma_pred,
     "K" = K
   )
-
 }
 
 #' @examples
@@ -129,7 +128,8 @@ backwards_pass <- function(y, mu_pred, sigma_pred, K, A, C, R) {
 
     if (i > 1) {
       r[i - 1] <- t(C) %*% u[i] + t(A) %*% r[i]
-      N[,, i - 1] <- t(C) %*% v_pred_inv %*% C + t(A - K[,, i] %*% C) %*% N[,, i] %*% (A - K[,, i] %*% C)
+      N[,, i - 1] <- t(C) %*% v_pred_inv %*% C +
+        t(A - K[,, i] %*% C) %*% N[,, i] %*% (A - K[,, i] %*% C)
     }
 
   }
@@ -175,7 +175,7 @@ forward_scan <- function(y, zero_indic, u, Ct, M_inv, K, C) {
     }
 
     u[i, ] <- u[i, ] - solve(M_inv[,, i]) %*% delta
-    b[i + 1] <- t(A - K[,, i] %*% C) %*% b[i, ] - K[,, i] %*% delta
+    b[i + 1] <- (A - K[,, i] %*% C) %*% b[i, ] - K[,, i] %*% delta
     y[i, ] <- y[i, ] - delta
   }
 
@@ -206,7 +206,6 @@ backward_scan <- function(y, zero_indic, u, Ct, M_inv, K, C) {
     }
 
     u[i, ] <- u[i, ] - K[,, i] %*% b[i, ]
-
 
     delta <- -Inf
     while (!all(y[i, ] - delta < 0)) {
