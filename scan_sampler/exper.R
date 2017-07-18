@@ -30,6 +30,11 @@ my <- melt(
 
 p <- ggplot() +
   geom_point(
+    data = my %>% filter(y < 0),
+    aes(x = i, y = y),
+    size = .5, alpha = 0.05
+  ) +
+  geom_point(
     data = my %>% filter(iter == 2),
     aes(x = i, y = y),
     col = "red", size = 1, alpha = 1
@@ -38,11 +43,6 @@ p <- ggplot() +
     data = my %>% filter(iter == 1),
     aes(x = i, y = y),
     col = "red", size = 1, alpha = 0.5
-  ) +
-  geom_point(
-    data = my %>% filter(y < 0),
-    aes(x = i, y = y),
-    size = .5, alpha = 0.05
   )
 
 p + ylim(-10, 5)
