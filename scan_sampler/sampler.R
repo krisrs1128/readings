@@ -11,15 +11,11 @@
 ## author: sankaran.kris@gmail.com
 ## date: 07/17/2017
 
-###############################################################################
-## Necessary libraries
-###############################################################################
 library("expm")
 
 ###############################################################################
 ## simulate data from the kalman filter
 ###############################################################################
-
 
 #' @examples
 #' ## perturbation like example
@@ -59,6 +55,9 @@ simulate <- function(A ,C, x0 = NULL, Q = NULL, R = NULL, time_len = 100) {
   list("x" = x, "y" = y)
 }
 
+###############################################################################
+## Filtering and smoothing required for sampler initialization
+###############################################################################
 
 #' @examples
 #' A <- diag(0.9, nrow = 1)
@@ -66,10 +65,10 @@ simulate <- function(A ,C, x0 = NULL, Q = NULL, R = NULL, time_len = 100) {
 #' Q <- diag(2, nrow = 1)
 #' R <- diag(1, nrow = 1)
 #' res <- simulate(A, C, 0, Q, R)
-#' filt <- kalman_filter(res$y, A, C, R, Q)
+#' filt <- kalman_filter(res$y, A, C, Q, R)
 #' points(filt$mu, col = "red")
 #' points(filt$mu_pred, col = "red")
-kalman_filter <- function(y, A, C, R, Q) {
+kalman_filter <- function(y, A, C, Q, R) {
   time_len <- length(y)
   p <- nrow(C)
   k <- nrow(A)
@@ -84,7 +83,7 @@ kalman_filter <- function(y, A, C, R, Q) {
     ## predict
     mu_pred[i, ] <- A %*% mu[i - 1, ]
     sigma_pred[,, i] <- A %*% sigma[,, i - 1] %*% t(A) + Q
-    K[,, i] <- solve(solve(sigma_pred[,, i]) + t(C) %*% R %*% t(C)) %*% t(C) %*% solve(R)
+    K[,, i] <- solve(solve(sigma_pred[,, i]) + t(C) %*% R %*% C) %*% t(C) %*% solve(R) # eq 18.39 in Murphy Machine Learning
 
     ## update
     sigma[,, i] <- (diag(k) - K[,, i]) %*% C %*% sigma_pred[,, i]
@@ -98,7 +97,6 @@ kalman_filter <- function(y, A, C, R, Q) {
     "sigma_pred" = sigma_pred,
     "K" = K
   )
-
 }
 
 #' @examples
@@ -130,7 +128,8 @@ backwards_pass <- function(y, mu_pred, sigma_pred, K, A, C, R) {
 
     if (i > 1) {
       r[i - 1] <- t(C) %*% u[i] + t(A) %*% r[i]
-      N[,, i - 1] <- t(C) %*% v_pred_inv %*% C + t(A - K[,, i] %*% C) %*% N[,, i] %*% (A - K[,, i] %*% C)
+      N[,, i - 1] <- t(C) %*% v_pred_inv %*% C +
+        t(A - K[,, i] %*% C) %*% N[,, i] %*% (A - K[,, i] %*% C)
     }
 
   }
@@ -144,6 +143,10 @@ backwards_pass <- function(y, mu_pred, sigma_pred, K, A, C, R) {
   )
 }
 
+###############################################################################
+## Scans define the actual sampler
+###############################################################################
+
 #' @examples
 #' A <- diag(0.9, nrow = 1)
 #' C <- diag(1, nrow = 1)
@@ -155,16 +158,24 @@ backwards_pass <- function(y, mu_pred, sigma_pred, K, A, C, R) {
 #' y_prime <- forward_scan(res$y, back$u, back$Ct, back$M_inv, filt$K, C)
 #' plot(res$y)
 #' points(y_prime, col = "green")
-forward_scan <- function(y, u, Ct, M_inv, K, C) {
+forward_scan <- function(y, zero_indic, u, Ct, M_inv, K, C) {
   k <- ncol(u)
   time_len <- nrow(u)
   b <- matrix(0, time_len, k)
 
   for (i in seq_len(time_len)) {
+    if (!zero_indic[i]) {
+      next
+    }
+
     u[i, ] <- u[i, ] - Ct[,, i] %*% b[i, ]
-    delta <- M_inv[,, i] %*% u[i, ] + sqrtm(as.matrix(M_inv[,, i])) %*% rnorm(k)
+    delta <- -Inf
+    while (!all(y[i, ] - delta < 0)) {
+      delta <- M_inv[,, i] %*% u[i, ] + sqrtm(as.matrix(M_inv[,, i])) %*% rnorm(k)
+    }
+
     u[i, ] <- u[i, ] - solve(M_inv[,, i]) %*% delta
-    b[i + 1] <- t(A - K[,, i] %*% C) %*% b[i, ] - K[,, i] %*% delta
+    b[i + 1] <- (A - K[,, i] %*% C) %*% b[i, ] - K[,, i] %*% delta
     y[i, ] <- y[i, ] - delta
   }
 
@@ -184,18 +195,56 @@ forward_scan <- function(y, u, Ct, M_inv, K, C) {
 #' plot(res$y)
 #' points(fw$y, col = "green")
 #' points(bw$y, col = "purple")
-backward_scan <- function(y, u, Ct, M_inv, K, C) {
+backward_scan <- function(y, zero_indic, u, Ct, M_inv, K, C) {
   k <- ncol(u)
   time_len <- nrow(u)
   b <- matrix(0, time_len, k)
 
   for (i in seq(time_len, 1)) {
+    if (!zero_indic[i]) {
+      next
+    }
+
     u[i, ] <- u[i, ] - K[,, i] %*% b[i, ]
-    delta <- M_inv[,, i] %*% u[i, ] + sqrtm(as.matrix(M_inv[,, i])) %*% rnorm(k)
+
+    delta <- -Inf
+    while (!all(y[i, ] - delta < 0)) {
+      delta <- M_inv[,, i] %*% u[i, ] + sqrtm(as.matrix(M_inv[,, i])) %*% rnorm(k)
+    }
     u[i, ] <- u[i, ] - solve(M_inv[,, i]) %*% delta
-    b[i - 1] <- t(A - K[,, i] %*% C) %*% b[i, ] - Ct[,, i] %*% delta
+    b[i - 1] <- t(A - K[,, i] %*% C) %*% b[i, ] - t(Ct[,, i]) %*% delta
     y[i, ] <- y[i, ] - delta
   }
 
   list("y" = y, "u" = u)
+}
+
+#' Scan Sampler for the Dynamic Tobit Model
+#'
+#' @examples
+#' A <- diag(0.9, nrow = 1)
+#' C <- diag(1, nrow = 1)
+#' Q <- diag(2, nrow = 1)
+#' R <- diag(1, nrow = 1)
+#' set.seed(1000)
+#' res <- simulate(A, C, 0, Q, R)
+#' y <- res$y
+#' y[y < 0] <- 0
+#' y_samples <- sampler(y, A, C, Q, R, n_iter = 10)
+sampler <- function(y, A, C, Q, R, n_iter = 1000) {
+  filt <- kalman_filter(y, A, C, Q, R)
+  smooth <- backwards_pass(y, filt$mu_pred, filt$sigma_pred, filt$K, A, C, R)
+  zero_indic <- y == 0
+  y_samples <- array(0, c(dim(y), n_iter))
+  y_samples[,, 1] <- y
+
+  for (i in seq_len(n_iter - 1)) {
+    cat(sprintf("iteration %s/%s\n", i, n_iter))
+    y_mat <- as.matrix(y_samples[,, i, drop = F])
+    fw <- forward_scan(y_mat, zero_indic, smooth$u, smooth$Ct, smooth$M_inv, filt$K, C)
+    bw <- backward_scan(fw$y, zero_indic, fw$u, smooth$Ct, smooth$M_inv, filt$K, C)
+    y_samples[,, i + 1] <- bw$y
+  }
+
+  y_samples
 }
