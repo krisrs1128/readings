@@ -1,4 +1,5 @@
 \documentclass{article}
+\usepackage{amssymb, amsfonts}
 \usepackage{natbib}
 \usepackage{graphicx}
 \input{preamble.tex}
@@ -86,5 +87,147 @@ $\mu$. Minimizing the resulting loss gives the full posterior.
 
 If you mix the two optimization problems, you recover a pseudoposterior. Can be
 used to ensure consistency in more cases than if you only use posterior.
+
+\pagebreak
+
+\section{The Dirichlet process, related priors, and posterior asymptotics}
+
+In the nonparametric setting, you try to let the data generating process (the
+parameters) be described by functions. What would we want for priors in these
+nonparametric settings? THey should have large support, so that posterior
+inference has good frequentist properties. E.g., consistency. Would like to
+characterize rate of convergence of posterior concentration, and have it be
+fast.
+
+What would the Bayesian analog of the ECDF look like? Think of probabilities at
+the observed data locations, which gives rise to a multinomial likelihood, which
+leads us to a Dirichlet prior. The Dirichlet process induces this distribution
+on every possible partition of the data space.
+
+\section{Construction of the Dirichlet Process}
+
+It's not possible to naively apply Kolmogorov's consistency theorem (the product
+$\sigma$-field $\left[0, 1\right]^{\mathcal{B}}$ is not rich enough). But you
+can use a countable generator instead, or try normalizing a gamma process.
+
+There are some useful properties,
+
+\begin{itemize}
+\item For any $A$, we have the expected measure assigned to that set is
+  $\Esubarg{D_{\alpha}}{P\left(A\right)} = \frac{\alpha\left(A\right)}{\alpha\left(\Omega\right)}$.
+\item The corresponding variance is $\frac{G\left(A\right)G\left(A^{C}\right)}{\alpha\left(\Omega\right) + 1}$
+  Note that the total mass of $\alpha$ modulates the concentration around that measure.
+\item You can also compute expectations of linear functionals using the standard
+  machine. Distributions can also be found, but are more complicated.
+\item The DP is conjugate ``for estimating a completely unknown distribution
+  from i.i.d. data.'' The posterior is $D_{\alpha + \sum \delta_{X_{i}}}$. This
+  can be proven by drawing smaller partitions around the $X_{i}$ (so that you
+  get these delta point masses at the observations) and using a martingale
+  convergence theorem.
+\item The posterior mean is a mixture of prior mean and the empirical CDF.
+\item In the limit, you recover either the ECDF, brownian bridge, or bayesian
+  bootstrap, depending on the type of asymptotic.
+\item The DP isn't smooth (just because there's a point \textit{near} $A$
+  doesn't mean the posterior mean of $A$ will go up. In fact, due to negative
+  correlation across partitions, it will go down. Also, for all the promise of
+  being nonparametric, the process is always discrete (though, consider an
+  analogy with the ECDF).
+\item If you analyze / condition on subsets, you recover a DP which is
+  independent of the complement. This is called self-similarity, and is the
+  motivation behind tail-free processes.
+\item Assuming some properties in the limiting concentration parameter, you have
+  consistency regardless of the choice of prior, which is odd in the Bayesian
+  context.
+\item You have the predictive,
+  \begin{align*}
+    X_{n} \vert X_{1:(n - 1)} &\sim \frac{M}{M + n - 1}G + \sum \frac{n_{j}}{M + n - 1} \delta_{\theta_{j}}
+  \end{align*}
+\item There's the stick breaking representation,
+\begin{align*}
+  \sum_{i = 1}^{\infty} V_{i}\delta_{\theta_{i}}
+\end{align*}
+where
+\begin{align*}
+  V_{i} &= Y_{i}\prod_{j = 1}^{i - 1}\left(1 - Y_{j}\right)
+\end{align*}
+and the $Y_{j}$ are iid $\Bet\left(1, M\right)$. The proof uses the
+self-similarity property.
+\item The prior and posterior are mutually singular. Of course there is no
+  dominating measure.
+\item The tails are lighter than the base measure $G$.
+\end{itemize}
+
+\section{Priors related to the DP}
+
+I wasn't taking notes on this, but they talked about DP mixtures (mix over the
+concentration parameter, e.g.), the DPMM, and the HDP.
+
+They've also spent a bit time discussing posterior consistency (failure
+situations too). They outlined Schwartz's argument and the KL property which
+guarantees consistency.
+
+\section{General Theory (consistency)}
+
+Need numerator (likelihood times prior) to be upper bounded by
+$\exp{-cn\eps_{n}^{2}}$ and the denominator (marginal likelihood) to be lower
+bounded by $\exp{-bn\eps_{n}^{2}}$.
+
+For the denominator, can replace the KL positivity condition. Still need a prior
+concentration rate,
+\begin{align}
+\Pi\left(B\left(p_{0}, \eps_{n}\right)\right) \geq \exp{-b_{1}n\eps_{n}^{2}},
+\end{align}
+where the exponent goes to $\infty$ since density estimation problems must have
+rate slower than $n^{-\frac{1}{2}}$.
+
+For the numerator, use seives + metric entropy.
+
+\section{Applications}
+
+\begin{itemize}
+\item Can use bracketing to get rates.
+\item The $\eps$-bracketing number of a class of densities is the number of
+  pairs (which are within $\eps$ of each other) of densities that are needed
+  so that any individual density is in at least one of these brackets.
+\item Can be used to show that get minimax rate $n^{-\frac{\alpha}{2\alpha +
+    1}}$ in Holder continuous densities (smoothness $\alpha$)
+\item Can get results for parametric models and log spline priors, but need
+  a more refined notation of entropy (local entropy) to get correct rates
+  (otherwise have extra log factor)
+\item This general theory can show that the posterior converges at the minimax
+  rate in Dirichlet process mixture models and Gaussian processes.
+\end{itemize}
+
+In the misspecified case (true model does not lie in the posited model space),
+you converge to the KL projection of the truth onto the model space.
+
+There are also extensions to the non i.i.d. case (mainly independendent
+non-identical and Markov processes, apparently).
+
+\section{Adaptation and model selection}
+
+In classical theory, you often see oracle properties, where an estimator gets a
+rate equal to what you would have gotten if you actually knew the smoothness
+level of the target density. In the bayesian case, you would hope to get similar
+kinds of adaptiveness by placing a prior on the smoothness parameter, so we have
+a two-level hierarchical model.
+
+This can be formalized in a general theory, which says that if you have a local
+entropy condition and a few bounds on the relative probability of sets under too
+coarse / too smooth priors, then this addaptation strategy is effective.
+
+\section{Bernstein-von Mises theorems}
+
+On top of knowing that the posterior converges at some rate, we would like to
+know the actual shape of the posterior. Bernstein-von Mises says that the
+posterior is asymptotically normal, centered around the MLE with inverse
+Fisher-information covariance. So, frequentist and Bayesian inference coincide.
+
+There a few nonparametric versions of these theorems. E.g., the Dirichlet
+Process analog of Donsker is that $\sqrt{n}\left(F - \mathbb{F}_{n}\right)$
+converges to an $F_{0}$ Brownian Bridge under $F_{0}$.
+
+There are cases where these theorems don't obtain. See Cox 1993 or Freedman
+1999.
 
 \end{document}
