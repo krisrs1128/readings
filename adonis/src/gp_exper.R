@@ -49,7 +49,7 @@ p_vals <- lapply(models, function(x) { x$aov.tab$"Pr(>F)"[1] })
 
 ## this actuall seems conservative in this case?
 hist(p_vals, breaks = 20)
-save(p_vals, models, file = "pois_exper.rda")
+save(p_vals, models, file = "data/pois_exper.rda")
 
 ## Gaussian setup
 models <- list()
@@ -63,4 +63,4 @@ for (i in seq_len(n_sim)) {
 
 p_vals <- sapply(models, function(x) { x$aov.tab$"Pr(>F)"[1] })
 hist(p_vals, breaks = 20)
-save(p_vals, models, file = "gauss_exper.rda")
+save(p_vals, models, file = "data/gauss_exper.rda")
