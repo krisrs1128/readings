@@ -46,4 +46,5 @@ cur_ix <- (0.5 * time_len):time_len
 y[cur_ix] <- gp[cur_ix, 1] - gp[cur_ix[1], 1] + rnorm(length(cur_ix), 0, 0.1)
 plot(y)
 
-write.csv(y, "data/y.csv", row.names = FALSE)
+write.csv(y, "data/y.csv", row.names = FALSE, col.names = FALSE)
+write.csv(seq_len(time_len) / 50, "data/x.csv", row.names = FALSE, .names = FALSE)
