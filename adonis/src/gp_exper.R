@@ -49,6 +49,7 @@ p_vals <- lapply(models, function(x) { x$aov.tab$"Pr(>F)"[1] })
 
 ## this actuall seems conservative in this case?
 hist(p_vals, breaks = 20)
+dir.create("data")
 save(p_vals, models, file = "data/pois_exper.rda")
 
 ## Gaussian setup
