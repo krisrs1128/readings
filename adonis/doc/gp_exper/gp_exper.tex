@@ -1,0 +1,102 @@
+\documentclass{article}
+\usepackage{natbib}
+\usepackage{graphicx}
+\input{preamble.tex}
+
+\title{Invalidity of ADONIS in the Pesence of Between-Site Correlation}
+\author{Kris Sankaran}
+\maketitle
+
+\begin{document}
+
+On occassion, the $p$-values obtained by the permutation procedure described in
+\citep{anderson2001new} (implemented as the \texttt{adonis} function in
+\cite{oksanen2007vegan}) have seemed suspiciously significant, sometimes out of
+line with several other analysis on the same data. We have had various
+hypotheses about why the permutation procedure might not be appropriate in
+microbiome data -- bacteria and sites tend to be correlated across phyla and
+time, for example. In this note, we try to formalize this intuition and quantify
+the robustness (or lack thereof) of the adonis permutation procedure. We believe
+that a more careful understanding of this method is a relevant area of
+statistical research, in light of the popularity of this method in standard
+microbiome analysis practice (see e.g. \cite{fukuyama2012comparisons} and
+references therein).
+
+Our analysis is directly inspired by \citep{guillot2013dismantling}, which also
+studied validity of the Mantel test, another type of distanced-based,
+nonparametric hypothesis test. The main idea in both their work and ours is that
+measurements across multiple sites will often express some sort of between-site
+correlation structure, and that it is important to maintain this structure under
+the permutation null. More precisely, the null hypothesis should only be that
+the two processes are independent of one another, not that the two processes are
+independent and each have no between-site correlation. But the latter structure
+is what is simulated in ADONIS' permutation null, and if the processes are
+actually independent but with within-process site correlation, ADONIS will still
+report that there is an association between them, when there are in fact none.
+
+We will describe some simple linear-model based alternatives to ADONIS that
+provide valid $p$-values. The drawback of these approaches is that they cannot
+be applied when only distances between sites is available -- a setting which is
+meaningful in microbiome studies, where working entirely with UniFrac distances
+\citep{lozupone2005unifrac} is common, for example.
+
+There are two main limitations in this note,
+
+\begin{itemize}
+\item As in any simulation study, the conclusions are only as useful as the
+  simulation mechanism is representative of data analysis practice. Ideally we
+  could characterize the plausibility of our simulation mechanism, with respect
+  to real data.
+\item We have no alternative to ADONIS that can be applied when only distances
+  are available. We could imagine more sophisticated approaches, based on
+  model-free knockoffs, for example.
+\end{itemize}
+
+Hopefully these will be resolved as this work matures.
+
+\section{Setup}
+\label{sec:setup}
+
+* data generation *
+
+- What models do we consider simulating under?
+- High level view is that we want some spatial correlation in the group labels.
+And also in the species counts. But the group and species counts will be totally
+unrelated.
+- The way we simulate this is to simulate two gaussian processes, as in the
+mantel test paper. Since groups are categorical, we'll pass the GP through a
+logistic function.
+- We'll also consider making the $x$'s look like species counts. We do that
+using a gaussian process under a poisson model.
+
+* methods review *
+
+adonis
+- We will include $u$ as a covariate. This is how people would typically
+recommend controlling for the spatial correlation, as far as I can tell.
+- The basic idea of the test is to compute within and between distances in $x$,
+where the groups are determined by $y$. The testing scheme permutes the labels
+of $y$. Note that this breaks all correlation structure among the $y$s.
+
+logistic regression
+- We can use the species counts as predictors of $y$. We don't get a global
+$p$-value for $y$, like in adonis, but we can get $p$-values for each of the
+species breakdowns on their own.
+
+linear model
+- For a closer parallel with adonis, we can treat the category as a covariate.
+Then, we can model the response label using a linear model. In the Poisson
+generating scheme, we use a Poisson link.
+
+\section{Results}
+\label{sec:results}
+
+give the summary figure
+in this setup, adonis is not giving valid p-values
+note that the logistic regression case is returning many more p-values: it has
+one for each species in our simulation.
+
+\bibliographystyle{plainnat}
+\bibliography{refs.bib}
+
+\end{document}
