@@ -2,12 +2,13 @@
 \usepackage{natbib}
 \usepackage{graphicx}
 \input{preamble.tex}
+\linespread{1.5}
 
 \title{Invalidity of ADONIS in the Pesence of Between-Site Correlation}
 \author{Kris Sankaran}
-\maketitle
 
 \begin{document}
+\maketitle
 
 On occassion, the $p$-values obtained by the permutation procedure described in
 \citep{anderson2001new} (implemented as the \texttt{adonis} function in
@@ -44,20 +45,34 @@ There are two main limitations in this note,
 
 \begin{itemize}
 \item As in any simulation study, the conclusions are only as useful as the
-  simulation mechanism is representative of data analysis practice. Ideally we
-  could characterize the plausibility of our simulation mechanism, with respect
-  to real data.
+  simulation mechanism is representative of the data encountered in practice.
+  Ideally we could characterize the plausibility of our simulation mechanism,
+  with respect to real data.
 \item We have no alternative to ADONIS that can be applied when only distances
   are available. We could imagine more sophisticated approaches, based on
   model-free knockoffs, for example.
 \end{itemize}
 
-Hopefully these will be resolved as this work matures.
+Hopefully these deficiencies will be resolved as this work matures.
 
 \section{Setup}
 \label{sec:setup}
 
-* data generation *
+In this section, we describe the our simulation design. This has two components:
+how do we generate the null data, and how do we test for associations. We have
+several approaches for each.
+
+\subsection{Data generating mechanism}
+\label{subsec:data_generating_mechanism}
+
+As mentioned in the introduction, the goal of our simulation study is to
+formally encode the qualitative observation that ADONIS may incorrectly report
+an association between independent measurements when the measurements exhibit
+between-site correlation. Suppose that we have populated a matrix
+$X \in \reals^{n \times p}$ of abundances for $p$ species across $n$ sites. A vector
+$y \in \{0, 1\}^{n}$ describes a binary characteristic at each site.
+
+This 
 
 - What models do we consider simulating under?
 - High level view is that we want some spatial correlation in the group labels.
@@ -69,7 +84,8 @@ logistic function.
 - We'll also consider making the $x$'s look like species counts. We do that
 using a gaussian process under a poisson model.
 
-* methods review *
+\subsection{Methods description}
+\label{subsec:methods_description}
 
 adonis
 - We will include $u$ as a covariate. This is how people would typically
