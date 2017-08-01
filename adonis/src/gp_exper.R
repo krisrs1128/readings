@@ -15,6 +15,7 @@ library("kernlab")
 library("expm")
 library("vegan")
 library("tidyverse")
+library("reshape2")
 library("mvtnorm")
 
 print_iter <- function(i) {
@@ -28,11 +29,11 @@ logit <- function(x) {
 }
 
 ###############################################################################
-## actual simulation experiment
+## simulate underlying category data
 ###############################################################################
 
 ## variables used throughout experiment
-n_sim <- 1000
+n_sim <- 40
 p1 <- 20
 p2 <- 2
 n <- 100
@@ -51,45 +52,68 @@ for (i in seq_len(n)) {
   }
 }
 
+###############################################################################
+## perform poisson and gaussian adonis / lm experiments
+###############################################################################
+
+models <- list(
+  "poisson" = list(
+    "adonis" = list(),
+    "logistic" = list(),
+    "lm" = list()
+  ),
+  "gaussian" = list(
+    "adonis" = list(),
+    "logistic" = list(),
+    "lm" = list()
+  )
+)
+
 ## Poisson setup
-models <- list()
 for (i in seq_len(n_sim)) {
   print_iter(i)
   f <- t(rmvnorm(p1, sigma = K))
   x <- matrix(rpois(n * p1, lambda = exp(f)), n, p1)
-  models[[i]] <- adonis(x ~ y[, i] + u, method = "bray")
+  models$poisson$adonis[[i]] <- adonis(x ~ y[, i] + u, method = "bray")
+  models$poisson$logistic[[i]] <- glm(y[, i] ~ x + u)
+  models$poisson$lm[[i]] <- lm(x[, 1] ~ y[, i] + u)
 }
-
-p_vals <- sapply(models, function(x) { x$aov.tab$"Pr(>F)"[1] })
-
-## Okay, so this is rejecting a lot
-hist(p_vals, breaks = 40)
-dir.create("data")
-save(p_vals, models, file = "data/pois_exper.rda")
 
 ## Gaussian setup
-models <- list()
 for (i in seq_len(n_sim)) {
   print_iter(i)
   x <- t(rmvnorm(p1, sigma = K))
-  models[[i]] <- adonis(x ~ y[, i] + u, method = "euclidean")
+  models$gaussian$adonis[[i]] <- adonis(x ~ y[, i] + u, method = "euclidean")
+  models$gaussian$logistic[[i]] <- glm(y[, i] ~ x + u)
+  models$gaussian$lm[[i]] <- lm(x[, 1] ~ y[, i] + u)
 }
 
-p_vals <- sapply(models, function(x) { x$aov.tab$"Pr(>F)"[1] })
-hist(p_vals, breaks = 40)
-save(p_vals, models, file = "data/gauss_exper.rda")
+###############################################################################
+## visualize the resulting p-values
+###############################################################################
+pvals <- list(
+  "poisson" = list(
+    "adonis" = sapply(models$poisson$adonis, function(x) x$aov.tab["y[, i]", "Pr(>F)"]),
+    "logistic" = sapply(models$poisson$logistic, function(x) coef(summary(x))[2:(2 + p1), "Pr(>|t|)"]),
+    "lm" = sapply(models$poisson$lm, function(x) coef(summary(x))["y[, i]", "Pr(>|t|)"])
+  ),
+  "gaussian" = list(
+    "adonis" = sapply(models$gaussian$adonis, function(x) x$aov.tab["y[, i]", "Pr(>F)"]),
+    "logistic" = sapply(models$gaussian$logistic, function(x) coef(summary(x))[2:(2 + p1), "Pr(>|t|)"]),
+    "lm" = sapply(models$gaussian$lm, function(x) coef(summary(x))["y[, i]", "Pr(>|t|)"])
+  )
+)
 
-## What happens if we're just doing logistic regression? Things seem fine.
-models <- list()
-for (i in seq_len(n_sim)) {
-  print_iter(i)
-  x <- t(rmvnorm(p1, sigma = K))
-  models[[i]] <- glm(y[, i] ~ x + u)
-}
+m_pvals <- melt(pvals)
+colnames(m_pvals) <- c("pval", "rsv", "sim", "method", "mechanism")
+head(m_pvals)
 
-p_vals <- sapply(models, function(x) {
-  coef(summary(x))[, "Pr(>|t|)"]
-})
-hist(p_vals[2, ], breaks = 20)
-hist(p_vals[3, ], breaks = 20)
-save(p_vals, models, file = "data/logit_exper.rda")
+ggplot(m_pvals) +
+  geom_histogram(
+    aes(x = pval)
+  ) +
+  facet_grid(method ~ mechanism, scales = "free_y")
+
+## save to file
+dir.create("data")
+save(p_vals, models, file = "data/pois_exper.rda")
