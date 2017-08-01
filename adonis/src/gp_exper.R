@@ -12,14 +12,13 @@
 ## libraries and setup
 ###############################################################################
 library("kernlab")
-library("expm")
 library("vegan")
 library("tidyverse")
 library("reshape2")
 library("mvtnorm")
 
-print_iter <- function(i) {
-  if (i %% 10 == 0) {
+print_iter <- function(i, m == 10) {
+  if (i %% m == 0) {
     cat(sprintf("iteration %s\n", i))
   }
 }
@@ -29,7 +28,7 @@ logit <- function(x) {
 }
 
 ###############################################################################
-## simulate underlying category data
+## simulate underlying categorical data
 ###############################################################################
 
 ## variables used throughout experiment
@@ -106,14 +105,11 @@ pvals <- list(
 
 m_pvals <- melt(pvals)
 colnames(m_pvals) <- c("pval", "rsv", "sim", "method", "mechanism")
-head(m_pvals)
 
 ggplot(m_pvals) +
-  geom_histogram(
-    aes(x = pval)
-  ) +
+  geom_histogram(aes(x = pval)) +
   facet_grid(method ~ mechanism, scales = "free_y")
 
 ## save to file
 dir.create("data")
-save(p_vals, models, file = "data/pois_exper.rda")
+save(p_vals, models, file = "data/exper.rda")
