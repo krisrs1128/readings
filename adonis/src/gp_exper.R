@@ -75,7 +75,7 @@ for (i in seq_len(n_sim)) {
   x <- matrix(rpois(n * p1, lambda = exp(f)), n, p1)
   models$poisson$adonis[[i]] <- adonis(x ~ y[, i] + u, method = "bray")
   models$poisson$logistic[[i]] <- glm(y[, i] ~ x + u)
-  models$poisson$lm[[i]] <- lm(x[, 1] ~ y[, i] + u)
+  models$poisson$lm[[i]] <- glm(x[, 1] ~ y[, i] + u, family = "poisson")
 }
 
 ## Gaussian setup
@@ -106,10 +106,11 @@ pvals <- list(
 m_pvals <- melt(pvals)
 colnames(m_pvals) <- c("pval", "rsv", "sim", "method", "mechanism")
 
-ggplot(m_pvals) +
+p <- ggplot(m_pvals) +
   geom_histogram(aes(x = pval)) +
   facet_grid(method ~ mechanism, scales = "free_y")
+ggsave("../doc/figure/pvals_comparison.png")
 
 ## save to file
 dir.create("data")
-save(p_vals, models, file = "data/exper.rda")
+save(pvals, models, file = "data/exper.rda")
