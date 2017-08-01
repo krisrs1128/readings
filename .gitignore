@@ -4,3 +4,4 @@
 *.bbl
 *.pdf
 *.png
+adonis/src/data/*
