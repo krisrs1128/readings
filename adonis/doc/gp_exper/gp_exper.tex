@@ -206,7 +206,7 @@ We implement this using the \texttt{glm} command, as in \ref{code:logistic}.
 
 \begin{code}
 \begin{minted}[mathescape, linenos, frame=lines, framesep=2mm]{R}
-  glm(y ~ x + u, family = binomial()) 
+  glm(y ~ x + u, family = binomial())
 \end{minted}
 \captionof{listing}{An example call for applying logistic regression of species
   counts onto site characteristisc.}
@@ -240,16 +240,28 @@ our simulation study. Code for this procedure is provided in
 \section{Results}
 \label{sec:results}
 
+We simulate 1000 replicates of the setup described in section \ref{sec:setup},
+for each data generating mechanism and method. The resulting $p$-values are
+described in figure \ref{fig:pvals_comparison}. 
+
+More precisely, the ADONIS $p$-value is the permutation $p$-value for the $y$
+coefficient and the (Poisson) linear model $p$-values those for the coefficient
+of the $y$ covariate. In contrast, the $p$-values for the logistic regression
+are those for the coefficients for each species -- this is why there are so many
+more $p$-values in the logistic regression row of figure
+\ref{fig:pvals_comparison}.
+
 \begin{figure}
   \centering
   \includegraphics[width=0.8\textwidth]{figure/pvals_comparison}
   \caption{\label{fig:pvals_comparison} }
 \end{figure}
 
-give the summary figure
-in this setup, adonis is not giving valid p-values
-note that the logistic regression case is returning many more p-values: it has
-one for each species in our simulation.
+Evidently, the $p$-values associated with all procedures are not quite uniform.
+However, those provided by ADONIS are very strongly concentrated on very low
+values. Indeed, the permutation procedure in this setting seems poorly suited in
+the case of correlated sites, even when they are included as covariates in the
+regression.
 
 \bibliographystyle{plainnat}
 \bibliography{refs.bib}
