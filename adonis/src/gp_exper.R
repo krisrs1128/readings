@@ -109,6 +109,7 @@ pvals <- list(
 m_pvals <- melt(pvals)
 colnames(m_pvals) <- c("pval", "rsv", "sim", "method", "mechanism")
 
+m_pvals$method <- factor(m_pvals$method, levels = c("adonis", "logistic", "lm"))
 p <- ggplot(m_pvals) +
   geom_histogram(aes(x = pval), binwidth = 0.02) +
   facet_grid(method ~ mechanism, scales = "free_y")
