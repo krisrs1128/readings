@@ -133,18 +133,25 @@ ADONIS is a nonparametric alternative to ANOVA \citep{anderson2001new}. The main
 idea is that the within and between sums-of-squares, which are central to ANOVA
 can be represented in terms of pairwise sums-of-squares. Substituting generic
 pairwise distances for these pairwise sums-of-squares leads to a nonparametric
-analog of the ANOVA decomposition. However, the nonparametric analog of the
-$F$-statistic is no longer $F$-distributed, so standard theory theory does not
-provide valid inference. Instead, a permutation scheme is considered. In the
-one-way ANOVA case, we recompute the nonparametric $F$-statistic under many
-permutations of $y$ and use the resulting histogram as the null reference
-distribution. When more covariates are included, such a permutation scheme is
-not sufficient, and in general it is not straightforwards to design valid
-permutation tests, because the permutations must respect constraints impsed by
-null hypothesis \cite{anderson2001new}. The implementation in
-\citep{oksanen2007vegan} is only approximate, applying independent permutations
-to each covariate in the model. Note in particular that this permutation scheme
-breaks the between-site correlation in the simulated $y$.
+analog of the ANOVA decomposition. The advantage of this approach is that it
+allows inference based simply on pairwise distances between sites -- say,
+Bray-Curtis or UniFrac distances -- which might be more sensitive to the types
+of variation that are meaningful in the microbial ecology setting than ordinary
+euclidean distance, which is implicitly assumed by ANOVA.
+
+However, the nonparametric analog of the $F$-statistic is no longer
+$F$-distributed, so standard theory theory does not provide valid inference.
+Instead, a permutation scheme is considered. In the one-way ANOVA case, we
+recompute the nonparametric $F$-statistic under many permutations of $y$ and use
+the resulting histogram as the null reference distribution.
+
+When more covariates are included, such a permutation scheme is not sufficient,
+and in general it is not straightforwards to design valid permutation tests,
+because the permutations must respect constraints impsed by null hypothesis
+\cite{anderson2001new}. The implementation in \citep{oksanen2007vegan} is only
+approximate, applying independent permutations to each covariate in the model.
+Note in particular that this permutation scheme breaks the between-site
+correlation in the simulated $y$.
 
 %% \begin{align}
 %%   WSS &= \frac{1}{n} \sum_{k = 1}^{K} \sum_{i \in S_{k}} \left(x_{i} - \bar{x}_{k}\right)^{2}
@@ -178,19 +185,66 @@ and Bray-Curtis for the Poisson setup.
 \label{code:adonis}
 \end{code}
 
+\subsection{Logisitc regression}
+\label{subsec:logistic_regression}
 
-logistic regression
-- We can use the species counts as predictors of $y$. We don't get a global
-$p$-value for $y$, like in adonis, but we can get $p$-values for each of the
-species breakdowns on their own.
+We could instead measure the association between species counts $X$ and site
+characteristics $y$ using a logistic regression. The fact that the $y$ are
+binary means we can treat them as a response in a logistic regression model,
+using $X$ and site locations $u$ as covariates (again, $u$ is thrown in as a
+control in the association between $x$ and $y$). Note that this approach does
+not apply any specialized distances between species profiles, which is one
+reason ADONIS might be preferred.
 
-linear model
-- For a closer parallel with adonis, we can treat the category as a covariate.
-Then, we can model the response label using a linear model. In the Poisson
-generating scheme, we use a Poisson link.
+We can recover $p$-values using standard theory for logistic regression. This
+theory differs somewhat from our simulation setting, however, because the
+ordinary theory assumes the $y_{i}$ are i.i.d, given a linear model on the
+logitted probabilities. In our simulation, different coordinates of $y_{i}$ have
+nonlinearly varying probabilities depending on their location.
+
+We implement this using the \texttt{glm} command, as in \ref{code:logistic}.
+
+\begin{code}
+\begin{minted}[mathescape, linenos, frame=lines, framesep=2mm]{R}
+  glm(y ~ x + u, family = binomial()) 
+\end{minted}
+\captionof{listing}{An example call for applying logistic regression of species
+  counts onto site characteristisc.}
+\end{code}
+
+\subsection{Linear regression}
+\label{subsec:linear_regression}
+
+Alternatively, we could flip the species counts and the site characteristics in
+our regression. Unlike ADONIS, we can only have one species at a time in our
+response variable. In our simulation, we will only consider a model applied to
+our first species. In the GP data-generating mechanism, we will use a standard
+linear regression, while for the Poisson-GP data-generating mechanism, we will
+use a poisson regression.
+
+We will the $p$-value for the coefficient of $y$ provided by the standard
+regression theory. Note that, as in the logistic regression, the errors
+$\eps_{i}$ are actually correlated in our model, so the theory is in fact
+violated. We will see what effect this has on the validity of our test during
+our simulation study. Code for this procedure is provided in
+\ref{code:linear_reg}.
+
+\begin{code}
+\begin{minted}[mathescape, linenos, frame=lines, framesep=2mm]{R}
+  glm(x[, 1] ~ y + u, family = "poisson")
+\end{minted}
+\captionof{listing}{An example call for applying Poisson regression of site
+  characteristics onto counts for the first species.}
+\end{code}
 
 \section{Results}
 \label{sec:results}
+
+\begin{figure}
+  \centering
+  \includegraphics[width=0.8\textwidth]{figure/pvals_comparison}
+  \caption{\label{fig:pvals_comparison} }
+\end{figure}
 
 give the summary figure
 in this setup, adonis is not giving valid p-values
