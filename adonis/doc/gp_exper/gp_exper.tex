@@ -210,6 +210,7 @@ We implement this using the \texttt{glm} command, as in \ref{code:logistic}.
 \end{minted}
 \captionof{listing}{An example call for applying logistic regression of species
   counts onto site characteristisc.}
+\label{code:logistic}
 \end{code}
 
 \subsection{Linear regression}
@@ -235,6 +236,7 @@ our simulation study. Code for this procedure is provided in
 \end{minted}
 \captionof{listing}{An example call for applying Poisson regression of site
   characteristics onto counts for the first species.}
+\label{code:linear_reg}
 \end{code}
 
 \section{Results}
@@ -254,14 +256,25 @@ more $p$-values in the logistic regression row of figure
 \begin{figure}
   \centering
   \includegraphics[width=0.8\textwidth]{figure/pvals_comparison}
-  \caption{\label{fig:pvals_comparison} }
+  \caption{\label{fig:pvals_comparison} A comparison of the null $p$-values
+    according to the different data-generating mechanisms and methods. Different
+    methods are arranged across rows, while the GP and Poisson-GP data
+    generating mechanisms are in the left and right columns, respectively.
+    Ideally, these would all look approximately uniform, and the fact that they
+    are not means these tests are not valid. Further, the $p$-values for ADONIS
+    seem particularly far from uniform.
+  }
 \end{figure}
 
 Evidently, the $p$-values associated with all procedures are not quite uniform.
-However, those provided by ADONIS are very strongly concentrated on very low
-values. Indeed, the permutation procedure in this setting seems poorly suited in
-the case of correlated sites, even when they are included as covariates in the
-regression.
+In light of our earlier discussion, this is not surprising. Both the logistic
+and linear regression models fail because the errors are correlated, since the
+location $u$ has a nonlinear influence on both $x$ and $y$. The ADONIS
+permutation procedure also fails to account for the influence of the $u$s, since
+it breaks the correlation between sites. However, those provided by ADONIS are
+strongly concentrated on very low values. Indeed, the permutation procedure in
+this setting seems poorly suited in the case of correlated sites, even when they
+are included as covariates in the regression.
 
 \bibliographystyle{plainnat}
 \bibliography{refs.bib}
