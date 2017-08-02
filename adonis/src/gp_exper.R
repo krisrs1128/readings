@@ -16,8 +16,11 @@ library("vegan")
 library("tidyverse")
 library("reshape2")
 library("mvtnorm")
+theme_set(
+  ggscaffold::min_theme(list(text_size = 7, subtitle_size = 9))
+)
 
-print_iter <- function(i, m == 10) {
+print_iter <- function(i, m = 10) {
   if (i %% m == 0) {
     cat(sprintf("iteration %s\n", i))
   }
@@ -32,7 +35,7 @@ logit <- function(x) {
 ###############################################################################
 
 ## variables used throughout experiment
-n_sim <- 40
+n_sim <- 1000
 p1 <- 20
 p2 <- 2
 n <- 100
@@ -74,7 +77,7 @@ for (i in seq_len(n_sim)) {
   f <- t(rmvnorm(p1, sigma = K))
   x <- matrix(rpois(n * p1, lambda = exp(f)), n, p1)
   models$poisson$adonis[[i]] <- adonis(x ~ y[, i] + u, method = "bray")
-  models$poisson$logistic[[i]] <- glm(y[, i] ~ x + u)
+  models$poisson$logistic[[i]] <- glm(y[, i] ~ x + u, family = binomial())
   models$poisson$lm[[i]] <- glm(x[, 1] ~ y[, i] + u, family = "poisson")
 }
 
@@ -83,7 +86,7 @@ for (i in seq_len(n_sim)) {
   print_iter(i)
   x <- t(rmvnorm(p1, sigma = K))
   models$gaussian$adonis[[i]] <- adonis(x ~ y[, i] + u, method = "euclidean")
-  models$gaussian$logistic[[i]] <- glm(y[, i] ~ x + u)
+  models$gaussian$logistic[[i]] <- glm(y[, i] ~ x + u, family = binomial())
   models$gaussian$lm[[i]] <- lm(x[, 1] ~ y[, i] + u)
 }
 
@@ -93,12 +96,12 @@ for (i in seq_len(n_sim)) {
 pvals <- list(
   "poisson" = list(
     "adonis" = sapply(models$poisson$adonis, function(x) x$aov.tab["y[, i]", "Pr(>F)"]),
-    "logistic" = sapply(models$poisson$logistic, function(x) coef(summary(x))[2:(2 + p1), "Pr(>|t|)"]),
-    "lm" = sapply(models$poisson$lm, function(x) coef(summary(x))["y[, i]", "Pr(>|t|)"])
+    "logistic" = sapply(models$poisson$logistic, function(x) coef(summary(x))[2:(p1 + 1), "Pr(>|z|)"]),
+    "lm" = sapply(models$poisson$lm, function(x) coef(summary(x))["y[, i]", "Pr(>|z|)"])
   ),
   "gaussian" = list(
     "adonis" = sapply(models$gaussian$adonis, function(x) x$aov.tab["y[, i]", "Pr(>F)"]),
-    "logistic" = sapply(models$gaussian$logistic, function(x) coef(summary(x))[2:(2 + p1), "Pr(>|t|)"]),
+    "logistic" = sapply(models$gaussian$logistic, function(x) coef(summary(x))[2:(p1 + 1), "Pr(>|z|)"]),
     "lm" = sapply(models$gaussian$lm, function(x) coef(summary(x))["y[, i]", "Pr(>|t|)"])
   )
 )
@@ -107,9 +110,9 @@ m_pvals <- melt(pvals)
 colnames(m_pvals) <- c("pval", "rsv", "sim", "method", "mechanism")
 
 p <- ggplot(m_pvals) +
-  geom_histogram(aes(x = pval)) +
+  geom_histogram(aes(x = pval), binwidth = 0.02) +
   facet_grid(method ~ mechanism, scales = "free_y")
-ggsave("../doc/figure/pvals_comparison.png")
+ggsave("../doc/gp_exper/figure/pvals_comparison.png")
 
 ## save to file
 dir.create("data")
