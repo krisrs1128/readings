@@ -1,16 +1,21 @@
 \documentclass{article}
 \usepackage{natbib}
 \usepackage{graphicx}
+\usepackage{amssymb, amsmath, amsfonts}
+\usepackage[newfloat]{minted}
+\usepackage{caption}
+\newenvironment{code}{\captionsetup{type=listing}}{}
+\SetupFloatingEnvironment{listing}{name=Source Code}
 \input{preamble.tex}
 \linespread{1.5}
 
-\title{Invalidity of ADONIS in the Pesence of Between-Site Correlation}
+\title{Invalidity of ADONIS in the Presence of Between-Site Correlation}
 \author{Kris Sankaran}
 
 \begin{document}
 \maketitle
 
-On occassion, the $p$-values obtained by the permutation procedure described in
+On occasion, the $p$-values obtained by the permutation procedure described in
 \citep{anderson2001new} (implemented as the \texttt{adonis} function in
 \cite{oksanen2007vegan}) have seemed suspiciously significant, sometimes out of
 line with several other analysis on the same data. We have had various
@@ -68,31 +73,111 @@ several approaches for each.
 As mentioned in the introduction, the goal of our simulation study is to
 formally encode the qualitative observation that ADONIS may incorrectly report
 an association between independent measurements when the measurements exhibit
-between-site correlation. Suppose that we have populated a matrix
-$X \in \reals^{n \times p}$ of abundances for $p$ species across $n$ sites. A vector
-$y \in \{0, 1\}^{n}$ describes a binary characteristic at each site.
+between-site correlation. Suppose $X \in \reals^{n \times p}$ is a matrix of
+abundances for $p$ species across $n$ sites. Let $y \in \{0, 1\}^{n}$ encode a
+binary categorical measurement for each site. For example, this could represent
+whether a site is arid or not, and the study might be attempting to determine
+whether the species signatures across sites is related to site climate.
 
-This 
+In our first data generating mechanism, we imagine that each species has an
+abundance that varies smoothly over space. Specifically, we model the abundance
+of the $j^{th}$ species over space according to a Gaussian Process (GP) with
+kernel
+$\kappa\left(u_{i}, u_{j}\right) = a\exp{-\frac{1}{2\sigma^{2}}\|u_{i} - u_{j}\|^{2}}$.
+We think of $u \in \reals^{2}$ as the geographic location of the site.
+Specifically, we suppose,
+\begin{align}
+  x_{j} &\sim GP\left(0, \kappa\right)
+\end{align}
+for $j = 1, \dots, p$. This defines $p$ random functions, one for each species,
+which have high values at locations $u$ where the the species are abundant and
+low values where they are not.
 
-- What models do we consider simulating under?
-- High level view is that we want some spatial correlation in the group labels.
-And also in the species counts. But the group and species counts will be totally
-unrelated.
-- The way we simulate this is to simulate two gaussian processes, as in the
-mantel test paper. Since groups are categorical, we'll pass the GP through a
-logistic function.
-- We'll also consider making the $x$'s look like species counts. We do that
-using a gaussian process under a poisson model.
+For the site labels $y$, we first define a random process of probabilities by
+passing an independent GP through a logit link,
+\begin{align}
+  p \vert f &\sim \frac{1}{1 + \exp{-f}} \\
+  f &\sim GP\left(0, \kappa\right).
+\end{align}
+
+We suppose our data set are drawn at $n$ locations $u_{1}, \dots, u_{n}$, and
+that $X$ has $ij^{tth}$ entry $x_{j}\left(u_{i}\right)$ and the $i^{th}$ element
+of $y$ is drawn as $y_{i} \sim \Ber\left(p\left(u_{i}\right)\right)$. If we use
+different realizations of a GP for generating the $x_{j}$ and $f$, then the site
+category labels $y$ and species abundances $X$ are independent of one another.
+However, across sites, both $y$ and the $x_{j}$'s have strong between-site
+(i.e., between-coordinate) correlation. Therefore, we have provided one
+quantitative model of the null situation described in the introduction.
+
+Our second data generating mechanism is a minor variant of the first, where
+we ensure that the entries of $X$ are counts. To achieve this, we pass a GP
+through a Poisson link. That is, the mechanism is identical to the above,
+except that we take,
+\begin{align}
+  g &\sim GP\left(0, \kappa\right)
+\end{align}
+and at location $u_{i}$ we draw
+$x_{j}\left(u_{i}\right) \sim \Poi\left(g\left(u_{i}\right)\right)$.
 
 \subsection{Methods description}
 \label{subsec:methods_description}
 
-adonis
-- We will include $u$ as a covariate. This is how people would typically
-recommend controlling for the spatial correlation, as far as I can tell.
-- The basic idea of the test is to compute within and between distances in $x$,
-where the groups are determined by $y$. The testing scheme permutes the labels
-of $y$. Note that this breaks all correlation structure among the $y$s.
+We review three approaches to measuring the strength of the association between
+$X$ and $y$ -- ADONIS, logistic regression, and linear modeling -- which we
+later apply in our simulation study.
+
+\subsubsection{ADONIS}
+\label{subsubsec:adonis}
+
+ADONIS is a nonparametric alternative to ANOVA \citep{anderson2001new}. The main
+idea is that the within and between sums-of-squares, which are central to ANOVA
+can be represented in terms of pairwise sums-of-squares. Substituting generic
+pairwise distances for these pairwise sums-of-squares leads to a nonparametric
+analog of the ANOVA decomposition. However, the nonparametric analog of the
+$F$-statistic is no longer $F$-distributed, so standard theory theory does not
+provide valid inference. Instead, a permutation scheme is considered. In the
+one-way ANOVA case, we recompute the nonparametric $F$-statistic under many
+permutations of $y$ and use the resulting histogram as the null reference
+distribution. When more covariates are included, such a permutation scheme is
+not sufficient, and in general it is not straightforwards to design valid
+permutation tests, because the permutations must respect constraints impsed by
+null hypothesis \cite{anderson2001new}. The implementation in
+\citep{oksanen2007vegan} is only approximate, applying independent permutations
+to each covariate in the model. Note in particular that this permutation scheme
+breaks the between-site correlation in the simulated $y$.
+
+%% \begin{align}
+%%   WSS &= \frac{1}{n} \sum_{k = 1}^{K} \sum_{i \in S_{k}} \left(x_{i} - \bar{x}_{k}\right)^{2}
+%% \end{align}
+
+%% \begin{align}
+%%   BSS &= \frac{1}{K} \sum_{k = 1}^{K} \left(\bar{x}_{k} - \bar{x}\right)^{2}
+%% \end{align}
+
+
+We apply ADONIS using the function \texttt{adonis} in the vegan package
+\citep{oksanen2007vegan}. In our simulation, we treat the distances between
+species profiles $X$ as the response and the category $y$ and locations $u$ as
+covariates. The associations with categories $y$ is of core interest, while the
+$u$'s are included to ``control for'' location variation\footnote{We will see
+  that this does not seem to control for the (nonlinear) location variation seen
+  in our simulation.}. Specifically, our calls have the form given in example
+\ref{code:adonis}, where we use a euclidean distance for the ordinary GP setup
+and Bray-Curtis for the Poisson setup.
+
+\begin{code}
+\begin{minted}[mathescape, linenos, frame=lines, framesep=2mm]{R}
+  ## use method = 'euclidean' for gaussian process x
+  adonis(x ~ y + u, method = "bray")
+\end{minted}
+\captionof{listing}{An example call to adonis in our simulation. Here,
+  \texttt{x} is an $n \times p$ matrix of species abundances across $n$ sites,
+  $y$ is a length $n$ binary indicator variable, and $u$ is an $\reals^{n \times
+    2}$ matrix of site coordinates.
+}
+\label{code:adonis}
+\end{code}
+
 
 logistic regression
 - We can use the species counts as predictors of $y$. We don't get a global
