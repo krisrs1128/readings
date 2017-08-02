@@ -93,12 +93,36 @@ for $j = 1, \dots, p$. This defines $p$ random functions, one for each species,
 which have high values at locations $u$ where the the species are abundant and
 low values where they are not.
 
+\begin{figure}
+  \centering
+  \includegraphics[width=0.8\textwidth]{figure/x_gaussian}
+  \caption{\label{fig:x_gaussian} The simulated $X$ matrix according to the
+    first data generating mechanism. Each panel represents one species. Within a
+    panel, a point gives the abundance for the associated species at one site
+    and at one timepoint. The $x$-axis encodes the coordinate $u_{1}$ of the
+    sites location, while the size of the points encodes $u_{2}$. The color of
+    each point encodes the site characteristic $y$. The main idea is that
+    species abundances vary smoothly across space and are independent of site
+    characteristics.}
+\end{figure}
+
 For the site labels $y$, we first define a random process of probabilities by
 passing an independent GP through a logit link,
 \begin{align}
   p \vert f &\sim \frac{1}{1 + \exp{-f}} \\
   f &\sim GP\left(0, \kappa\right).
 \end{align}
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=0.8\textwidth]{figure/p_gp}
+  \caption{\label{fig:p_gp} To simulate the vector of site characteristics $y$,
+    we pass a GP through a logit link. Each circle represents the probability
+    that a given site will have $y = 1$. The $x$-axis and sizes encode $u_{1}$
+    and $u_{2}$, respectively, as in Figure \ref{fig:x_gaussian}. The observed
+    characteristics are marked as crosses. The idea is that the probability of
+    taking on $y = 1$ varies somewhat smoothly over space.}
+\end{figure}
 
 We suppose our data set are drawn at $n$ locations $u_{1}, \dots, u_{n}$, and
 that $X$ has $ij^{tth}$ entry $x_{j}\left(u_{i}\right)$ and the $i^{th}$ element
@@ -108,6 +132,16 @@ category labels $y$ and species abundances $X$ are independent of one another.
 However, across sites, both $y$ and the $x_{j}$'s have strong between-site
 (i.e., between-coordinate) correlation. Therefore, we have provided one
 quantitative model of the null situation described in the introduction.
+
+\begin{figure}
+  \centering
+  \includegraphics[width=0.8\textwidth]{figure/x_poisson}
+  \caption{\label{fig:x_poisson} The second data generation mechanism ensures
+    that $X$ are true counts. The figure is read exactly as in figure
+    \ref{fig:x_gaussian}. Again, we see the average count varies smoothly over
+    space, though there tend to be larger swaths of space where all counts are
+    small.}
+\end{figure}
 
 Our second data generating mechanism is a minor variant of the first, where
 we ensure that the entries of $X$ are counts. To achieve this, we pass a GP
