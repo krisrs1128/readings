@@ -16,6 +16,8 @@ library("vegan")
 library("tidyverse")
 library("reshape2")
 library("mvtnorm")
+library("viridis")
+library("scales")
 theme_set(
   ggscaffold::min_theme(list(text_size = 7, subtitle_size = 9))
 )
@@ -28,6 +30,31 @@ print_iter <- function(i, m = 10) {
 
 logit <- function(x) {
   1 / (1 + exp(-x))
+}
+
+plot_species_counts <- function(x, u, y) {
+  plot_df <- data.frame("x" = x, "u" = u, "y" = y) %>%
+    melt(
+      id.vars = c("u.1", "u.2", "y"),
+      variable = "species",
+      value.name = "count"
+    )
+
+  ggplot(plot_df) +
+    geom_point(
+      aes(x = u.1, y = count, size = u.2, col = as.factor(y)),
+      alpha = 0.4
+    ) +
+    scale_y_continuous(breaks = trans_breaks(identity, identity, n = 3)) +
+    scale_size_continuous(range = c(0.1, 3)) +
+    scale_color_brewer(palette = "Set2") +
+    facet_wrap(~species, scales = "free") +
+    labs(y = "Site Characteristic") +
+    theme(
+      strip.text.x = element_blank(),
+      axis.text.x = element_blank(),
+      axis.text.y = element_text(size = 7)
+    )
 }
 
 ###############################################################################
@@ -118,3 +145,36 @@ ggsave("../doc/gp_exper/figure/pvals_comparison.png")
 ## save to file
 dir.create("data")
 save(pvals, models, file = "data/exper.rda")
+
+###############################################################################
+## illustrate some of the simulation mechanism
+###############################################################################
+f <- t(rmvnorm(p1, sigma = K))
+x <- matrix(rpois(n * p1, lambda = exp(f)), n, p1)
+
+p <- plot_species_counts(x, u, y[, 1])
+ggsave("../doc/gp_exper/figure/x_poisson.png", p)
+
+x <- t(rmvnorm(p1, sigma = K))
+p <- plot_species_counts(x, u)
+ggsave("../doc/gp_exper/figure/x_gaussian.png", p)
+
+plot_df <- data.frame("y" = y[, 1], "p" = probs[, 1], "u" = u)
+p <- ggplot(plot_df) +
+  geom_point(
+    aes(x = u.1, y = p, size = u.2),
+    alpha = 0.4
+  ) +
+  geom_point(
+    aes(x = u.1, y = y, size = u.2, col = as.factor(y)),
+    shape = 3, alpha = 0.9
+  ) +
+  scale_color_brewer("y", palette = "Set2") +
+  scale_y_continuous(breaks = trans_breaks(identity, identity, n = 3)) +
+  scale_size_continuous(range = c(0.1, 3)) +
+  theme(
+    strip.text.x = element_blank(),
+    axis.text.x = element_blank(),
+    axis.text.y = element_text(size = 7)
+  )
+ggsave("../doc/gp_exper/figure/p_gp.png", p)
