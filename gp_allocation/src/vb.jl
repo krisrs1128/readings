@@ -72,18 +72,20 @@ end
 ## E-step for variational bayes updates
 ###############################################################################
 
+"""
+    lambda(x::Array{Float64, 2},
+           uk::Array{Float64, 2},
+           l::Float64,
+           a::Float64)
+
+Compute the covariance for the variational approximation
+
+This is defined in equation (8) of "Fast Allocation of Gaussian Process Experts"
+"""
 function lambda(x::Array{Float64, 2},
                 uk::Array{Float64, 2},
                 l::Float64,
                 a::Float64)
-
-"""
-  Compute the log marginal likelihood
-
-This is the log marginal likelihood, as defined in equation 22 of "Fast
-Allocation of Gaussian Process Experts"
-
-"""
   kappa = function(x, y)
     kernel(x, y, l, a)
   end
@@ -173,6 +175,12 @@ function update_log_rho(x::Array{Float64, 2},
   return (log_rho)
 end
 
+"""
+    Q(xk::Array{Float64, 2}, uk::Array{Float64, 2})
+
+Compute the marginal covariance for the k^{th} cluster, as defined just after
+equation (22) of "Fast Allocation of Gaussian Process Experts"
+"""
 function Q(xk::Array{Float64, 2}, uk::Array{Float64, 2})
   kappa = function(x, y)
     kernel(x, y, l, a)
