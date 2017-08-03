@@ -46,10 +46,10 @@ plot_species_counts <- function(x, u, y) {
       alpha = 0.4
     ) +
     scale_y_continuous(breaks = trans_breaks(identity, identity, n = 3)) +
-    scale_size_continuous(range = c(0.1, 3)) +
+    scale_size_continuous(range = c(0.005, 1.5)) +
     scale_color_brewer(palette = "Set2") +
     facet_wrap(~species, scales = "free") +
-    labs(y = "Site Characteristic") +
+    labs(col = "y") +
     theme(
       strip.text.x = element_blank(),
       axis.text.x = element_blank(),
@@ -139,8 +139,9 @@ colnames(m_pvals) <- c("pval", "rsv", "sim", "method", "mechanism")
 m_pvals$method <- factor(m_pvals$method, levels = c("adonis", "logistic", "lm"))
 p <- ggplot(m_pvals) +
   geom_histogram(aes(x = pval), binwidth = 0.02) +
+  scale_y_continuous(breaks = trans_breaks(identity, identity, n = 2)) +
   facet_grid(method ~ mechanism, scales = "free_y")
-ggsave("../doc/gp_exper/figure/pvals_comparison.png")
+ggsave("../doc/gp_exper/figure/pvals_comparison.png", width = 4, height = 2)
 
 ## save to file
 dir.create("data")
@@ -153,11 +154,11 @@ f <- t(rmvnorm(p1, sigma = K))
 x <- matrix(rpois(n * p1, lambda = exp(f)), n, p1)
 
 p <- plot_species_counts(x, u, y[, 1])
-ggsave("../doc/gp_exper/figure/x_poisson.png", p)
+ggsave("../doc/gp_exper/figure/x_poisson.png", p, width = 4.5, height = 1.7)
 
 x <- t(rmvnorm(p1, sigma = K))
-p <- plot_species_counts(x, u)
-ggsave("../doc/gp_exper/figure/x_gaussian.png", p)
+p <- plot_species_counts(x, u, y[, 1])
+ggsave("../doc/gp_exper/figure/x_gaussian.png", p, width = 4, height = 1.7)
 
 plot_df <- data.frame("y" = y[, 1], "p" = probs[, 1], "u" = u)
 p <- ggplot(plot_df) +
@@ -177,4 +178,4 @@ p <- ggplot(plot_df) +
     axis.text.x = element_blank(),
     axis.text.y = element_text(size = 7)
   )
-ggsave("../doc/gp_exper/figure/p_gp.png", p)
+ggsave("../doc/gp_exper/figure/p_gp.png", p, width = 4, height = 2)
