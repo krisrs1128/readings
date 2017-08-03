@@ -8,6 +8,10 @@
 
 using Distributions
 
+###############################################################################
+## helper functions used throughout the algorithm
+###############################################################################
+
 """
     kernel(x::Array{Float64,2},
            y::Array{Float64,2},
@@ -62,6 +66,31 @@ end
 
 function normalize_log_space(log_x::Array{Float64, 1})
   log_x - lse(log_x)
+end
+
+###############################################################################
+## E-step for variational bayes updates
+###############################################################################
+
+function lambda(x::Array{Float64, 2},
+                uk::Array{Float64, 2},
+                l::Float64,
+                a::Float64)
+
+"""
+  Compute the log marginal likelihood
+
+This is the log marginal likelihood, as defined in equation 22 of "Fast
+Allocation of Gaussian Process Experts"
+
+"""
+  kappa = function(x, y)
+    kernel(x, y, l, a)
+  end
+
+  return diagm(
+    diag(kappa(x, x) - kappa(x, uk) * inv(kappa(uk, uk)) * kappa(x, uk)')
+  )
 end
 
 """
@@ -128,9 +157,7 @@ function update_log_rho(x::Array{Float64, 2},
   for i = 1:n
     for k = 1:K
       x_distn = MvNormal(m[k, :], V)
-      lambda_k = diagm(
-        diag(kappa(x, x) - kappa(x, u[k]) * inv(kappa(u[k], u[k])) * kappa(x, u[k])')
-      )
+      lambda_k = lambda(x, u[k], l, a)
       gamma_k = diagm(r[:, k]) .* inv(lambda_k + (sigma[k] ^ 2) * eye(n))
       psi_k = kappa(u[k], u[k]) + kappa(u[k], x) * gamma_k * kappa(x, u[k])
       mu_gk = kappa(u[k], u[k]) *  inv(psi_k) * kappa(u[k], x) * gamma_k * y
@@ -146,8 +173,55 @@ function update_log_rho(x::Array{Float64, 2},
   return (log_rho)
 end
 
-"""
-  Compute the log marginal likelihood
+function Q(xk::Array{Float64, 2}, uk::Array{Float64, 2})
+  kappa = function(x, y)
+    kernel(x, y, l, a)
+  end
+
+  return kappa(xk, uk) * inv(kappa(uk, uk)) * kappa(uk, xk)
+end
+
 
 """
+    log_marginal(y::Vector{Float64},
+                 x::Array{Float64, 2},
+                 z::Vector{Int64},
+                 u::Array{Array{Float64, 2}, 1},
+                 sigma::Array{Float64, 1},
+                 l::Float64,
+                 a::Float64)
 
+Compute the log marginal probability of y, as defined in equation (22) of "Fast
+Allocation of Gaussian Processes"
+
+```julia-repl
+y = randn(10)
+x = randn(10, 2)
+z = [1, 1, 1, 1, 2, 2, 2, 3, 3, 1]
+u = [rand(2, 2), rand(2, 2), rand(2, 2)]
+sigma = [1.0, 1.0, 1.0]
+log_marginal(y, x, z, u, sigma, 1.0, 1.0)
+```
+"""
+function log_marginal(y::Vector{Float64},
+                      x::Array{Float64, 2},
+                      z::Vector{Int64},
+                      u::Array{Array{Float64, 2}, 1},
+                      sigma::Array{Float64, 1},
+                      l::Float64,
+                      a::Float64)
+  n, p = size(x)
+  K = length(u)
+  log_liks = zeros(K)
+
+  for k = 1:K
+    xk = x[z .== k, :]
+    yk = y[z .== k]
+    Q_k = Q(xk, u[k])
+    lambda_k = lambda(xk, u[k], l, a)
+    marginal_cov = Q_k + lambda_k + diagm(sigma[k] * ones(size(xk, 1)))
+    log_liks[k] = -0.5 * (logdet(marginal_cov) + yk' * inv(marginal_cov) * yk)[1]
+  end
+
+  return log_liks
+end
