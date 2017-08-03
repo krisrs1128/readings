@@ -272,6 +272,16 @@ n_iter = 100
 n_inducing = 20
 K = 3
 
+function z_assignment(rho::Matrix{Float64})
+  n, _ = size(rho)
+  z = Vector{Int64}(n)
+  for i = 1:n
+    _, z[i] = findmax(rho[i, :])
+  end
+
+  return z
+end
+
 function vb(y::Vector{Float64},
             x::Matrix{Float64},
             K::Int64,
@@ -297,16 +307,50 @@ function vb(y::Vector{Float64},
     m = update_m(u)
     v = update_v(u)
     log_rho = update_log_rho(x, y, exp(log_rho), m, V, u, sigma, l, a)
+    z = z_assignment(exp(log_rho))
+    -sum(log_marginal(y, x, z, u, sigma, l, a))
+
+    f(u, sigma, l, a)
 
     ## M-step
     f = function(u::Vector{Matrix{Float64}},
                  sigma::Vector{Float64},
                  l::Float64,
                  a::Float64)
-      return -log_marginal(y, x, z, u, sigma, l, a)
+      return -sum(log_marginal(y, x, z, u, sigma, l, a))
     end
 
     optimize(f, [u, sigma, l, a])
 
   end
+end
+
+function stack_params(u::Vector{Matrix{Float64}},
+                      sigma::Vector{Float64},
+                      l::Float64,
+                      a::Float64)
+  K = length(u)
+  p = size(u[1], 2)
+  hyper = [sigma; [l, a]]
+
+  for j in 1:p
+    for k in 1:K
+      hyper = [hyper; u[k][:, j]]
+    end
+  end
+
+  return hyper
+end
+
+function unstack_params(hyper::Vector{Float64}, K::Int64)
+  sigma = hyper[1]
+  l = hyper[2]
+  a = hyper[3]
+
+  u = Vector{Matrix{Float64}}(K)
+  for k = 1:K
+    print("blah")
+  end
+
+  return sigma, l, a, u
 end
