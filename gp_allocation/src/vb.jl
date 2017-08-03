@@ -79,8 +79,8 @@ Compute the rho's necessary for the E-step
 
 # Arguments
 - `x::Array{Float64, 2}`: The array of observed covariates.
-- `y::Vector{Float64}`: The vector of observed response values. The $$i^{th}$$
-  row of $$x$$ corresponds to the $$i^{th}$$ entry of $$y$$.
+- `y::Vector{Float64}`: The vector of observed response values. The i^{th}
+  row of x corresponds to the i^{th} entry of y.
 - `r::Array{FLoat64, 2}`: An n x K array of responsibilities computed in the
   previous update. The i^{th} row corresponds to the i^{th} sample, and the
   k^{th} column corresponds to the k^{th} cluster component
@@ -94,6 +94,19 @@ Compute the rho's necessary for the E-step
 - `sigma::Array{Float64, 1}`: The noise of observed data y around the GP mean f.
 - `l::Float64 = 1.0`: The scale of the kernel.
 - `a::Float64 = 1.0`: The bandwidth of the kernel.
+
+```julia-repl
+# generated in the simulate.R file
+x = randn(10, 2)
+y = randn(10)
+r = rand(Uniform(), 10)
+r = [r/2 r/2 1 - r]
+m = rand(3, 2)
+V = [1.0 0; 0 1.0]
+u = [rand(2, 2), rand(2, 2), rand(2, 2)]
+sigma = [1.0, 1.0, 1.0]
+update_log_rho(x, y, r, m, V, u, sigma, 1.0, 1.0)
+```
 """
 function update_log_rho(x::Array{Float64, 2},
                         y::Vector{Float64},
@@ -102,10 +115,10 @@ function update_log_rho(x::Array{Float64, 2},
                         V::Array{Float64, 2},
                         u::Array{Array{Float64, 2}, 1},
                         sigma::Array{Float64, 1},
-                        l::Float64 = 1.0,
-                        a::Float64 = 1.0)
+                        l::Float64,
+                        a::Float64)
   n, d = size(x)
-  _, K = size(m)
+  K, _ = size(m)
   log_rho = zeros(n, K)
 
   kappa = function(x, y)
@@ -114,7 +127,7 @@ function update_log_rho(x::Array{Float64, 2},
 
   for i = 1:n
     for k = 1:K
-      x_distn = MvNormal(m[:, k], V)
+      x_distn = MvNormal(m[k, :], V)
       lambda_k = diagm(
         diag(kappa(x, x) - kappa(x, u[k]) * inv(kappa(u[k], u[k])) * kappa(x, u[k])')
       )
@@ -129,6 +142,8 @@ function update_log_rho(x::Array{Float64, 2},
     end
     log_rho[i, :] = normalize_log_space(log_rho[i, :])
   end
+
+  return (log_rho)
 end
 
 """
@@ -136,14 +151,3 @@ end
 
 """
 
-# generated in the simulate.R file
-y = readcsv("data/y.csv")
-x = readcsv("data/x.csv")
-x = randn(10, 2)
-y = randn(10, 1)
-r = rand(Uniform(), 10)
-r = [r 1 - r]
-m = rand(2, 3)
-V = [1 0; 0 1]
-u = [rand(2, 2), rand(2, 2), rand(2, 2)]
-sigma = [1, 1, 1]
