@@ -4,3 +4,5 @@
 *.bbl
 *.pdf
 *.png
+adonis/src/data/*
+gp_allocation/build/*
