@@ -7,6 +7,8 @@
 # date: 07/25/2017
 
 using Distributions
+using Clustering
+using Optim
 
 ###############################################################################
 ## helper functions used throughout the algorithm
@@ -21,8 +23,8 @@ using Distributions
 Compute the kernel matrix between two matrices x and y.
 
 # Arguments
-- `x::Array{Float64, 2}`: Each row is an ``x_{i}`` when computing ``k\left(x_{i}, y_{j}\right)``.
-- `y::Array{Float64, 2}`: Each row is a ``y_{j}`` when computing ``k\left(x_{i}, y_{j}\right)``.
+- `x::Matrix{Float64}`: Each row is an ``x_{i}`` when computing ``k\left(x_{i}, y_{j}\right)``.
+- `y::Matrix{Float64}`: Each row is a ``y_{j}`` when computing ``k\left(x_{i}, y_{j}\right)``.
 - `sigma::Float64 = 1.0`: The bandwidth of the kernel.
 - `l::Float64 = 1.0`: The scale of the kernel.
 
@@ -30,8 +32,8 @@ Compute the kernel matrix between two matrices x and y.
 kernel(randn(10, 2), randn(5, 2))
 ```
 """
-function kernel(x::Array{Float64, 2},
-                y::Array{Float64, 2},
+function kernel(x::Matrix{Float64},
+                y::Matrix{Float64},
                 sigma::Float64 = 1.0,
                 l::Float64 = 1.0)
   n_x = size(x, 1)
@@ -48,7 +50,7 @@ function kernel(x::Array{Float64, 2},
 end
 
 """
-    lse(x::Array{Float64, 1})
+    lse(x::Vector{Float64})
 
 Compute the log-sum-exp function.
 
@@ -60,11 +62,11 @@ a == b
 true
 ```
 """
-function lse(x::Array{Float64, 1})
+function lse(x::Vector{Float64})
   return log(sum(exp(x)))
 end
 
-function normalize_log_space(log_x::Array{Float64, 1})
+function normalize_log_space(log_x::Vector{Float64})
   log_x - lse(log_x)
 end
 
@@ -73,8 +75,8 @@ end
 ###############################################################################
 
 """
-    lambda(x::Array{Float64, 2},
-           uk::Array{Float64, 2},
+    lambda(x::Matrix{Float64},
+           uk::Matrix{Float64},
            l::Float64,
            a::Float64)
 
@@ -82,8 +84,8 @@ Compute the covariance for the variational approximation
 
 This is defined in equation (8) of "Fast Allocation of Gaussian Process Experts"
 """
-function lambda(x::Array{Float64, 2},
-                uk::Array{Float64, 2},
+function lambda(x::Matrix{Float64},
+                uk::Matrix{Float64},
                 l::Float64,
                 a::Float64)
   kappa = function(x, y)
@@ -95,34 +97,60 @@ function lambda(x::Array{Float64, 2},
   )
 end
 
+function update_m(u::Vector{Matrix{Float64}})
+  K = length(u)
+  _, p = size(u[1])
+  m = zeros(p, K)
+
+  for k = 1:K
+    m[:, k] = mean(u[k], 1)
+  end
+
+  return m
+end
+
+function update_v(u::Vector{Matrix{Float64}})
+  K = length(u)
+  _, p = size(u[1])
+  vk = zeros(p, K)
+
+  for j = 1:p
+    for k = 1:K
+      vk[j, k] = var(u[k][:, j])
+    end
+  end
+
+  return diag(mean(vk, 1))
+end
+
 """
-    update_log_rho(x::Array{Float64, 2},
+    update_log_rho(x::Matrix{Float64},
                    y::Vector{Float64},
-                   r::Array{Float64, 2},
-                   m::Array{Float64, 2},
-                   V::Array{Float64, 2},
-                   u::Array{Array{Float64, 2}, 1},
-                   sigma::Array{Float64, 1},
+                   r::Matrix{Float64},
+                   m::Matrix{Float64},
+                   V::Matrix{Float64},
+                   u::Array{Matrix{Float64}, 1},
+                   sigma::Vector{Float64},
                    l::Float64 = 1.0,
                    a::Float64 = 1.0)
 
 Compute the rho's necessary for the E-step
 
 # Arguments
-- `x::Array{Float64, 2}`: The array of observed covariates.
+- `x::Matrix{Float64}`: The array of observed covariates.
 - `y::Vector{Float64}`: The vector of observed response values. The i^{th}
   row of x corresponds to the i^{th} entry of y.
 - `r::Array{FLoat64, 2}`: An n x K array of responsibilities computed in the
   previous update. The i^{th} row corresponds to the i^{th} sample, and the
   k^{th} column corresponds to the k^{th} cluster component
-- `m::Array{Float64, 2}`: An P x K array whose k^{th} column is the mean for the
+- `m::Matrix{Float64}`: An p x K array whose k^{th} column is the mean for the
   k^{th} variational approximation distribution.
-- `V::Array{Float64, 2}`: A P x P covariance for the variational approximation
+- `V::Matrix{Float64}`: A p x p covariance for the variational approximation
   distributions. This is shared across all K clusters.
-- `u::Array{Array{Float64, 2}, 2}`: The positions of the inducing points. The
+- `u::Array{Matrix{Float64}, 2}`: The positions of the inducing points. The
   k^{th} element of the outer array corresponds to the k^{th} cluster. The Nk x
-  P array within this element gives the actual inducing points for this cluster.
-- `sigma::Array{Float64, 1}`: The noise of observed data y around the GP mean f.
+  p array within this element gives the actual inducing points for this cluster.
+- `sigma::Vector{Float64}`: The noise of observed data y around the GP mean f.
 - `l::Float64 = 1.0`: The scale of the kernel.
 - `a::Float64 = 1.0`: The bandwidth of the kernel.
 
@@ -139,13 +167,13 @@ sigma = [1.0, 1.0, 1.0]
 update_log_rho(x, y, r, m, V, u, sigma, 1.0, 1.0)
 ```
 """
-function update_log_rho(x::Array{Float64, 2},
+function update_log_rho(x::Matrix{Float64},
                         y::Vector{Float64},
-                        r::Array{Float64, 2},
-                        m::Array{Float64, 2},
-                        V::Array{Float64, 2},
-                        u::Array{Array{Float64, 2}, 1},
-                        sigma::Array{Float64, 1},
+                        r::Matrix{Float64},
+                        m::Matrix{Float64},
+                        V::Matrix{Float64},
+                        u::Vector{Matrix{Float64}},
+                        sigma::Vector{Float64},
                         l::Float64,
                         a::Float64)
   n, d = size(x)
@@ -158,7 +186,7 @@ function update_log_rho(x::Array{Float64, 2},
 
   for i = 1:n
     for k = 1:K
-      x_distn = MvNormal(m[k, :], V)
+      x_distn = MvNormal(m[:, k], V)
       lambda_k = lambda(x, u[k], l, a)
       gamma_k = diagm(r[:, k]) .* inv(lambda_k + (sigma[k] ^ 2) * eye(n))
       psi_k = kappa(u[k], u[k]) + kappa(u[k], x) * gamma_k * kappa(x, u[k])
@@ -172,16 +200,16 @@ function update_log_rho(x::Array{Float64, 2},
     log_rho[i, :] = normalize_log_space(log_rho[i, :])
   end
 
-  return (log_rho)
+  return log_rho
 end
 
 """
-    Q(xk::Array{Float64, 2}, uk::Array{Float64, 2})
+    Q(xk::Matrix{Float64}, uk::Matrix{Float64})
 
 Compute the marginal covariance for the k^{th} cluster, as defined just after
 equation (22) of "Fast Allocation of Gaussian Process Experts"
 """
-function Q(xk::Array{Float64, 2}, uk::Array{Float64, 2})
+function Q(xk::Matrix{Float64}, uk::Matrix{Float64})
   kappa = function(x, y)
     kernel(x, y, l, a)
   end
@@ -192,10 +220,10 @@ end
 
 """
     log_marginal(y::Vector{Float64},
-                 x::Array{Float64, 2},
+                 x::Matrix{Float64},
                  z::Vector{Int64},
-                 u::Array{Array{Float64, 2}, 1},
-                 sigma::Array{Float64, 1},
+                 u::Array{Matrix{Float64}, 1},
+                 sigma::Vector{Float64},
                  l::Float64,
                  a::Float64)
 
@@ -212,10 +240,10 @@ log_marginal(y, x, z, u, sigma, 1.0, 1.0)
 ```
 """
 function log_marginal(y::Vector{Float64},
-                      x::Array{Float64, 2},
+                      x::Matrix{Float64},
                       z::Vector{Int64},
-                      u::Array{Array{Float64, 2}, 1},
-                      sigma::Array{Float64, 1},
+                      u::Array{Matrix{Float64}, 1},
+                      sigma::Vector{Float64},
                       l::Float64,
                       a::Float64)
   n, p = size(x)
@@ -232,4 +260,53 @@ function log_marginal(y::Vector{Float64},
   end
 
   return log_liks
+end
+
+###############################################################################
+## Full VB iteration
+###############################################################################
+
+y = randn(70)
+x = randn(70, 2)
+n_iter = 100
+n_inducing = 20
+K = 3
+
+function vb(y::Vector{Float64},
+            x::Matrix{Float64},
+            K::Int64,
+            n_inducing::Int64,
+            n_iter::Int64)
+
+  ## Initialization
+  n = size(x,1 )
+  inducing_init = kmeans(x', n_inducing).centers'
+  u = Vector{Matrix{Float64}}(K)
+  ix = round(linspace(1, K, n_inducing))
+  for k = 1:K
+    u[k] = inducing_init[ix .== k, :]
+  end
+
+  log_rho = log(rand(Dirichlet(ones(K)), n))'
+  sigmas = var(y) * ones(K)
+  l = 1.0
+  a = 1.0
+
+  for iter = 1:n_iter
+    ## E-step
+    m = update_m(u)
+    v = update_v(u)
+    log_rho = update_log_rho(x, y, exp(log_rho), m, V, u, sigma, l, a)
+
+    ## M-step
+    f = function(u::Vector{Matrix{Float64}},
+                 sigma::Vector{Float64},
+                 l::Float64,
+                 a::Float64)
+      return -log_marginal(y, x, z, u, sigma, l, a)
+    end
+
+    optimize(f, [u, sigma, l, a])
+
+  end
 end
