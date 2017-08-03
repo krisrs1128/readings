@@ -7,9 +7,9 @@
 \newenvironment{code}{\captionsetup{type=listing}}{}
 \SetupFloatingEnvironment{listing}{name=Source Code}
 \input{preamble.tex}
-\linespread{1.5}
+\linespread{1.25}
 
-\title{Invalidity of ADONIS in the Presence of Between-Site Correlation}
+\title{Studying Species-Environment Associations among Correlated Sites}
 \author{Kris Sankaran}
 
 \begin{document}
@@ -18,43 +18,42 @@
 On occasion, the $p$-values obtained by the permutation procedure described in
 \citep{anderson2001new} (implemented as the \texttt{adonis} function in
 \cite{oksanen2007vegan}) have seemed suspiciously significant, sometimes out of
-line with several other analysis on the same data. We have had various
-hypotheses about why the permutation procedure might not be appropriate in
-microbiome data -- bacteria and sites tend to be correlated across phyla and
-time, for example. In this note, we try to formalize this intuition and quantify
-the robustness (or lack thereof) of the adonis permutation procedure. We believe
-that a more careful understanding of this method is a relevant area of
-statistical research, in light of the popularity of this method in standard
-microbiome analysis practice (see e.g. \cite{fukuyama2012comparisons} and
-references therein).
+line with other analysis on the same data. We have had various hypotheses about
+why the permutation procedure might not be appropriate in microbiome data -- in
+particular, bacteria and sites tend to be correlated across phyla and time. In
+this note, we try to formalize this intuition and quantify the robustness (or
+lack thereof) of the adonis permutation procedure. We believe that a more
+careful understanding of this method is a relevant area of statistical research,
+in light of the popularity of this method in microbiome analysis practice (see
+e.g. \cite{fukuyama2012comparisons} and references therein).
 
-Our analysis is directly inspired by \citep{guillot2013dismantling}, which also
+Our analysis is directly inspired by \citep{guillot2013dismantling}, which
 studied validity of the Mantel test, another type of distanced-based,
 nonparametric hypothesis test. The main idea in both their work and ours is that
-measurements across multiple sites will often express some sort of between-site
+measurements across multiple sites will often include some sort of between-site
 correlation structure, and that it is important to maintain this structure under
 the permutation null. More precisely, the null hypothesis should only be that
 the two processes are independent of one another, not that the two processes are
 independent and each have no between-site correlation. But the latter structure
-is what is simulated in ADONIS' permutation null, and if the processes are
-actually independent but with within-process site correlation, ADONIS will still
+is what is simulated in adonis' permutation null, and if the processes are
+actually independent but with within-process site correlation, adonis will
 report that there is an association between them, when there are in fact none.
 
-We will describe some simple linear-model based alternatives to ADONIS that
-provide valid $p$-values. The drawback of these approaches is that they cannot
-be applied when only distances between sites is available -- a setting which is
-meaningful in microbiome studies, where working entirely with UniFrac distances
-\citep{lozupone2005unifrac} is common, for example.
+We will describe some simple linear-model based alternatives to adonis that
+provide ``better'' (but actually still invalid) $p$-values. These alternatives
+also cannot be applied when only distances between sites is available -- a
+setting which is meaningful in microbiome studies, where working entirely with
+UniFrac distances \citep{lozupone2005unifrac} is common, for example.
 
 There are two main limitations in this note,
-
 \begin{itemize}
 \item As in any simulation study, the conclusions are only as useful as the
   simulation mechanism is representative of the data encountered in practice.
   Ideally we could characterize the plausibility of our simulation mechanism,
   with respect to real data.
-\item We have no alternative to ADONIS that can be applied when only distances
-  are available. We could imagine more sophisticated approaches, based on
+\item None of our alternatives are quite satisfactory, because the $p$-values
+  are still not quite valid, and because they cannot be applied to different
+  kinds of distances. We could imagine more sophisticated approaches, based on
   model-free knockoffs, for example.
 \end{itemize}
 
@@ -71,7 +70,7 @@ several approaches for each.
 \label{subsec:data_generating_mechanism}
 
 As mentioned in the introduction, the goal of our simulation study is to
-formally encode the qualitative observation that ADONIS may incorrectly report
+formally encode the qualitative observation that adonis may incorrectly report
 an association between independent measurements when the measurements exhibit
 between-site correlation. Suppose $X \in \reals^{n \times p}$ is a matrix of
 abundances for $p$ species across $n$ sites. Let $y \in \{0, 1\}^{n}$ encode a
@@ -89,13 +88,14 @@ Specifically, we suppose,
 \begin{align}
   x_{j} &\sim GP\left(0, \kappa\right)
 \end{align}
-for $j = 1, \dots, p$. This defines $p$ random functions, one for each species,
-which have high values at locations $u$ where the the species are abundant and
-low values where they are not.
+independently for $j = 1, \dots, p$. This defines $p$ random functions, one for
+each species, which have high values at locations $u$ where the the species are
+abundant and low values where they are not. See Figure \ref{fig:x_gaussian} for
+a representative of the simulated $X$.
 
 \begin{figure}
   \centering
-  \includegraphics[width=0.8\textwidth]{figure/x_gaussian}
+  \includegraphics[width=0.9\textwidth]{figure/x_gaussian}
   \caption{\label{fig:x_gaussian} The simulated $X$ matrix according to the
     first data generating mechanism. Each panel represents one species. Within a
     panel, a point gives the abundance for the associated species at one site
@@ -115,7 +115,7 @@ passing an independent GP through a logit link,
 
 \begin{figure}[ht]
   \centering
-  \includegraphics[width=0.8\textwidth]{figure/p_gp}
+  \includegraphics[width=0.9\textwidth]{figure/p_gp}
   \caption{\label{fig:p_gp} To simulate the vector of site characteristics $y$,
     we pass a GP through a logit link. Each circle represents the probability
     that a given site will have $y = 1$. The $x$-axis and sizes encode $u_{1}$
@@ -125,17 +125,18 @@ passing an independent GP through a logit link,
 \end{figure}
 
 We suppose our data set are drawn at $n$ locations $u_{1}, \dots, u_{n}$, and
-that $X$ has $ij^{tth}$ entry $x_{j}\left(u_{i}\right)$ and the $i^{th}$ element
-of $y$ is drawn as $y_{i} \sim \Ber\left(p\left(u_{i}\right)\right)$. If we use
-different realizations of a GP for generating the $x_{j}$ and $f$, then the site
-category labels $y$ and species abundances $X$ are independent of one another.
-However, across sites, both $y$ and the $x_{j}$'s have strong between-site
-(i.e., between-coordinate) correlation. Therefore, we have provided one
-quantitative model of the null situation described in the introduction.
+that $X$ has $ij^{th}$ entry $x_{j}\left(u_{i}\right)$ and the $i^{th}$ element
+of $y$ is drawn as $y_{i} \sim \Ber\left(p\left(u_{i}\right)\right)$. See Figure
+\ref{fig:p_gp} for a visual representative of this process. If we use different
+realizations of a GP for generating the $x_{j}$ and $f$, then the site category
+labels $y$ and species abundances $X$ are independent of one another. However,
+across sites, both $y$ and the $x_{j}$'s have strong between-site correlation.
+Therefore, we have provided one quantitative model of the null situation
+described in the introduction.
 
 \begin{figure}
   \centering
-  \includegraphics[width=0.8\textwidth]{figure/x_poisson}
+  \includegraphics[width=0.9\textwidth]{figure/x_poisson}
   \caption{\label{fig:x_poisson} The second data generation mechanism ensures
     that $X$ are true counts. The figure is read exactly as in figure
     \ref{fig:x_gaussian}. Again, we see the average count varies smoothly over
@@ -151,37 +152,37 @@ except that we take,
   g &\sim GP\left(0, \kappa\right)
 \end{align}
 and at location $u_{i}$ we draw
-$x_{j}\left(u_{i}\right) \sim \Poi\left(g\left(u_{i}\right)\right)$.
+$x_{j}\left(u_{i}\right) \sim \Poi\left(\exp{g\left(u_{i}\right)}\right)$.
 
 \subsection{Methods description}
 \label{subsec:methods_description}
 
 We review three approaches to measuring the strength of the association between
-$X$ and $y$ -- ADONIS, logistic regression, and linear modeling -- which we
+$X$ and $y$ -- adonis, logistic regression, and linear modeling -- which we
 later apply in our simulation study.
 
-\subsubsection{ADONIS}
+\subsubsection{Adonis}
 \label{subsubsec:adonis}
 
-ADONIS is a nonparametric alternative to ANOVA \citep{anderson2001new}. The main
-idea is that the within and between sums-of-squares, which are central to ANOVA
+Adonis is a nonparametric alternative to ANOVA \citep{anderson2001new}. The main
+idea is that the within and between sums-of-squares, which are central to ANOVA,
 can be represented in terms of pairwise sums-of-squares. Substituting generic
 pairwise distances for these pairwise sums-of-squares leads to a nonparametric
 analog of the ANOVA decomposition. The advantage of this approach is that it
 allows inference based simply on pairwise distances between sites -- say,
 Bray-Curtis or UniFrac distances -- which might be more sensitive to the types
 of variation that are meaningful in the microbial ecology setting than ordinary
-euclidean distance, which is implicitly assumed by ANOVA.
+Euclidean distance, which is implicitly assumed by ANOVA.
 
 However, the nonparametric analog of the $F$-statistic is no longer
-$F$-distributed, so standard theory theory does not provide valid inference.
-Instead, a permutation scheme is considered. In the one-way ANOVA case, we
-recompute the nonparametric $F$-statistic under many permutations of $y$ and use
-the resulting histogram as the null reference distribution.
+$F$-distributed, so standard theory does not provide valid inference. Instead, a
+permutation scheme is considered. In the one-way ANOVA case, we recompute the
+nonparametric $F$-statistic under many permutations of $y$ and use the resulting
+histogram as the reference null distribution.
 
 When more covariates are included, such a permutation scheme is not sufficient,
 and in general it is not straightforwards to design valid permutation tests,
-because the permutations must respect constraints impsed by null hypothesis
+because the permutations must respect constraints imposed by the null hypothesis
 \cite{anderson2001new}. The implementation in \citep{oksanen2007vegan} is only
 approximate, applying independent permutations to each covariate in the model.
 Note in particular that this permutation scheme breaks the between-site
@@ -196,13 +197,13 @@ correlation in the simulated $y$.
 %% \end{align}
 
 
-We apply ADONIS using the function \texttt{adonis} in the vegan package
+We apply adonis using the function \texttt{adonis} in the vegan package
 \citep{oksanen2007vegan}. In our simulation, we treat the distances between
 species profiles $X$ as the response and the category $y$ and locations $u$ as
 covariates. The associations with categories $y$ is of core interest, while the
-$u$'s are included to ``control for'' location variation\footnote{We will see
+$u$s are included to ``control for'' location variation\footnote{We will see
   that this does not seem to control for the (nonlinear) location variation seen
-  in our simulation.}. Specifically, our calls have the form given in example
+  in our simulation.}. Specifically, our calls have the form given in code block
 \ref{code:adonis}, where we use a euclidean distance for the ordinary GP setup
 and Bray-Curtis for the Poisson setup.
 
@@ -219,7 +220,7 @@ and Bray-Curtis for the Poisson setup.
 \label{code:adonis}
 \end{code}
 
-\subsection{Logisitc regression}
+\subsection{Logistic regression}
 \label{subsec:logistic_regression}
 
 We could instead measure the association between species counts $X$ and site
@@ -228,40 +229,41 @@ binary means we can treat them as a response in a logistic regression model,
 using $X$ and site locations $u$ as covariates (again, $u$ is thrown in as a
 control in the association between $x$ and $y$). Note that this approach does
 not apply any specialized distances between species profiles, which is one
-reason ADONIS might be preferred.
+reason why adonis might be preferred.
 
 We can recover $p$-values using standard theory for logistic regression. This
-theory differs somewhat from our simulation setting, however, because the
-ordinary theory assumes the $y_{i}$ are i.i.d, given a linear model on the
-logitted probabilities. In our simulation, different coordinates of $y_{i}$ have
-nonlinearly varying probabilities depending on their location.
+theory does not quite apply to our simulation setting, however, because the
+effect of the $u$ enters nonlinearly, resulting in correlated errors. In our
+simulation, different coordinates of $y_{i}$ have nonlinearly varying
+probabilities depending on their location.
 
-We implement this using the \texttt{glm} command, as in \ref{code:logistic}.
+We implement this using the \texttt{glm} command, as in code block
+\ref{code:logistic}.
 
 \begin{code}
 \begin{minted}[mathescape, linenos, frame=lines, framesep=2mm]{R}
   glm(y ~ x + u, family = binomial())
 \end{minted}
 \captionof{listing}{An example call for applying logistic regression of species
-  counts onto site characteristisc.}
+  counts onto site characteristic.}
 \label{code:logistic}
 \end{code}
 
 \subsection{Linear regression}
 \label{subsec:linear_regression}
 
-Alternatively, we could flip the species counts and the site characteristics in
-our regression. Unlike ADONIS, we can only have one species at a time in our
+Alternatively, we could flip the species counts and site characteristics in our
+regression. Unlike adonis, we can only have one species at a time in our
 response variable. In our simulation, we will only consider a model applied to
-our first species. In the GP data-generating mechanism, we will use a standard
+the first species. In the GP data-generating mechanism, we will use a standard
 linear regression, while for the Poisson-GP data-generating mechanism, we will
-use a poisson regression.
+use a Poisson regression.
 
-We will the $p$-value for the coefficient of $y$ provided by the standard
+We use the $p$-value for the coefficient of $y$ provided by the standard
 regression theory. Note that, as in the logistic regression, the errors
-$\eps_{i}$ are actually correlated in our model, so the theory is in fact
+$\eps_{i}$ are actually correlated in our simulation, so the theory is in fact
 violated. We will see what effect this has on the validity of our test during
-our simulation study. Code for this procedure is provided in
+our simulation study. Code for this procedure is provided in code block
 \ref{code:linear_reg}.
 
 \begin{code}
@@ -276,15 +278,15 @@ our simulation study. Code for this procedure is provided in
 \section{Results}
 \label{sec:results}
 
-We simulate 1000 replicates of the setup described in section \ref{sec:setup},
-for each data generating mechanism and method. The resulting $p$-values are
-described in figure \ref{fig:pvals_comparison}. 
+For each data generating mechanism and method described in section
+\ref{sec:setup}, we simulate 1000 replicates. The resulting $p$-values are
+described in figure \ref{fig:pvals_comparison}.
 
-More precisely, the ADONIS $p$-value is the permutation $p$-value for the $y$
-coefficient and the (Poisson) linear model $p$-values those for the coefficient
+More precisely, the adonis $p$-value is the permutation $p$-value for the $y$
+covariate, and the (Poisson) linear model $p$-values those for the coefficient
 of the $y$ covariate. In contrast, the $p$-values for the logistic regression
-are those for the coefficients for each species -- this is why there are so many
-more $p$-values in the logistic regression row of figure
+are those associated with coefficients for each species -- this is why there are
+so many more $p$-values in the logistic regression row of figure
 \ref{fig:pvals_comparison}.
 
 \begin{figure}
@@ -295,17 +297,15 @@ more $p$-values in the logistic regression row of figure
     methods are arranged across rows, while the GP and Poisson-GP data
     generating mechanisms are in the left and right columns, respectively.
     Ideally, these would all look approximately uniform, and the fact that they
-    are not means these tests are not valid. Further, the $p$-values for ADONIS
-    seem particularly far from uniform.
-  }
+    are not means these tests are not valid.}
 \end{figure}
 
 Evidently, the $p$-values associated with all procedures are not quite uniform.
 In light of our earlier discussion, this is not surprising. Both the logistic
 and linear regression models fail because the errors are correlated, since the
-location $u$ has a nonlinear influence on both $x$ and $y$. The ADONIS
-permutation procedure also fails to account for the influence of the $u$s, since
-it breaks the correlation between sites. However, those provided by ADONIS are
+location $u$ has a nonlinear influence on both $x$ and $y$. The adonis
+permutation procedure also fails to account for the influence of $u$, since it
+breaks the correlation between sites. However, those provided by adonis are
 strongly concentrated on very low values. Indeed, the permutation procedure in
 this setting seems poorly suited in the case of correlated sites, even when they
 are included as covariates in the regression.
