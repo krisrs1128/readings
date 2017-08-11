@@ -120,7 +120,7 @@ function update_v(u::Vector{Matrix{Float64}})
     end
   end
 
-  return diag(mean(vk, 1))
+  return Matrix(Diagonal(mean(vk, 2)[:, 1]))
 end
 
 """
@@ -243,7 +243,7 @@ function log_marginal(y::Vector{Float64},
                       x::Matrix{Float64},
                       z::Vector{Int64},
                       u::Array{Matrix{Float64}, 1},
-                      sigma::Vector{Float64},
+                      sigmas::Vector{Float64},
                       l::Float64,
                       a::Float64)
   n, p = size(x)
@@ -255,7 +255,8 @@ function log_marginal(y::Vector{Float64},
     yk = y[z .== k]
     Q_k = Q(xk, u[k])
     lambda_k = lambda(xk, u[k], l, a)
-    marginal_cov = Q_k + lambda_k + diagm(sigma[k] * ones(size(xk, 1)))
+    marginal_cov = Q_k + lambda_k + diagm(sigmas[k] * ones(size(xk, 1)))
+    println(eig(marginal_cov)[1])
     log_liks[k] = -0.5 * (logdet(marginal_cov) + yk' * inv(marginal_cov) * yk)[1]
   end
 
@@ -265,13 +266,6 @@ end
 ###############################################################################
 ## Full VB iteration
 ###############################################################################
-
-y = randn(70)
-x = randn(70, 2)
-n_iter = 100
-n_inducing = 20
-K = 3
-
 function z_assignment(rho::Matrix{Float64})
   n, _ = size(rho)
   z = Vector{Int64}(n)
@@ -289,7 +283,7 @@ function vb(y::Vector{Float64},
             n_iter::Int64)
 
   ## Initialization
-  n = size(x,1 )
+  n = size(x, 1)
   inducing_init = kmeans(x', n_inducing).centers'
   u = Vector{Matrix{Float64}}(K)
   ix = round(linspace(1, K, n_inducing))
@@ -298,43 +292,49 @@ function vb(y::Vector{Float64},
   end
 
   log_rho = log(rand(Dirichlet(ones(K)), n))'
-  sigmas = var(y) * ones(K)
+  log_sigmas = log(var(y) * ones(K))
   l = 1.0
   a = 1.0
 
+  ## get size is ns
+  ns = zeros(Int64, K)
+  for k = 1:K
+    ns[k] = size(u[k], 1)
+  end
+
   for iter = 1:n_iter
     ## E-step
+    println(iter)
     m = update_m(u)
-    v = update_v(u)
-    log_rho = update_log_rho(x, y, exp(log_rho), m, V, u, sigma, l, a)
+    V = update_v(u)
+    log_rho = update_log_rho(x, y, exp(log_rho), m, V, u, exp(log_sigmas), l, a)
     z = z_assignment(exp(log_rho))
-    -sum(log_marginal(y, x, z, u, sigma, l, a))
-
-    f(u, sigma, l, a)
 
     ## M-step
-    f = function(u::Vector{Matrix{Float64}},
-                 sigma::Vector{Float64},
-                 l::Float64,
-                 a::Float64)
-      return -sum(log_marginal(y, x, z, u, sigma, l, a))
+    p = size(u[1], 2)
+    f = function(hyper::Vector{Float64})
+      u2, log_sigmas2, l2, a2 = unstack_params(hyper, ns, p)
+      val = -sum(log_marginal(y, x, z, u2, exp(log_sigmas2), l2, a2))
+     return val
     end
 
-    optimize(f, [u, sigma, l, a])
-
+    hyper = stack_params(u, log_sigmas, l, a)
+    opt = optimize(f, hyper, NelderMead(), Optim.Options(iterations = 10))
+    u, log_sigmas, l, a = unstack_params(opt.minimizer, ns, p)
   end
+
 end
 
 function stack_params(u::Vector{Matrix{Float64}},
-                      sigma::Vector{Float64},
+                      sigmas::Vector{Float64},
                       l::Float64,
                       a::Float64)
   K = length(u)
   p = size(u[1], 2)
-  hyper = [sigma; [l, a]]
+  hyper = [sigmas; [l, a]]
 
-  for j in 1:p
-    for k in 1:K
+  for k in 1:K
+    for j in 1:p
       hyper = [hyper; u[k][:, j]]
     end
   end
@@ -342,15 +342,29 @@ function stack_params(u::Vector{Matrix{Float64}},
   return hyper
 end
 
-function unstack_params(hyper::Vector{Float64}, K::Int64)
-  sigma = hyper[1]
-  l = hyper[2]
-  a = hyper[3]
+function unstack_params(hyper::Vector{Float64}, ns::Vector{Int64}, p::Int64)
+  chyper = copy(hyper)
+  K = length(ns)
+  log_sigmas = chyper[1:K]
+  l = chyper[K + 1]
+  a = chyper[K + 2]
 
+  deleteat!(chyper, 1:(K + 2))
   u = Vector{Matrix{Float64}}(K)
   for k = 1:K
-    print("blah")
+    cur_u = zeros(ns[k], p)
+    for j = 1:p
+      cur_u[:, j] = chyper[1:ns[k]]
+      deleteat!(chyper, 1:ns[k])
+    end
+    u[k] = cur_u
   end
 
-  return sigma, l, a, u
+  return u, log_sigmas, l, a
 end
+
+y = randn(200)
+x = randn(200, 2)
+n_iter = 100
+n_inducing = 50
+K = 3
