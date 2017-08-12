@@ -230,4 +230,103 @@ converges to an $F_{0}$ Brownian Bridge under $F_{0}$.
 There are cases where these theorems don't obtain. See Cox 1993 or Freedman
 1999.
 
+\section{Chapter 3}
+\label{sec:chapter_3}
+
+We'll start on mixture modeling (haven't been typing up my notes so much
+lately). The setup is the usual DPMM, draw the $\theta_{i}$'s from a Dirichlet
+Process, and then have continuous observations $X_{i}$ drawn from
+$F_{\theta_{i}}$. Since many of the $\theta_{i}$s are equal to one another, this
+induces a mixture model on the $X_{i}$.
+
+The posterior for the $\theta_{i}^{\ast}$s looks like
+\begin{align}
+\Pi_{k}^{(n)}\left(n_{1}, \dots, n_{i}\right) \prod_{j} \prod_{i \in C_{j}} k\left(x_{i}, \theta_{j}^{\ast}\right) P_{0}\left(d\theta_{j}^{\ast}\right).
+\end{align}
+Here the $\Pi_{k}^{(n)}$ gives the prior for the observed partition structure,
+the $P_{0}\left(d\theta_{j}^{\ast}\right)$ gives the prior for the observed
+locations of the mixture components, the $k$ gives a likelihood of the $x_{i}$s
+given their component.
+
+From here, you can get a bayesian posterior density estimate for the
+hierarchical mixture model, but it requries a sum over all partitions of $n$
+into $k$ components (for all $k \leq n$). So you need to do MCMC, like in
+Escobar and West. While most people write the algorithm for the DPMM, all you
+really need is the predictive of a new $\theta_{j}^{\ast}$ given the observed
+ones, along with a way to evaluate the EPPFs $\Pi_{k}^{(n)}$.
+
+The idea of the gibbs sampling scheme is to draw each $\theta_{i}^{(t)}$ from
+the full conditional on all other $\theta_{i}^{(t-1) or t}$s, using the
+predictive distributions, which can be written in terms of the EPPFs
+$\Pi_{k_{i, n - 1} + 1}^{(n)}$ and $\Pi_{k_{i}, n -1}^{(n)}$. An issue is that
+clusters will switch very slowly, since you have to pass through valleys in the
+posterior corresponding to half-swapped clusters. One remedy is to model the
+posterior directly -- these are called conditional methods, as opposed to the
+``marginal'' methods presented above.
+
+In the Poisson Dirichlet case, the update weights are
+\begin{align}
+\left(\theta + \sigma k_{i, n - 1}\right) \int_{\Theta}k\left(x_{i}, \theta\right)P_{0}\left(d\theta\right)
+\end{align}
+for a new cluster component and
+\begin{align}
+\left(n_{i, j} - \sigma\right)k\left(x_{i}, \theta_{ij}^{\ast}\right)
+\end{align}
+for a previously observed cluster.
+
+One interesting idea is to put a prior on $\sigma$ in the PD model -- you can
+get an updated posterior, which helps you learn the relative sizes / total
+numbers of clusters.
+
+Another example is random bernstein polynomials. The idea is that this family
+uniformly approximates any $C\left[0, 1\right]$ function. So you can construct
+random members of this family by randomizing the degree and mixture weights --
+these look like mixtures of different $\beta$ densities. There is also a latent
+variable interpretation of this model, which leads to a suitable gibbs sampler
+-- see Petrone 1999.
+
+Now moving on to polya trees. Let $\Gamma = \left(\Gamma_{k}\right)$ be a family
+of nested partitions (get refinements with increasing $k$). A density
+$\tilde{p}$ is called tail-free if there exists some R.V.s $V_{k, B}$ such that
+
+\begin{itemize}
+\item $\{V_{1, B}: B\in \Gamma_{1}\}, \{V_{2, B} : B \in \Gamma_{2}\}, \dots, $ are independent
+\item If $B_{k} \subset B_{k - 1} \subset \dots \subset B_{1}$, then
+  $\tilde{p}\left(B_{k}\right) = \prod_{j = 1}^{k} V_{j, B_{j}}$.
+\end{itemize}
+
+The special case where the $\Gamma_{k}$s are dyadic intervals and the
+$V_{j, B_{j}}$ are beta R.V.s gives the Polya tree process. It turns out that
+the posterior of the polya tree is still a polya tree. You can write it down
+pretty directly as the analogous sequences of beta distributed variables where
+the parameters are updated by counts of the number of points within the
+associated partition bin.
+
+It's possible to get priors that put more mass on different parts of the
+interval by sizing the bins unevenly. While it's neat that polya trees put
+priors on continuous densities, a disadvantage is that they can be dependent on
+the specific partition structure.
+
+Now random means. This means that we are studying
+$\tilde{p}\left(f\right) = \int f d\tilde{p}$ for some function $f$.
+An interesting identity when $\tilde{p}$ is a dirichlet process is the
+regazzini-cifarelli identity:
+
+\begin{align}
+  \Earg{\frac{1}{\left(1 + i t \tilde{p}\left(f\right)\right)^{\theta}}} &= \exp{-\int \log\left(1 + itf\right) d\alpha},
+\end{align}
+the interpretation is the left hand side is the stieltjes transform of
+$\tilde{p}\left(f\right)$ while the right hand side is a laplace transform of
+$\int f d\tilde{\gamma}$ under a gamma process prior $\tilde{gamma}$.
+
+Hook walks? Young diagram? What is this black magic??
+
+Closing remarks: It's valuable to think about frequentist properties of bayesian
+models. De Finetti is the ultimate motivating theorem for this type of analysis.
+
+\section{Chapter 4}
+\label{sec:chapter_4}
+
+
+
 \end{document}
