@@ -264,7 +264,7 @@ posterior corresponding to half-swapped clusters. One remedy is to model the
 posterior directly -- these are called conditional methods, as opposed to the
 ``marginal'' methods presented above.
 
-In the Poisson Dirichlet case, the update weights are 
+In the Poisson Dirichlet case, the update weights are
 \begin{align}
 \left(\theta + \sigma k_{i, n - 1}\right) \int_{\Theta}k\left(x_{i}, \theta\right)P_{0}\left(d\theta\right)
 \end{align}
@@ -288,7 +288,7 @@ variable interpretation of this model, which leads to a suitable gibbs sampler
 Now moving on to polya trees. Let $\Gamma = \left(\Gamma_{k}\right)$ be a family
 of nested partitions (get refinements with increasing $k$). A density
 $\tilde{p}$ is called tail-free if there exists some R.V.s $V_{k, B}$ such that
- 
+
 \begin{itemize}
 \item $\{V_{1, B}: B\in \Gamma_{1}\}, \{V_{2, B} : B \in \Gamma_{2}\}, \dots, $ are independent
 \item If $B_{k} \subset B_{k - 1} \subset \dots \subset B_{1}$, then
@@ -305,7 +305,28 @@ associated partition bin.
 It's possible to get priors that put more mass on different parts of the
 interval by sizing the bins unevenly. While it's neat that polya trees put
 priors on continuous densities, a disadvantage is that they can be dependent on
-the specific partition strucure.
+the specific partition structure.
+
+Now random means. This means that we are studying
+$\tilde{p}\left(f\right) = \int f d\tilde{p}$ for some function $f$.
+An interesting identity when $\tilde{p}$ is a dirichlet process is the
+regazzini-cifarelli identity:
+
+\begin{align}
+  \Earg{\frac{1}{\left(1 + i t \tilde{p}\left(f\right)\right)^{\theta}}} &= \exp{-\int \log\left(1 + itf\right) d\alpha},
+\end{align}
+the interpretation is the left hand side is the stieltjes transform of
+$\tilde{p}\left(f\right)$ while the right hand side is a laplace transform of
+$\int f d\tilde{\gamma}$ under a gamma process prior $\tilde{gamma}$.
+
+Hook walks? Young diagram? What is this black magic??
+
+Closing remarks: It's valuable to think about frequentist properties of bayesian
+models. De Finetti is the ultimate motivating theorem for this type of analysis.
+
+\section{Chapter 4}
+\label{sec:chapter_4}
+
+
 
 \end{document}
-
