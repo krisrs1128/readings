@@ -285,7 +285,27 @@ these look like mixtures of different $\beta$ densities. There is also a latent
 variable interpretation of this model, which leads to a suitable gibbs sampler
 -- see Petrone 1999.
 
-Now moving on to polya trees.
+Now moving on to polya trees. Let $\Gamma = \left(\Gamma_{k}\right)$ be a family
+of nested partitions (get refinements with increasing $k$). A density
+$\tilde{p}$ is called tail-free if there exists some R.V.s $V_{k, B}$ such that
+ 
+\begin{itemize}
+\item $\{V_{1, B}: B\in \Gamma_{1}\}, \{V_{2, B} : B \in \Gamma_{2}\}, \dots, $ are independent
+\item If $B_{k} \subset B_{k - 1} \subset \dots \subset B_{1}$, then
+  $\tilde{p}\left(B_{k}\right) = \prod_{j = 1}^{k} V_{j, B_{j}}$.
+\end{itemize}
+
+The special case where the $\Gamma_{k}$s are dyadic intervals and the
+$V_{j, B_{j}}$ are beta R.V.s gives the Polya tree process. It turns out that
+the posterior of the polya tree is still a polya tree. You can write it down
+pretty directly as the analogous sequences of beta distributed variables where
+the parameters are updated by counts of the number of points within the
+associated partition bin.
+
+It's possible to get priors that put more mass on different parts of the
+interval by sizing the bins unevenly. While it's neat that polya trees put
+priors on continuous densities, a disadvantage is that they can be dependent on
+the specific partition strucure.
 
 \end{document}
 
