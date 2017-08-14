@@ -1,3 +1,13 @@
+#! /usr/bin/env Rscript
+
+## File description -------------------------------------------------------------
+##
+## Some experiments with adonis under other settings. Focused more on mixture
+## and latent factor models. These generally maintain exchangeability between
+## sites, so the permutation p-values are in fact valid.
+##
+## author: sankaran.kris@gmail.com
+## date: 08/14/2017
 
 library("tidyverse")
 library("scales")
@@ -37,10 +47,11 @@ for (i in seq_len(n)) {
   }
 }
 
+## write Sigma for factor analysis
 k <- 1
 sigma <- 1
 W <- matrix(runif(p2 * k), p2, k)
-Sigma <- W %*% t(W) + sigma * diag(nrow = p2)
+Sigma <- W %*% t(W) + sigma * diag(nrow = p2) # factor analysis Sigma
 
 ## Factor setup
 models <- list()
@@ -55,7 +66,7 @@ for (i in seq_len(n_sim)) {
 pvals <- list(
   "factor" = list(
     "adonis" = sapply(models$factor$adonis, function(x) x$aov.tab["y[, i]", "Pr(>F)"]),
-    #"logistic" = sapply(models$factor$logistic, function(x) coef(summary(x))[2:(p1 + 1), "Pr(>|z|)"]),
+    "logistic" = as.numeric(sapply(models$factor$logistic, function(x) coef(summary(x))[2:(p2 + 1), "Pr(>|z|)"])),
     "lm" = sapply(models$factor$lm, function(x) coef(summary(x))["y[, i]", "Pr(>|t|)"])
   )
 )
