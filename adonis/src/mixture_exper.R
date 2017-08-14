@@ -84,39 +84,39 @@ rmix_gauss <- function(n, mu_mat, Sigma = NULL, probs = NULL) {
     x[i, ] <- rmvnorm(1, mu_mat[z[i], ], Sigma)
   }
 
-  x
+  list("z" = z, "x" = x)
 }
 
 #' Simulate from an LDA model
 #'
 #' @examples
 #' rlda(100, 10)
-rlda <- function(n, V, N = 500, K = 4, alpha0 = 1) {
+rlda <- function(n, V, lambda = 500, K = 4, alpha0 = 1) {
   beta <- rdirichlet(K, alpha0 * rep(1, V))
-  theta <- rdirichlet(n, alpha0 * rep(1, K))
   x <- matrix(nrow = n, ncol = V)
   for (i in seq_len(n)) {
-    x[i, ] <- rmultinom(1, N, prob = t(beta) %*% theta[i, ])
+    x[i, ] <- rmultinom(
+      1,
+      rpois(1, lambda),
+      prob = t(beta) %*% theta[i, ]
+    )
   }
 
-  x
+  list("x" = x, "theta" = theta)
+}
+
+sample_probs <- function(probs) {
+  y <- vector(length = nrow(probs))
+  for (i in seq_len(n)) {
+    y[i] <- sample(0:1, 1, replace = TRUE, prob = c(1 - prob[i, ], prob[i, ]))
+  }
+
+  y
 }
 
 ###############################################################################
 ## simulation experiment
 ###############################################################################
-
-## generate matrix y according to logit
-probs <- t(logit(rmvnorm(n_sim, sigma = K)))
-y <- matrix(0, n, n_sim)
-for (i in seq_len(n)) {
-  for (j in seq_len(n_sim)) {
-    y[i, j] <- sample(
-      0:1, 1,
-      prob = c(1 - probs[i, j], probs[i, j])
-    )
-  }
-}
 
 ## setup for factor analysis and mixture of gaussians
 k <- 1
@@ -131,38 +131,41 @@ for (i in seq_len(n_sim)) {
 
   ## factor analysis
   x <- rmvnorm(n, sigma = W %*% t(W) + sigma * diag(nrow = p2))
-  models$factor$adonis[[i]] <- adonis(x ~ y[, i] + u, method = "euclidean")
-  models$factor$logistic[[i]] <- glm(y[, i] ~ x + u, family = binomial())
-  models$factor$lm[[i]] <- lm(x[, 1] ~ y[, i] + u)
+  y <- sample_probs(matrix(0.5, nrow = n))
+  models$factor$adonis[[i]] <- adonis(x ~ y, method = "euclidean", perm = 99)
+  models$factor$logistic[[i]] <- glm(y ~ x, family = binomial())
+  models$factor$lm[[i]] <- lm(x[, 1] ~ y)
 
   ## mixture of gaussians
   x <- rmix_gauss(n, mu_mat)
-  models$mix_gauss$adonis[[i]] <- adonis(x ~ y[, i] + u, method = "euclidean")
-  models$mix_gauss$logistic[[i]] <- glm(y[, i] ~ x + u, family = binomial())
-  models$mix_gauss$lm[[i]] <- lm(x[, 1] ~ y[, i] + u)
+  y <- sample_probs(matrix(runif(nrow(mu_mat)[x$z]), ncol = 1))
+  models$mix_gauss$adonis[[i]] <- adonis(x$x ~ y, method = "euclidean", perm = 99)
+  models$mix_gauss$logistic[[i]] <- glm(y ~ x$x, family = binomial())
+  models$mix_gauss$lm[[i]] <- lm(x$x[, 1] ~ y)
 
   ## latent dirichlet allocation
   x <- rlda(n, p2)
-  models$lda$adonis[[i]] <- adonis(x ~ y[, i] + u, method = "euclidean")
-  models$lda$logistic[[i]] <- glm(y[, i] ~ x + u, family = binomial())
-  models$lda$lm[[i]] <- lm(x[, 1] ~ y[, i] + u)
+  y <- sample_probs(logit(x$theta %*% rnorm(4, 0, 2.5)))
+  models$lda$adonis[[i]] <- adonis(x$x ~ y + x$theta[, -1], method = "euclidean", perm = 99)
+  models$lda$logistic[[i]] <- glm(y ~ x$x + x$theta[, -1], family = binomial())
+  models$lda$lm[[i]] <- lm(x$x[, 1] ~ y + x$theta[, -1])
 }
 
 pvals <- list(
   "factor" = list(
-    "adonis" = sapply(models$factor$adonis, function(x) x$aov.tab["y[, i]", "Pr(>F)"]),
+    "adonis" = sapply(models$factor$adonis, function(x) x$aov.tab["y", "Pr(>F)"]),
     "logistic" = as.numeric(sapply(models$factor$logistic, function(x) coef(summary(x))[2:(p2 + 1), "Pr(>|z|)"])),
-    "lm" = sapply(models$factor$lm, function(x) coef(summary(x))["y[, i]", "Pr(>|t|)"])
+    "lm" = sapply(models$factor$lm, function(x) coef(summary(x))["y", "Pr(>|t|)"])
   ),
   "mix_gauss" = list(
-    "adonis" = sapply(models$mix_gauss$adonis, function(x) x$aov.tab["y[, i]", "Pr(>F)"]),
+    "adonis" = sapply(models$mix_gauss$adonis, function(x) x$aov.tab["y", "Pr(>F)"]),
     "logistic" = as.numeric(sapply(models$mix_gauss$logistic, function(x) coef(summary(x))[2:(p2 + 1), "Pr(>|z|)"])),
-    "lm" = sapply(models$mix_gauss$lm, function(x) coef(summary(x))["y[, i]", "Pr(>|t|)"])
+    "lm" = sapply(models$mix_gauss$lm, function(x) coef(summary(x))["y", "Pr(>|t|)"])
   ),
   "lda" = list(
-    "adonis" = sapply(models$lda$adonis, function(x) x$aov.tab["y[, i]", "Pr(>F)"]),
+    "adonis" = sapply(models$lda$adonis, function(x) x$aov.tab["y", "Pr(>F)"]),
     "logistic" = as.numeric(sapply(models$lda$logistic, function(x) coef(summary(x))[2:(p2 + 1), "Pr(>|z|)"])),
-    "lm" = sapply(models$lda$lm, function(x) coef(summary(x))["y[, i]", "Pr(>|t|)"])
+    "lm" = sapply(models$lda$lm, function(x) coef(summary(x))["y", "Pr(>|t|)"])
   )
 )
 
