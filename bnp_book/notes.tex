@@ -388,6 +388,89 @@ p\left(w_{1}, \dots, w_{K}\right)\prod_{1}^{n} \indic{u_{j} < w_{s_{j}}} g\left(
 where $K$ is chosen so the amount of stick left in the stick breaking process is
 less than $\min\left(u_{i}\right)$.
 
-Slice sampling can also be extended to normalized CRMs.
+Slice sampling can also be extended to normalized CRMs, using a clever
+application of the Levy-Khintchine formula to take an infinite sum into a
+one-dimensional integral.
+
+\section{Chapter 7}
+\label{sec:chapter_7}
+
+It's common in biomedicine these days to make high-dimensional measurements.
+Classical nonparametric methods can fail in this setting, some sort of sharing
+or latent variable reductions are necessary, and this can be accomplished in the
+BNP paradigm. Another advantage is that complex study structure can often be
+modeled easily probabilistically.
+
+A motivating example is an extension of the usual random effects model for the
+$j^{th}$ observation in subject $i$ to
+\begin{align}
+  \label{eq:simple_re}
+  y_{ij} &= \Gsn\left(\mu_{i}, \sigma^{2}\right) \\
+  \mu_{i} &\sim P,
+\end{align}
+for some nonparametric $P$ instead of the usual
+$\mu_{i} \sim \Gsn\left(\mu, \tau^{2}\right)$. You might imagine there are
+latent subpopulations, for example, which would warrant several modes in $P$.
+
+Apparently in a DP with $\alpha = 10$, we have $\infty \approx 50$ (sigh...).
+
+``It is important not to view the DP model as a magic clustering approach, which
+avoids assuming a fixed number of clusters and specification of an arbitrarily
+penalty. Instead, one must carefully consider how the penalty for model
+complexity or overfitting arises in the DP implementation....''
+
+A problem that people don't often talk about is sensitivity of the DP
+specification to the choice of base measure (as opposed to concentration, which
+everyone knows is related to the fitted $K$). The issue is that in the polya
+scheme, the probability of choosing a new cluster is proportional to
+
+\begin{align}
+\int \prod_{j = 1}^{n} \Gsn\left(y_{ij}; \mu_{i}, \sigma^{2}\right) dP_{0}\left(\mu_{i}\right)
+\end{align}
+which can depend a lot on (say) the mean and variance of $P_{0}$ if it is
+normal. E.g., if $\sigma^{2}$ is too small, we'll introduce new clusters all the
+time, while if it's too big, we won't ever introduce new clusters. The usual
+solution is to make an informed choice by looking at the data, or to just
+standardize everything.
+
+On to posterior computation. The three main types of MCMC people use are
+collapsed gibbs, block gibbs, and reversible-jump type samplers. In the
+collapsed samplers, the stick breaking weights are integrated out and the
+partition structure is sampled instead, via a polya urn. In the block gibbs
+samplers, a truncation is applied to the original stick breaking representation
+instead. The updates look like,
+
+\begin{itemize}
+\item Allocate individuals to components
+\item Update stick breaking weights
+\item Update the atoms (model parameters)
+\item Update hyperparameters, and hyperhyperparameters
+\end{itemize}
+
+When people ask about the difference between a parametric model with some $K$
+and a truncated DPMM, you can say that the $K$ in the DPMM is more like an upper
+bound for the number of clusters.
+
+We can extend the random effects model \ref{eq:simple_re} to
+
+\begin{align}
+  y_{ij} &\sim \Gsn\left(x_{ij}^{T}\beta + z_{ij}^{T}b_{i}, \sigma^{2}\right)\\
+  b_{i} &\sim P
+\end{align}
+for random effects $b_{i}$. An issue with interpretation of the fixed effects
+$\beta$ is that we don't necessarily have to have $P$ have zero mean. There are
+some proposals in the literature for addressing this though.
+
+Often, instead of random effects, we want latent variables instead. This can
+look like
+
+\begin{align}
+  y_{ij} &\sim \Gsn\left(\mu_{j} + \lambda_{j} \eta_{i}, \sigma^{2}\right) \\
+  \eta_{i} &= x_{i}^{T}\beta + \delta_{i} \\
+  \delta_{i} &\sim P
+\end{align}
+where you interpret $\eta_{i}$ as scores and $\lambda_{j}$ as loadings.
+
+Now on to functional data analysis.
 
 \end{document}
