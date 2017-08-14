@@ -18,6 +18,7 @@ library("reshape2")
 library("mvtnorm")
 library("viridis")
 library("scales")
+source("utils.R")
 theme_set(
   ggscaffold::min_theme(list(text_size = 7, subtitle_size = 9))
 )
