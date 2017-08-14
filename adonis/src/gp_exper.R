@@ -22,47 +22,13 @@ theme_set(
   ggscaffold::min_theme(list(text_size = 7, subtitle_size = 9))
 )
 
-print_iter <- function(i, m = 10) {
-  if (i %% m == 0) {
-    cat(sprintf("iteration %s\n", i))
-  }
-}
-
-logit <- function(x) {
-  1 / (1 + exp(-x))
-}
-
-plot_species_counts <- function(x, u, y) {
-  plot_df <- data.frame("x" = x, "u" = u, "y" = y) %>%
-    melt(
-      id.vars = c("u.1", "u.2", "y"),
-      variable = "species",
-      value.name = "count"
-    )
-
-  ggplot(plot_df) +
-    geom_point(
-      aes(x = u.1, y = count, size = u.2, col = as.factor(y)),
-      alpha = 0.4
-    ) +
-    scale_y_continuous(breaks = trans_breaks(identity, identity, n = 3)) +
-    scale_size_continuous(range = c(0.005, 1.5)) +
-    scale_color_brewer(palette = "Set2") +
-    facet_wrap(~species, scales = "free") +
-    labs(col = "y") +
-    theme(
-      strip.text.x = element_blank(),
-      axis.text.x = element_blank(),
-      axis.text.y = element_text(size = 7)
-    )
-}
 
 ###############################################################################
 ## simulate underlying categorical data
 ###############################################################################
 
 ## variables used throughout experiment
-n_sim <- 1000
+n_sim <- 20
 p1 <- 20
 p2 <- 2
 n <- 100
@@ -73,12 +39,7 @@ K <- kernelMatrix(rbfdot(sigma = 5), u)
 probs <- t(logit(rmvnorm(n_sim, sigma = K)))
 y <- matrix(0, n, n_sim)
 for (i in seq_len(n)) {
-  for (j in seq_len(n_sim)) {
-    y[i, j] <- sample(
-      0:1, 1,
-      prob = c(1 - probs[i, j], probs[i, j])
-    )
-  }
+  y[i, ] <- sample_probs(probs[i, ])
 }
 
 ###############################################################################

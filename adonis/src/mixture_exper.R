@@ -20,6 +20,7 @@ library("reshape2")
 library("kernlab")
 library("mvtnorm")
 library("vegan")
+source("utils.R")
 
 scale_colour_discrete <- function(...)
   scale_colour_brewer(..., palette="Set2")
@@ -48,73 +49,6 @@ u <- matrix(runif(n * p2), n, p2)
 K <- kernelMatrix(rbfdot(sigma = 5), u)
 
 ###############################################################################
-## utility functions
-###############################################################################
-
-logit <- function(x) {
-  1 / (1 + exp(-x))
-}
-
-print_iter <- function(i, m = 10) {
-  if (i %% m == 0) {
-    cat(sprintf("iteration %s\n", i))
-  }
-}
-
-#' Sample from Mixture of Gaussians
-#'
-#' @examples
-#' mu_mat <- matrix(rnorm(5 * p2, 0, 4), 5, p2)
-#' X <- rmix_gauss(1000, mu_mat)
-#' hist(X[, 2], breaks = 100)
-rmix_gauss <- function(n, mu_mat, Sigma = NULL, probs = NULL) {
-  K <- nrow(mu_mat)
-  p <- ncol(mu_mat)
-
-  if (is.null(probs)) {
-    probs <- rep(1 / K, K)
-  }
-  if (is.null(Sigma)) {
-    Sigma <- diag(nrow = p)
-  }
-
-  z <- sample(1:K, size = n, prob = probs, replace = TRUE)
-  x <- matrix(nrow = n, ncol = p)
-  for (i in seq_len(n)) {
-    x[i, ] <- rmvnorm(1, mu_mat[z[i], ], Sigma)
-  }
-
-  list("z" = z, "x" = x)
-}
-
-#' Simulate from an LDA model
-#'
-#' @examples
-#' rlda(100, 10)
-rlda <- function(n, V, lambda = 500, K = 4, alpha0 = 1) {
-  beta <- rdirichlet(K, alpha0 * rep(1, V))
-  x <- matrix(nrow = n, ncol = V)
-  for (i in seq_len(n)) {
-    x[i, ] <- rmultinom(
-      1,
-      rpois(1, lambda),
-      prob = t(beta) %*% theta[i, ]
-    )
-  }
-
-  list("x" = x, "theta" = theta)
-}
-
-sample_probs <- function(probs) {
-  y <- vector(length = nrow(probs))
-  for (i in seq_len(n)) {
-    y[i] <- sample(0:1, 1, replace = TRUE, prob = c(1 - prob[i, ], prob[i, ]))
-  }
-
-  y
-}
-
-###############################################################################
 ## simulation experiment
 ###############################################################################
 
@@ -131,21 +65,21 @@ for (i in seq_len(n_sim)) {
 
   ## factor analysis
   x <- rmvnorm(n, sigma = W %*% t(W) + sigma * diag(nrow = p2))
-  y <- sample_probs(matrix(0.5, nrow = n))
+  y <- sample_probs(rep(0.5, n))
   models$factor$adonis[[i]] <- adonis(x ~ y, method = "euclidean", perm = 99)
   models$factor$logistic[[i]] <- glm(y ~ x, family = binomial())
   models$factor$lm[[i]] <- lm(x[, 1] ~ y)
 
   ## mixture of gaussians
   x <- rmix_gauss(n, mu_mat)
-  y <- sample_probs(matrix(runif(nrow(mu_mat)[x$z]), ncol = 1))
+  y <- sample_probs(runif(nrow(mu_mat)[x$z]))
   models$mix_gauss$adonis[[i]] <- adonis(x$x ~ y, method = "euclidean", perm = 99)
   models$mix_gauss$logistic[[i]] <- glm(y ~ x$x, family = binomial())
   models$mix_gauss$lm[[i]] <- lm(x$x[, 1] ~ y)
 
   ## latent dirichlet allocation
   x <- rlda(n, p2)
-  y <- sample_probs(logit(x$theta %*% rnorm(4, 0, 2.5)))
+  y <- sample_probs(logit(x$theta %*% rnorm(4, 0, 2.5))[, 1])
   models$lda$adonis[[i]] <- adonis(x$x ~ y + x$theta[, -1], method = "euclidean", perm = 99)
   models$lda$logistic[[i]] <- glm(y ~ x$x + x$theta[, -1], family = binomial())
   models$lda$lm[[i]] <- lm(x$x[, 1] ~ y + x$theta[, -1])
