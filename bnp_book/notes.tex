@@ -324,9 +324,70 @@ Hook walks? Young diagram? What is this black magic??
 Closing remarks: It's valuable to think about frequentist properties of bayesian
 models. De Finetti is the ultimate motivating theorem for this type of analysis.
 
-\section{Chapter 4}
-\label{sec:chapter_4}
+\section{Chapter 6}
+\label{sec:chapter_6}
+
+What computational issues arise when working with bayesian nonparametric
+objects (considering things are infinite dimensional, shouldn't be surprising
+that there are a few)?
+
+``we see no reason why in general Nature should adhere to a small collection of
+computationally convenient model forms.''
+
+Basic motivation for bayesian modeling comes from de Finetti representation,
+
+\begin{align}
+p\left(x_{1}, \dots, x_{n}\right) &= \int_{T} \prod_{i = 1}^{n} F\left(x_{i}\right) dQ\left(F\right).
+\end{align}
+You can think of $Q\left(F\right) = \lim_{n} p\left(F_{n}\right)$ where $F_{n}$
+are empirical CDFs. In parametric modeling, we assume restricted form of $Q$ --
+idea in bnp is to remove this.
+
+For computation in the DPMM, it is useful to consider a latent variable
+interpretation, where the latent variables are cluster memberships and the
+probabilities for the different clusters come from a stick breaking / GEM.
 
 
+Alternatively, you can integrate out the cluster positions and work only with
+the partition structure, via a polya urn scheme. This can be done in closed form
+when the likelihood is conjugate to the prior for a single component, since
+
+\begin{align}
+p\left(s_{1}, \dots, s_{n}\vert y\right) \propto p\left(s_{1}, \dots, s_{n}\right) p\left(y \vert s_{1}, \dots, s_{n}\right),
+\end{align}
+and the prior term can be computed from a polya urn and the likelihood is just a
+mixture once the components are known. This can be used to derive a gibbs
+sampling scheme.
+
+Mixing can be slow since cluster memberships have to be updated one at a time,
+and there might be low probability valleys between two modes. An alternative is
+the split-merge (or ebb-flow) algorithm.
+
+Sometimes we don't have to have to rely on integrating out the nonparametric
+$F$. Some alternatives are truncation, retrospective sampling, and slice
+sampling.
+
+There sampling in the truncation scheme is actually approximate. But you can try
+to bound the TV distance between the truncated and full priors, as a function of
+$K$, and use this to set $K$. Then, the stick breaking weights and model
+parameters can be updated in blocks.
+
+The idea in retrosupective sampling is to use inversion sampling for discrete
+distributions. Draw a uniform and find the $K$ such that the sum of stick
+breaking weights up to $K$ is larger than that uniform. This $K$ is random and
+supported on all natural numbers, but in any given iteration it will be finite.
+You can then make an update for all parameters via mcmc.
+
+In slice sampling, you simulate uniforms $u_{1}, \dots, u_{n}$ such that the
+joint $p\left(s_{i} = k, u_{i}\right) = \indic{u_{i} < w_{k}}$, where the
+$s_{i}$ are cluster membership variables. You can then setup a gibbs sampler,
+since the posterior is proportional to
+\begin{align}
+p\left(w_{1}, \dots, w_{K}\right)\prod_{1}^{n} \indic{u_{j} < w_{s_{j}}} g\left(y_{j} \vert \theta_{s_{j}}\right) \prod_{1}^{K} h\left(\theta_{i}\right)
+\end{align}
+where $K$ is chosen so the amount of stick left in the stick breaking process is
+less than $\min\left(u_{i}\right)$.
+
+Slice sampling can also be extended to normalized CRMs.
 
 \end{document}
