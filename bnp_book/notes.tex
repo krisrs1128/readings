@@ -471,6 +471,47 @@ look like
 \end{align}
 where you interpret $\eta_{i}$ as scores and $\lambda_{j}$ as loadings.
 
-Now on to functional data analysis.
+Now on to functional data analysis. Idea is you have a different function for
+each subject, but want to share information across subjects. This looks like
+
+\begin{align}
+  y_{i}\left(t\right) &= \eta_{i}\left(t\right) + \eps_{i}\left(t\right) \\
+  \eps_{i}\left(t\right) &\sim \Gsn\left(0, \sigma^{2}\right) \\
+  \eta_{i} &\sim P
+\end{align}
+
+The methods reviewed differ mainly in how they model the random functions
+$\eta_{i}$. A first approach is to expand $\eta$ according to some basis
+functions (e.g., splines). Then you can put a nonparametric prior on the
+coefficients of these basis functions, see Ray and Mallick 2006. Note that you
+have to be careful about label switching when doing MCMC. See Stephens 2005 for
+some postprocessing techniques. But beware that sometimes you encounter
+different partition configurations during sampling (the clusters don't have the
+same interpretation across iterations) so you should instead think of some sort
+of averaging within a selected partition (see Medvedovic and Sivaganesan).
+
+Instead of specifying a basis, you could use a functional DP,
+$P \sim DP\left(\alpha P_{0}\right)$ where $P_{0}$ is a gaussian process. Of
+course, you still need to specify the covariance function.
+
+Another alternative is to use kernel smooething ideas: represent each
+$\eta\left(t\right)$ as
+\begin{align}
+\eta\left(t\right) &= \int_{T} K\left(x, u\right) d\gamma\left(u\right).
+\end{align}
+
+A different problems is joint modeling. The idea is to come up with clusters
+simultaneously across data types (multitable extensions?). A variation is to
+cluster on subsets of attributes (Cosa -- see Friedman and Muelman or Guindani
+and Gelfand). For sharing information across distinct centers, one approach is a
+``Mixture of Dependent DP''s which has one global DP and many center specific
+ones, another is the hierarchical DP. If you want the DPs to potentially be
+exactly the same across two centers, you can use a nested DP.
+
+Next we consider modeling in regression-like contexts. An idea is to index
+families of nonparametric priors according to predictors,
+\begin{align}
+P_{\mathcal{X}} &= \{P_{x} : x \in \mathcal{X}\} \sim \mathcal{P}
+\end{align}
 
 \end{document}
