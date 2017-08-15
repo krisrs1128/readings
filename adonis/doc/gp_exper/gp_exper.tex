@@ -282,8 +282,8 @@ our simulation study. Code for this procedure is provided in code block
 
 Ideally, we would be able to produce valid $p$-values without assuming too much
 knowledge of the underlying data generating mechanism. To this end, we consider
-applying a generalized least squares to the regression of the first species
-abundances onto the site characteristic. The assumed model has the form
+applying a generalized least squares (GLS) to the regression of the first
+species abundances onto the site characteristic. The assumed model has the form
 $x_{i1} = \beta_{y_{i}} + \eps_{i}$ where
 $\left(\eps_{1}, \dots, \eps_{n}\right)^{T} &\sim \Gsn\left(0, \Sigma\right)$.
 This addresses the correlation between errors, but not the nonzero means
@@ -294,7 +294,43 @@ uniform.
 \subsection{Generalized Additive Models}
 \label{subsec:generalized_additive_models}
 
+To this point, we have avoided using knowledge about the smoothly varying nature
+of the species abundances and site characteristic probabilities. We had been
+hoping to derive valid procedures without too much problem-specific knowledge.
+While we have succeeded in finding procedures that are much more robust than
+adonis, none of those we have described so far have been completely valid. On
+the other hand, if we had identified this particular problem structure, we we
+would be able to build it into our modeling strategy. This results in both a
+better fitting model and valid hypothesis tests.
 
+To this end, we will consider a generalized additive model (GAM) with nonlinear
+interactions terms for the effect of sites on species abundances. This exactly
+reflects the true smoothly varying nature of abundances across sites, built into
+the GP data generating mechanism. The code for this procedure is provided in
+code block \ref{code:gam}.
+
+If the estimated GAM influence of site location $u$ on species abundances $x$
+match the true underlying GP, then the errors will indeed by i.i.d. normals, so
+the assumptions required for testing will be fulfilled.
+
+Whether this much structural knowledge will ever be available in practical data
+analysis is unclear, and the possibility that it might not available or might
+not be correctly specified is the main deficiency of this approach.
+
+\begin{code}
+\begin{minted}[mathescape, linenos, frame=lines, framesep=2mm]{R}
+gam(
+  x[, 1] ~ y + ti(u[, 1]) + ti(u[, 2]) + ti(u[, 1], u[, 2]),
+  family = "poisson"
+)
+\end{minted}
+\captionof{An example call for Poisson regression with a smooth influence of the
+  site location on abundance. The first two \texttt{ti} terms correspond to
+  nonlinear main effects of site location, while the third provides an
+  interaction. The corresponding call for gaussian response uses a
+  \texttt{gaussian} family argument.}
+\label{code:gam}
+\end{code}
 
 \section{Results}
 \label{sec:results}
