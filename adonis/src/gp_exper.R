@@ -13,73 +13,30 @@
 ###############################################################################
 library("kernlab")
 library("vegan")
+library("mgcv")
+library("nlme")
 library("tidyverse")
 library("reshape2")
 library("mvtnorm")
 library("viridis")
 library("scales")
+source("utils.R")
 theme_set(
   ggscaffold::min_theme(list(text_size = 7, subtitle_size = 9))
 )
-
-print_iter <- function(i, m = 10) {
-  if (i %% m == 0) {
-    cat(sprintf("iteration %s\n", i))
-  }
-}
-
-logit <- function(x) {
-  1 / (1 + exp(-x))
-}
-
-plot_species_counts <- function(x, u, y) {
-  plot_df <- data.frame("x" = x, "u" = u, "y" = y) %>%
-    melt(
-      id.vars = c("u.1", "u.2", "y"),
-      variable = "species",
-      value.name = "count"
-    )
-
-  ggplot(plot_df) +
-    geom_point(
-      aes(x = u.1, y = count, size = u.2, col = as.factor(y)),
-      alpha = 0.4
-    ) +
-    scale_y_continuous(breaks = trans_breaks(identity, identity, n = 3)) +
-    scale_size_continuous(range = c(0.005, 1.5)) +
-    scale_color_brewer(palette = "Set2") +
-    facet_wrap(~species, scales = "free") +
-    labs(col = "y") +
-    theme(
-      strip.text.x = element_blank(),
-      axis.text.x = element_blank(),
-      axis.text.y = element_text(size = 7)
-    )
-}
 
 ###############################################################################
 ## simulate underlying categorical data
 ###############################################################################
 
 ## variables used throughout experiment
-n_sim <- 1000
-p1 <- 20
+n_sim <- 400
+p1 <- 15
 p2 <- 2
 n <- 100
 u <- matrix(runif(n * p2), n, p2)
 K <- kernelMatrix(rbfdot(sigma = 5), u)
-
-## generate matrix y according to logit
 probs <- t(logit(rmvnorm(n_sim, sigma = K)))
-y <- matrix(0, n, n_sim)
-for (i in seq_len(n)) {
-  for (j in seq_len(n_sim)) {
-    y[i, j] <- sample(
-      0:1, 1,
-      prob = c(1 - probs[i, j], probs[i, j])
-    )
-  }
-}
 
 ###############################################################################
 ## perform poisson and gaussian adonis / lm experiments
@@ -94,7 +51,8 @@ models <- list(
   "gaussian" = list(
     "adonis" = list(),
     "logistic" = list(),
-    "lm" = list()
+    "lm" = list(),
+    "gls" = list()
   )
 )
 
@@ -103,18 +61,26 @@ for (i in seq_len(n_sim)) {
   print_iter(i)
   f <- t(rmvnorm(p1, sigma = K))
   x <- matrix(rpois(n * p1, lambda = exp(f)), n, p1)
-  models$poisson$adonis[[i]] <- adonis(x ~ y[, i] + u, method = "bray")
-  models$poisson$logistic[[i]] <- glm(y[, i] ~ x + u, family = binomial())
-  models$poisson$lm[[i]] <- glm(x[, 1] ~ y[, i] + u, family = "poisson")
+  y <- sample_probs(probs[, i])
+  models$poisson$adonis[[i]] <- adonis(x ~ y + u, method = "bray", perm = 10)
+  models$poisson$logistic[[i]] <- glm(y ~ x + u, family = binomial())
+  models$poisson$lm[[i]] <- glm(x[, 1] ~ y + u, family = "poisson")
+  models$poisson$gls[[i]] <- gls(x[, 1] ~ y + u)
+  models$poisson$mds[[i]] <- mds_lm(x, cbind(y, u))
+  models$poisson$gam[[i]] <- gam(x[, 1] ~ y + ti(u[, 1]) + ti(u[, 2]) + ti(u[, 1], u[, 2]))
 }
 
 ## Gaussian setup
 for (i in seq_len(n_sim)) {
   print_iter(i)
+  y <- sample_probs(probs[, i])
   x <- t(rmvnorm(p1, sigma = K))
-  models$gaussian$adonis[[i]] <- adonis(x ~ y[, i] + u, method = "euclidean")
-  models$gaussian$logistic[[i]] <- glm(y[, i] ~ x + u, family = binomial())
-  models$gaussian$lm[[i]] <- lm(x[, 1] ~ y[, i] + u)
+  models$gaussian$adonis[[i]] <- adonis(x ~ y + u, method = "euclidean", perm = 10)
+  models$gaussian$logistic[[i]] <- glm(y ~ x + u, family = binomial())
+  models$gaussian$lm[[i]] <- lm(x[, 1] ~ y + u)
+  models$gaussian$gls[[i]] <- gls(x[, 1] ~ y + u)
+  models$gaussian$mds[[i]] <- mds_lm(x, cbind(y, u))
+  models$gaussian$gam[[i]] <- gam(x[, 1] ~ y + ti(u[, 1]) + ti(u[, 2]) + ti(u[, 1], u[, 2]))
 }
 
 ###############################################################################
@@ -122,21 +88,27 @@ for (i in seq_len(n_sim)) {
 ###############################################################################
 pvals <- list(
   "poisson" = list(
-    "adonis" = sapply(models$poisson$adonis, function(x) x$aov.tab["y[, i]", "Pr(>F)"]),
+    "adonis" = sapply(models$poisson$adonis, function(x) x$aov.tab["y", "Pr(>F)"]),
     "logistic" = sapply(models$poisson$logistic, function(x) coef(summary(x))[2:(p1 + 1), "Pr(>|z|)"]),
-    "lm" = sapply(models$poisson$lm, function(x) coef(summary(x))["y[, i]", "Pr(>|z|)"])
+    "lm" = sapply(models$poisson$lm, function(x) coef(summary(x))["y", "Pr(>|z|)"]),
+    "gls" = sapply(models$poisson$gls, function(x) coef(summary(x))["y", "p-value"]),
+    "mds" = sapply(models$poisson$mds, mds_lm_pvals),
+    "gam" = sapply(models$poisson$gam, function(x) summary(x)$p.pv["y"])
   ),
   "gaussian" = list(
-    "adonis" = sapply(models$gaussian$adonis, function(x) x$aov.tab["y[, i]", "Pr(>F)"]),
+    "adonis" = sapply(models$gaussian$adonis, function(x) x$aov.tab["y", "Pr(>F)"]),
     "logistic" = sapply(models$gaussian$logistic, function(x) coef(summary(x))[2:(p1 + 1), "Pr(>|z|)"]),
-    "lm" = sapply(models$gaussian$lm, function(x) coef(summary(x))["y[, i]", "Pr(>|t|)"])
+    "lm" = sapply(models$gaussian$lm, function(x) coef(summary(x))["y", "Pr(>|t|)"]),
+    "gls" = sapply(models$gaussian$gls, function(x) coef(summary(x))["y", "p-value"]),
+    "mds" = sapply(models$gaussian$mds, mds_lm_pvals),
+    "gam" = sapply(models$gaussian$gam, function(x) summary(x)$p.pv["y"])
   )
 )
 
 m_pvals <- melt(pvals)
 colnames(m_pvals) <- c("pval", "rsv", "sim", "method", "mechanism")
 
-m_pvals$method <- factor(m_pvals$method, levels = c("adonis", "logistic", "lm"))
+m_pvals$method <- factor(m_pvals$method, levels = names(pvals$poisson))
 p <- ggplot(m_pvals) +
   geom_histogram(aes(x = pval), binwidth = 0.02) +
   scale_y_continuous(breaks = trans_breaks(identity, identity, n = 2)) +
@@ -153,14 +125,14 @@ save(pvals, models, file = "data/exper.rda")
 f <- t(rmvnorm(p1, sigma = K))
 x <- matrix(rpois(n * p1, lambda = exp(f)), n, p1)
 
-p <- plot_species_counts(x, u, y[, 1])
+p <- plot_species_counts(x, u, y)
 ggsave("../doc/gp_exper/figure/x_poisson.png", p, width = 4.5, height = 1.7)
 
 x <- t(rmvnorm(p1, sigma = K))
-p <- plot_species_counts(x, u, y[, 1])
+p <- plot_species_counts(x, u, y)
 ggsave("../doc/gp_exper/figure/x_gaussian.png", p, width = 4, height = 1.7)
 
-plot_df <- data.frame("y" = y[, 1], "p" = probs[, 1], "u" = u)
+plot_df <- data.frame("y" = y, "p" = probs[, n_sim], "u" = u)
 p <- ggplot(plot_df) +
   geom_point(
     aes(x = u.1, y = p, size = u.2),
