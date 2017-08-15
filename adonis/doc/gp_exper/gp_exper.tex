@@ -39,22 +39,24 @@ is what is simulated in adonis' permutation null, and if the processes are
 actually independent but with within-process site correlation, adonis will
 report that there is an association between them, when there are in fact none.
 
-We will describe some simple linear-model based alternatives to adonis that
-provide ``better'' (but actually still invalid) $p$-values. These alternatives
-also cannot be applied when only distances between sites is available -- a
-setting which is meaningful in microbiome studies, where working entirely with
-UniFrac distances \citep{lozupone2005unifrac} is common, for example.
+We will describe some simple linear-model based alternatives to adonis that that
+seem much better behaved. These alternatives also cannot be applied when only
+distances between sites is available -- a setting which is meaningful in
+microbiome studies, where working entirely with UniFrac distances
+\citep{lozupone2005unifrac} is common, for example.
 
-There are two main limitations in this note,
+There are three main limitations in this note,
 \begin{itemize}
 \item As in any simulation study, the conclusions are only as useful as the
   simulation mechanism is representative of the data encountered in practice.
   Ideally we could characterize the plausibility of our simulation mechanism,
   with respect to real data.
-\item None of our alternatives are quite satisfactory, because the $p$-values
-  are still not quite valid, and because they cannot be applied to different
-  kinds of distances. We could imagine more sophisticated approaches, based on
-  model-free knockoffs, for example.
+\item None of our alternatives are quite satisfactory, because either (1) they
+  assume little knowledge about the data generating mechanism, but provide
+  invalid $p$-values, or (2) they provide valid $p$-values, but require
+  substantial knowledge of the data generating mechanism.
+\item We do not provide well-behaved alternatives to adonis when a noneuclidean
+  distance across species is desired.
 \end{itemize}
 
 Hopefully these deficiencies will be resolved as this work matures.
@@ -275,6 +277,25 @@ our simulation study. Code for this procedure is provided in code block
 \label{code:linear_reg}
 \end{code}
 
+\subsection{Generalized Least Squares}
+\label{subsec:generalized_least_squares}
+
+Ideally, we would be able to produce valid $p$-values without assuming too much
+knowledge of the underlying data generating mechanism. To this end, we consider
+applying a generalized least squares to the regression of the first species
+abundances onto the site characteristic. The assumed model has the form
+$x_{i1} = \beta_{y_{i}} + \eps_{i}$ where
+$\left(\eps_{1}, \dots, \eps_{n}\right)^{T} &\sim \Gsn\left(0, \Sigma\right)$.
+This addresses the correlation between errors, but not the nonzero means
+resulting from model misspecification. From the simulation results, we can see
+that this remaining misspecification is enough to keep the $p$-values from being
+uniform.
+
+\subsection{Generalized Additive Models}
+\label{subsec:generalized_additive_models}
+
+
+
 \section{Results}
 \label{sec:results}
 
@@ -302,13 +323,13 @@ so many more $p$-values in the logistic regression row of figure
 
 Evidently, the $p$-values associated with all procedures are not quite uniform.
 In light of our earlier discussion, this is not surprising. Both the logistic
-and linear regression models fail because the errors are correlated, since the
-location $u$ has a nonlinear influence on both $x$ and $y$. The adonis
-permutation procedure also fails to account for the influence of $u$, since it
-breaks the correlation between sites. However, those provided by adonis are
-strongly concentrated on very low values. Indeed, the permutation procedure in
-this setting seems poorly suited in the case of correlated sites, even when they
-are included as covariates in the regression.
+and linear regression models fail because the errors are neither independent nor
+identically distributed, since the location $u$ has a nonlinear influence on
+both $x$ and $y$. The adonis permutation procedure also fails to account for the
+influence of $u$, since it breaks the correlation between sites. However, those
+provided by adonis are strongly concentrated on very low values. Indeed, the
+permutation procedure in this setting seems poorly suited in the case of
+correlated sites, even when they are included as covariates in the regression.
 
 \bibliographystyle{plainnat}
 \bibliography{refs.bib}
