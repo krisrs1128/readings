@@ -4,7 +4,7 @@
 ## Functions to accompany the study of nonparametric ANOVA.
 ##
 ## author: sankaran.kris@gmail.com
-## date: 06/19/2017
+## date: 08/15/2017
 
 factor_x <- function(n_rows, p_levels) {
   factors <- vector("list", length = length(p_levels))
@@ -168,11 +168,13 @@ plot_species_counts <- function(x, u, y) {
     )
 }
 
-mds_lm <- function(y, x, K = 3) {
-  mds_y <- cmdscale(dist(y), k = K)
+mds_lm <- function(x, y, u, K = 3, ...) {
+  mds_x <- cmdscale(vegdist(x, ...), k = K)
   models <- list()
   for (k in seq_len(K)) {
-    models[[k]] <- lm(mds_y[, k] ~ x)
+    models[[k]] <- gam(
+      mds_x[, k] ~ y + ti(u[, 1]) + ti(u[, 2]) + ti(u[, 1], u[, 2])
+    )
   }
   models
 }
@@ -180,7 +182,7 @@ mds_lm <- function(y, x, K = 3) {
 mds_lm_pvals <- function(m) {
   pvals <- list()
   for (i in seq_along(m)) {
-    pvals[[i]] <- coef(summary(m[[i]]))["xy", "Pr(>|t|)"]
+    pvals[[i]] <- summary(m[[i]])$p.pv["y"]
   }
   unlist(pvals)
 }

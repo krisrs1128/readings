@@ -39,22 +39,24 @@ is what is simulated in adonis' permutation null, and if the processes are
 actually independent but with within-process site correlation, adonis will
 report that there is an association between them, when there are in fact none.
 
-We will describe some simple linear-model based alternatives to adonis that
-provide ``better'' (but actually still invalid) $p$-values. These alternatives
-also cannot be applied when only distances between sites is available -- a
-setting which is meaningful in microbiome studies, where working entirely with
-UniFrac distances \citep{lozupone2005unifrac} is common, for example.
+We will describe some simple linear-model based alternatives to adonis that that
+seem much better behaved. These alternatives also cannot be applied when only
+distances between sites is available -- a setting which is meaningful in
+microbiome studies, where working entirely with UniFrac distances
+\citep{lozupone2005unifrac} is common, for example.
 
-There are two main limitations in this note,
+There are three main limitations in this note,
 \begin{itemize}
 \item As in any simulation study, the conclusions are only as useful as the
   simulation mechanism is representative of the data encountered in practice.
   Ideally we could characterize the plausibility of our simulation mechanism,
   with respect to real data.
-\item None of our alternatives are quite satisfactory, because the $p$-values
-  are still not quite valid, and because they cannot be applied to different
-  kinds of distances. We could imagine more sophisticated approaches, based on
-  model-free knockoffs, for example.
+\item None of our alternatives are quite satisfactory, because either (1) they
+  assume little knowledge about the data generating mechanism, but provide
+  invalid $p$-values, or (2) they provide valid $p$-values, but require
+  substantial knowledge of the data generating mechanism.
+\item We do not provide well-behaved alternatives to adonis when a noneuclidean
+  distance across species is desired.
 \end{itemize}
 
 Hopefully these deficiencies will be resolved as this work matures.
@@ -275,6 +277,133 @@ our simulation study. Code for this procedure is provided in code block
 \label{code:linear_reg}
 \end{code}
 
+\subsection{Generalized Least Squares}
+\label{subsec:generalized_least_squares}
+
+Ideally, we would be able to produce valid $p$-values without assuming too much
+knowledge of the underlying data generating mechanism. To this end, we consider
+applying a generalized least squares (GLS) to the regression of the first
+species abundances onto the site characteristic. The assumed model has the form
+$x_{i1} = \beta_{y_{i}} + \eps_{i}$ where
+$\left(\eps_{1}, \dots, \eps_{n}\right)^{T} \sim \Gsn\left(0, \Sigma\right)$.
+This addresses the correlation between errors, but not the nonzero means
+resulting from model misspecification. From the simulation results, we can see
+that this remaining misspecification is enough to keep the $p$-values from being
+uniform.
+
+\subsection{Generalized Additive Models}
+\label{subsec:generalized_additive_models}
+
+To this point, we have avoided using knowledge about the smoothly varying nature
+of the species abundances and site characteristic probabilities. We had been
+hoping to derive valid procedures without too much problem-specific knowledge.
+While we have succeeded in finding procedures that are much more robust than
+adonis, none of those we have described so far have been completely valid. On
+the other hand, if we had identified this particular problem structure, we we
+would be able to build it into our modeling strategy. This results in both a
+better fitting model and valid hypothesis tests.
+
+To this end, we will consider a generalized additive model (GAM) with nonlinear
+interactions terms for the effect of sites on species abundances. This exactly
+reflects the true smoothly varying nature of abundances across sites, built into
+the GP data generating mechanism. The code for this procedure is provided in
+code block \ref{code:gam}.
+
+If the estimated GAM influence of site location $u$ on species abundances $x$
+match the true underlying GP, then the errors will indeed by i.i.d. normals, so
+the assumptions required for testing will be fulfilled.
+
+Whether this much structural knowledge will ever be available in practical data
+analysis is unclear, and the possibility that it might not available or might
+not be correctly specified is the main deficiency of this approach.
+
+\begin{code}
+\begin{minted}[mathescape, linenos, frame=lines, framesep=2mm]{R}
+gam(
+  x[, 1] ~ y + ti(u[, 1]) + ti(u[, 2]) + ti(u[, 1], u[, 2]),
+  family = "poisson"
+)
+\end{minted}
+\captionof{listing}{An example call for Poisson regression with a smooth
+  influence of the site location on abundance. The first two \texttt{ti} terms
+  correspond to nonlinear main effects of site location, while the third
+  provides an interaction. The corresponding call for gaussian response uses a
+  \texttt{gaussian} family argument.}
+\label{code:gam}
+\end{code}
+
+\subsection{MDS follows by GAM}
+\label{subsec:mds_followed_by_gam}
+
+The primary appeal of adonis in the microbiome literature is that it allows the
+use of a distance matrix computed across many species as a ``response''
+variable. Generally, there is an interest in whether certain site
+characteristics might induce different species profiles, depending on their
+value, and using a species-profile based distance matrix serves as a type of
+proxy for this.
+
+The only approach we have found so far that we would feel comfortable
+recommending to practitioners is the GAM-based approach\footnote{That was used a
+  GAM here is not particularly important. Any method that captured smooth
+  geographic variation across sites in our simulation would have suffied.}:
+large-scale (e.g., geographic) site variation in species abundances should be
+modeled before quantifying the influence of other site characteristics.
+
+The main barrier that keeps us from achieving these two goals simultaneously is
+that there are few (if any?) flexible modeling approaches that use distances
+matrices as a ``response variable''. Most modeling techniques work with a vector
+of responses. However, this also suggests one basic idea for blending
+perspectives without designing entirely new algorithms -- we can embded
+arbitrary distances into some euclidean space, and then apply modeling
+techniques in this artificial space.
+
+Concretely, we consider the following meta-algorithm,
+
+\begin{itemize}
+\item Compute a distance matrix between sites' species abundance profiles, using
+  any distance of interest.
+\item Embed this distance matrix into a $K$-dimensional euclidean space, using
+  multidimensional scaling. 
+\item Perform either a single $K$-dimensional multiresponse regression or $K$
+  separate single-response regressions, paying attention to the underlying site
+  variation, as in the GAM example above.
+\end{itemize}
+
+The optimal choices of distance, $K$, and final regression strategy are not
+entirely clear, and the choice is left to the modeler. Note that a separate
+coefficient is estimated for each response dimension -- this can complicate
+interpretation of the influence of individual factors on site profiles. However,
+displaying the intermediate MDS plot can help -- it might turn out that
+different groups of species vary along different MDS dimensions, and a site
+characteristic might only be associated with the abundances of one of these
+groups of species.
+
+Since the GAM approach was successful in the last example, we use it again
+within this MDS approach. The implementation we apply is provided in code block
+\ref{code:mds_gam}, where the distance is either ``bray'' or ``euclidean''
+depending on the Poisson or Gaussian setup.
+
+\begin{code}
+\begin{minted}[mathescape, linenos, frame=lines, framesep=2mm]{R}
+mds_lm <- function(x, y, u, K = 3, ...) {
+  mds_x <- cmdscale(vegdist(x, ...), k = K)
+  models <- list()
+  for (k in seq_len(K)) {
+    models[[k]] <- gam(
+      mds_x[, k] ~ y + ti(u[, 1]) + ti(u[, 2]) + ti(u[, 1], u[, 2])
+    )
+  }
+  models
+}
+\end{minted}
+\captionof{listing}{The function we use to do inference on site characteristic
+  across entire species profiles, using the MDS + GAM approach. The idea is that
+  the $K$ MDS embedded dimensions are each used as responses for $K$ separate
+  GAM fits, where the underlying MDS scores are assumed to vary smoothly as a
+  function of site location.}
+\label{code:gam}
+\end{code}
+
 \section{Results}
 \label{sec:results}
 
@@ -283,11 +412,11 @@ For each data generating mechanism and method described in section
 described in figure \ref{fig:pvals_comparison}.
 
 More precisely, the adonis $p$-value is the permutation $p$-value for the $y$
-covariate, and the (Poisson) linear model $p$-values those for the coefficient
-of the $y$ covariate. In contrast, the $p$-values for the logistic regression
-are those associated with coefficients for each species -- this is why there are
-so many more $p$-values in the logistic regression row of figure
-\ref{fig:pvals_comparison}.
+covariate, and the (Poisson) linear model, the GLS, and the GAMs are the
+$p$-values for the coefficient of the $y$ covariate. In contrast, the $p$-values
+for the logistic regression are those associated with coefficients for each
+species -- this is why there are so many more $p$-values in the logistic
+regression row of figure \ref{fig:pvals_comparison}.
 
 \begin{figure}
   \centering
@@ -295,20 +424,41 @@ so many more $p$-values in the logistic regression row of figure
   \caption{\label{fig:pvals_comparison} A comparison of the null $p$-values
     according to the different data-generating mechanisms and methods. Different
     methods are arranged across rows, while the GP and Poisson-GP data
-    generating mechanisms are in the left and right columns, respectively.
-    Ideally, these would all look approximately uniform, and the fact that they
-    are not means these tests are not valid.}
+    generating mechanisms are in the left and right columns, respectively. Since
+    there is no real association between site characteristic and species
+    abundances, the degree of nonuniformity indicates how (in)valid the
+    different tests are.}
 \end{figure}
 
-Evidently, the $p$-values associated with all procedures are not quite uniform.
-In light of our earlier discussion, this is not surprising. Both the logistic
-and linear regression models fail because the errors are correlated, since the
+Evidently, the $p$-values associated the adonis, logistic regression, linear
+model, and GLS are all not quite valid. In light of our earlier discussion, this
+is not surprising. Both the logistic and linear regression models fail because
+the errors are neither independent nor identically distributed, since the
 location $u$ has a nonlinear influence on both $x$ and $y$. The adonis
 permutation procedure also fails to account for the influence of $u$, since it
 breaks the correlation between sites. However, those provided by adonis are
 strongly concentrated on very low values. Indeed, the permutation procedure in
 this setting seems poorly suited in the case of correlated sites, even when they
-are included as covariates in the regression.
+are included as covariates in the regression. Indeed, while the linear model
+based approaches are not quite valid, they seem more robust to misspecification
+than adonis. On the other hand, both the MDS and GAM approaches, which correctly
+model the nonlinear variation in abundance as a function of site location,
+produce uniform $p$-values.
+
+So, the essential takeaways of this study are,
+\begin{itemize}
+\item Permutation-based inference can lead to wildly incorrect conclusions when
+  sites are not truly exchangeable.
+\item Even when, as a result of smooth intersite variation, linear model
+  assumptions do not hold, inference tends to be more robust, though a degree of
+  skepticism should still be maintained.
+\item Ideally, the true structure of variation of species abundances across
+  sites should be investigated and accounted for in order to perform valid
+  inference on the influence of site characteristics.
+\item Simple approaches to blending distance and model-based perspectives are
+  available, though they add more work for the modeler and introduce some
+  complexity to interpretation.
+\end{itemize}
 
 \bibliographystyle{plainnat}
 \bibliography{refs.bib}
