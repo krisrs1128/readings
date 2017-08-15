@@ -412,11 +412,11 @@ For each data generating mechanism and method described in section
 described in figure \ref{fig:pvals_comparison}.
 
 More precisely, the adonis $p$-value is the permutation $p$-value for the $y$
-covariate, and the (Poisson) linear model $p$-values those for the coefficient
-of the $y$ covariate. In contrast, the $p$-values for the logistic regression
-are those associated with coefficients for each species -- this is why there are
-so many more $p$-values in the logistic regression row of figure
-\ref{fig:pvals_comparison}.
+covariate, and the (Poisson) linear model, the GLS, and the GAMs are the
+$p$-values for the coefficient of the $y$ covariate. In contrast, the $p$-values
+for the logistic regression are those associated with coefficients for each
+species -- this is why there are so many more $p$-values in the logistic
+regression row of figure \ref{fig:pvals_comparison}.
 
 \begin{figure}
   \centering
@@ -424,25 +424,40 @@ so many more $p$-values in the logistic regression row of figure
   \caption{\label{fig:pvals_comparison} A comparison of the null $p$-values
     according to the different data-generating mechanisms and methods. Different
     methods are arranged across rows, while the GP and Poisson-GP data
-    generating mechanisms are in the left and right columns, respectively.
-    Ideally, these would all look approximately uniform, and the fact that they
-    are not means these tests are not valid.}
+    generating mechanisms are in the left and right columns, respectively. Since
+    there is no real association between site characteristic and species
+    abundances, the degree of nonuniformity indicates how (in)valid the
+    different tests are.}
 \end{figure}
 
-Evidently, the $p$-values associated with all procedures are not quite uniform.
-In light of our earlier discussion, this is not surprising. Both the logistic
-and linear regression models fail because the errors are neither independent nor
-identically distributed, since the location $u$ has a nonlinear influence on
-both $x$ and $y$. The adonis permutation procedure also fails to account for the
-influence of $u$, since it breaks the correlation between sites. However, those
-provided by adonis are strongly concentrated on very low values. Indeed, the
-permutation procedure in this setting seems poorly suited in the case of
-correlated sites, even when they are included as covariates in the regression.
+Evidently, the $p$-values associated the adonis, logistic regression, linear
+model, and GLS are all not quite valid. In light of our earlier discussion, this
+is not surprising. Both the logistic and linear regression models fail because
+the errors are neither independent nor identically distributed, since the
+location $u$ has a nonlinear influence on both $x$ and $y$. The adonis
+permutation procedure also fails to account for the influence of $u$, since it
+breaks the correlation between sites. However, those provided by adonis are
+strongly concentrated on very low values. Indeed, the permutation procedure in
+this setting seems poorly suited in the case of correlated sites, even when they
+are included as covariates in the regression. Indeed, while the linear model
+based approaches are not quite valid, they seem more robust to misspecification
+than adonis. On the other hand, both the MDS and GAM approaches, which correctly
+model the nonlinear variation in abundance as a function of site location,
+produce uniform $p$-values.
 
 So, the essential takeaways of this study are,
-
 \begin{itemize}
-\item 
+\item Permutation-based inference can lead to wildly incorrect conclusions when
+  sites are not truly exchangeable.
+\item Even when, as a result of smooth intersite variation, linear model
+  assumptions do not hold, inference tends to be more robust, though a degree of
+  skepticism should still be maintained.
+\item Ideally, the true structure of variation of species abundances across
+  sites should be investigated and accounted for in order to perform valid
+  inference on the influence of site characteristics.
+\item Simple approaches to blending distance and model-based perspectives are
+  available, though they add more work for the modeler and introduce some
+  complexity to interpretation.
 \end{itemize}
 
 \bibliographystyle{plainnat}
