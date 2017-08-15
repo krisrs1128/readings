@@ -285,7 +285,7 @@ knowledge of the underlying data generating mechanism. To this end, we consider
 applying a generalized least squares (GLS) to the regression of the first
 species abundances onto the site characteristic. The assumed model has the form
 $x_{i1} = \beta_{y_{i}} + \eps_{i}$ where
-$\left(\eps_{1}, \dots, \eps_{n}\right)^{T} &\sim \Gsn\left(0, \Sigma\right)$.
+$\left(\eps_{1}, \dots, \eps_{n}\right)^{T} \sim \Gsn\left(0, \Sigma\right)$.
 This addresses the correlation between errors, but not the nonzero means
 resulting from model misspecification. From the simulation results, we can see
 that this remaining misspecification is enough to keep the $p$-values from being
@@ -324,11 +324,83 @@ gam(
   family = "poisson"
 )
 \end{minted}
-\captionof{An example call for Poisson regression with a smooth influence of the
-  site location on abundance. The first two \texttt{ti} terms correspond to
-  nonlinear main effects of site location, while the third provides an
-  interaction. The corresponding call for gaussian response uses a
+\captionof{listing}{An example call for Poisson regression with a smooth
+  influence of the site location on abundance. The first two \texttt{ti} terms
+  correspond to nonlinear main effects of site location, while the third
+  provides an interaction. The corresponding call for gaussian response uses a
   \texttt{gaussian} family argument.}
+\label{code:gam}
+\end{code}
+
+\subsection{MDS follows by GAM}
+\label{subsec:mds_followed_by_gam}
+
+The primary appeal of adonis in the microbiome literature is that it allows the
+use of a distance matrix computed across many species as a ``response''
+variable. Generally, there is an interest in whether certain site
+characteristics might induce different species profiles, depending on their
+value, and using a species-profile based distance matrix serves as a type of
+proxy for this.
+
+The only approach we have found so far that we would feel comfortable
+recommending to practitioners is the GAM-based approach\footnote{That was used a
+  GAM here is not particularly important. Any method that captured smooth
+  geographic variation across sites in our simulation would have suffied.}:
+large-scale (e.g., geographic) site variation in species abundances should be
+modeled before quantifying the influence of other site characteristics.
+
+The main barrier that keeps us from achieving these two goals simultaneously is
+that there are few (if any?) flexible modeling approaches that use distances
+matrices as a ``response variable''. Most modeling techniques work with a vector
+of responses. However, this also suggests one basic idea for blending
+perspectives without designing entirely new algorithms -- we can embded
+arbitrary distances into some euclidean space, and then apply modeling
+techniques in this artificial space.
+
+Concretely, we consider the following meta-algorithm,
+
+\begin{itemize}
+\item Compute a distance matrix between sites' species abundance profiles, using
+  any distance of interest.
+\item Embed this distance matrix into a $K$-dimensional euclidean space, using
+  multidimensional scaling. 
+\item Perform either a single $K$-dimensional multiresponse regression or $K$
+  separate single-response regressions, paying attention to the underlying site
+  variation, as in the GAM example above.
+\end{itemize}
+
+The optimal choices of distance, $K$, and final regression strategy are not
+entirely clear, and the choice is left to the modeler. Note that a separate
+coefficient is estimated for each response dimension -- this can complicate
+interpretation of the influence of individual factors on site profiles. However,
+displaying the intermediate MDS plot can help -- it might turn out that
+different groups of species vary along different MDS dimensions, and a site
+characteristic might only be associated with the abundances of one of these
+groups of species.
+
+Since the GAM approach was successful in the last example, we use it again
+within this MDS approach. The implementation we apply is provided in code block
+\ref{code:mds_gam}, where the distance is either ``bray'' or ``euclidean''
+depending on the Poisson or Gaussian setup.
+
+\begin{code}
+\begin{minted}[mathescape, linenos, frame=lines, framesep=2mm]{R}
+mds_lm <- function(x, y, u, K = 3, ...) {
+  mds_x <- cmdscale(vegdist(x, ...), k = K)
+  models <- list()
+  for (k in seq_len(K)) {
+    models[[k]] <- gam(
+      mds_x[, k] ~ y + ti(u[, 1]) + ti(u[, 2]) + ti(u[, 1], u[, 2])
+    )
+  }
+  models
+}
+\end{minted}
+\captionof{listing}{The function we use to do inference on site characteristic
+  across entire species profiles, using the MDS + GAM approach. The idea is that
+  the $K$ MDS embedded dimensions are each used as responses for $K$ separate
+  GAM fits, where the underlying MDS scores are assumed to vary smoothly as a
+  function of site location.}
 \label{code:gam}
 \end{code}
 
@@ -366,6 +438,12 @@ influence of $u$, since it breaks the correlation between sites. However, those
 provided by adonis are strongly concentrated on very low values. Indeed, the
 permutation procedure in this setting seems poorly suited in the case of
 correlated sites, even when they are included as covariates in the regression.
+
+So, the essential takeaways of this study are,
+
+\begin{itemize}
+\item 
+\end{itemize}
 
 \bibliographystyle{plainnat}
 \bibliography{refs.bib}
