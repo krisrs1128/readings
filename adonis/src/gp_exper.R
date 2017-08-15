@@ -62,12 +62,12 @@ for (i in seq_len(n_sim)) {
   f <- t(rmvnorm(p1, sigma = K))
   x <- matrix(rpois(n * p1, lambda = exp(f)), n, p1)
   y <- sample_probs(probs[, i])
-  models$poisson$adonis[[i]] <- adonis(x ~ y + u, method = "bray", perm = 10)
+  models$poisson$adonis[[i]] <- adonis(x ~ y + u, method = "bray")
   models$poisson$logistic[[i]] <- glm(y ~ x + u, family = binomial())
   models$poisson$lm[[i]] <- glm(x[, 1] ~ y + u, family = "poisson")
   models$poisson$gls[[i]] <- gls(x[, 1] ~ y + u)
   models$poisson$mds[[i]] <- mds_lm(x, cbind(y, u))
-  models$poisson$gam[[i]] <- gam(x[, 1] ~ y + u)
+  models$poisson$gam[[i]] <- gam(x[, 1] ~ y + te(u))
 }
 
 ## Gaussian setup
@@ -75,12 +75,12 @@ for (i in seq_len(n_sim)) {
   print_iter(i)
   y <- sample_probs(probs[, i])
   x <- t(rmvnorm(p1, sigma = K))
-  models$gaussian$adonis[[i]] <- adonis(x ~ y + u, method = "euclidean", perm = 10)
+  models$gaussian$adonis[[i]] <- adonis(x ~ y + u, method = "euclidean")
   models$gaussian$logistic[[i]] <- glm(y ~ x + u, family = binomial())
   models$gaussian$lm[[i]] <- lm(x[, 1] ~ y + u)
   models$gaussian$gls[[i]] <- gls(x[, 1] ~ y + u)
   models$gaussian$mds[[i]] <- mds_lm(x, cbind(y, u))
-  models$gaussian$gam[[i]] <- gam(x[, 1] ~ y + u)
+  models$gaussian$gam[[i]] <- gam(x[, 1] ~ y + te(u, bs = "tp"))
 }
 
 ###############################################################################
