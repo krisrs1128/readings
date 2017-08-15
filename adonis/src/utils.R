@@ -167,3 +167,20 @@ plot_species_counts <- function(x, u, y) {
       axis.text.y = element_text(size = 7)
     )
 }
+
+mds_lm <- function(y, x, K = 3) {
+  mds_y <- cmdscale(dist(y), k = K)
+  models <- list()
+  for (k in seq_len(K)) {
+    models[[k]] <- lm(mds_y[, k] ~ x)
+  }
+  models
+}
+
+mds_lm_pvals <- function(m) {
+  pvals <- list()
+  for (i in seq_along(m)) {
+    pvals[[i]] <- coef(summary(m[[i]]))["xy", "Pr(>|t|)"]
+  }
+  unlist(pvals)
+}
