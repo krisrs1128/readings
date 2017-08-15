@@ -30,7 +30,7 @@ theme_set(
 ###############################################################################
 
 ## variables used throughout experiment
-n_sim <- 400
+n_sim <- 1000
 p1 <- 15
 p2 <- 2
 n <- 100
@@ -62,7 +62,7 @@ for (i in seq_len(n_sim)) {
   f <- t(rmvnorm(p1, sigma = K))
   x <- matrix(rpois(n * p1, lambda = exp(f)), n, p1)
   y <- sample_probs(probs[, i])
-  models$poisson$adonis[[i]] <- adonis(x ~ y + u, method = "bray", perm = 10)
+  models$poisson$adonis[[i]] <- adonis(x ~ y + u, method = "bray")
   models$poisson$logistic[[i]] <- glm(y ~ x + u, family = binomial())
   models$poisson$lm[[i]] <- glm(x[, 1] ~ y + u, family = "poisson")
   models$poisson$gls[[i]] <- gls(x[, 1] ~ y + u)
@@ -75,7 +75,7 @@ for (i in seq_len(n_sim)) {
   print_iter(i)
   y <- sample_probs(probs[, i])
   x <- t(rmvnorm(p1, sigma = K))
-  models$gaussian$adonis[[i]] <- adonis(x ~ y + u, method = "euclidean", perm = 10)
+  models$gaussian$adonis[[i]] <- adonis(x ~ y + u, method = "euclidean")
   models$gaussian$logistic[[i]] <- glm(y ~ x + u, family = binomial())
   models$gaussian$lm[[i]] <- lm(x[, 1] ~ y + u)
   models$gaussian$gls[[i]] <- gls(x[, 1] ~ y + u)
