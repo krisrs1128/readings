@@ -514,4 +514,89 @@ families of nonparametric priors according to predictors,
 P_{\mathcal{X}} &= \{P_{x} : x \in \mathcal{X}\} \sim \mathcal{P}
 \end{align}
 
+This is useful for modeling conditional densities $f\left(y \vert x\right)$.
+One approach is to write mixture models like
+\begin{align}
+f\left(y \vert x\right) &= \int \int g\left(y; x, \theta, \varphi\right)dP_{x}\left(\theta\right) d\pi\left(\varphi\right)
+\end{align}
+where $\varphi$ gets a parametric prior and $\theta$ gets a nonparametric prior.
+
+Another idea is the dependent dirichlet process,
+\begin{align}
+  P_{x} &= \sum \pi_{k}\left(x\right)\delta_{\Theta_{k}}\left(x\right) \\
+  \Theta_{k} &\sim P_{0}
+\end{align}
+where the stick-breaking weights *and* the base measure draws are correlated
+according to $x$ (e.g., $P_{0}$ could be a GP). As is, this model is
+computationally intractable, but it is common to consider either varying weights
+or stochastic process base measures.
+
+Another idea is to mix between underlying DPs using a kernel. E.g.,
+\begin{align}
+f\left(y \vert x\right) &= \frac{1}{K\left(x, 0\right) + K\left(x, 1\right)}\left[K\left(x, 0\right)f_{0}^{\ast}\left(y\right) + K\left(x, 1\right)f_{1}^{\ast}\right]
+\end{align}
+interpolates between two (potentially nonparametric) densities $f_{0}$ and
+$f_{1}$ smoothly as a function of $x$.
+
+A related idea is to use
+
+\begin{align}
+  P_{x} &= \sum_{i = 1}^{n} \frac{\gamma_{i}K\left(x, x_{i}\right)}{\sum_{l = 1}^{n} \gamma_{l}K\left(x, x_{l}\right)} P_{i}^{\ast} \\
+  P_{i}^{\ast} &\sim DP\left(\alpha P_{0}\right)
+\end{align}
+and then plug this into the mixture model integral above to get a density
+$f\left(y \vert x\right)$.
+
+One appealing aspect of this nonparametric density modeling approach is that it
+allows modeling the full shapes of distributions of interest (e.g., gestational
+age at delivery, or BMI). This is useful when there is interest in the tails
+(e.g., people usually binarize extreme things so they can study risk in that
+way). On a related note, you don't expect the predictors to just change the mean
+of the distributions, but actually the entire shapes. Figure 7.7 is a really
+nice example of this, showing the difference in gestational age densities given
+different covariate values.
+
+Talks a bit about differential expression, GWAS, and haplotype inference
+applications of BNP. Also an application of species sapling to ESTs.
+
+BNP bayes factors seems not as well developed...
+
+\section{Chapter 8}
+\label{sec:chapter_8}
+
+Focus here is on product partition, species sampling, and polya tree models,
+instead of dirichlet process.
+
+Product partition models has usual likelihood when given clusters, but defines
+probabilities over partitions according to the product,
+
+\begin{align}
+p\left(\rho\right) &=\prod c\left(S_{i}\right)
+\end{align}
+
+Species sampling models further require that this probability is only a function
+of partition sizes,
+\begin{align}
+p\left(\rho\right) &= p\left(\absarg{S_{1}}, \dots, \absarg{S_{k}}\right)
+\end{align}
+
+Reviews polya trees a bit. An interesting trick is to cap the maximum number of
+levels in the tree -- this simplifies computation without changing inference
+much.
+
+There is an interesting survival analysis application usign the ANOVA DDP, which
+is a variation of DDPs described in chapter 7, but where the draws from the base
+measure are written as main and interaction effects coming from a pair of
+factors.
+
+Another application: ordinal data coming from many raters. An observed
+phenomenon is that raters tend to agree on extreme cases but not intermediate
+ones. This can make a naive application of bivariate ordinal probit models
+inappropriate. They instead use a two dimensional DPMM for the latent scores for
+two raters, where different mixture components can have different correlations
+(corresponding to different types of cases having more or less interrater
+reliability).
+
+They use a mixture of markov chains to model loss of heterozygosity data.
+
 \end{document}
