@@ -83,7 +83,7 @@ for (i in seq_len(n_sim)) {
   models$gaussian$lm[[i]] <- lm(x[, 1] ~ y + u)
   models$gaussian$gls[[i]] <- gls(x[, 1] ~ y + u)
   models$gaussian$gam[[i]] <- gam(x[, 1] ~ y + ti(u[, 1]) + ti(u[, 2]) + ti(u[, 1], u[, 2]))
-  models$gaussian$mds[[i]] <- mds_lm(x, cbind(y, u))
+  models$gaussian$mds[[i]] <- mds_lm(x, y, u, method = "euclidean")
 }
 
 ###############################################################################
