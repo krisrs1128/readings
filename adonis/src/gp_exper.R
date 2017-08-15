@@ -13,6 +13,7 @@
 ###############################################################################
 library("kernlab")
 library("vegan")
+library("mgcv")
 library("nlme")
 library("tidyverse")
 library("reshape2")
@@ -30,7 +31,7 @@ theme_set(
 
 ## variables used throughout experiment
 n_sim <- 1000
-p1 <- 20
+p1 <- 15
 p2 <- 2
 n <- 100
 u <- matrix(runif(n * p2), n, p2)
@@ -61,10 +62,12 @@ for (i in seq_len(n_sim)) {
   f <- t(rmvnorm(p1, sigma = K))
   x <- matrix(rpois(n * p1, lambda = exp(f)), n, p1)
   y <- sample_probs(probs[, i])
-  models$poisson$adonis[[i]] <- adonis(x ~ y + u, method = "bray", perm = 20)
+  models$poisson$adonis[[i]] <- adonis(x ~ y + u, method = "bray", perm = 10)
   models$poisson$logistic[[i]] <- glm(y ~ x + u, family = binomial())
   models$poisson$lm[[i]] <- glm(x[, 1] ~ y + u, family = "poisson")
   models$poisson$gls[[i]] <- gls(x[, 1] ~ y + u)
+  models$poisson$mds[[i]] <- mds_lm(x, cbind(y, u))
+  models$poisson$gam[[i]] <- gam(x[, 1] ~ y + u)
 }
 
 ## Gaussian setup
@@ -72,10 +75,12 @@ for (i in seq_len(n_sim)) {
   print_iter(i)
   y <- sample_probs(probs[, i])
   x <- t(rmvnorm(p1, sigma = K))
-  models$gaussian$adonis[[i]] <- adonis(x ~ y + u, method = "euclidean", perm = 19)
+  models$gaussian$adonis[[i]] <- adonis(x ~ y + u, method = "euclidean", perm = 10)
   models$gaussian$logistic[[i]] <- glm(y ~ x + u, family = binomial())
   models$gaussian$lm[[i]] <- lm(x[, 1] ~ y + u)
   models$gaussian$gls[[i]] <- gls(x[, 1] ~ y + u)
+  models$gaussian$mds[[i]] <- mds_lm(x, cbind(y, u))
+  models$gaussian$gam[[i]] <- gam(x[, 1] ~ y + u)
 }
 
 ###############################################################################
@@ -86,20 +91,24 @@ pvals <- list(
     "adonis" = sapply(models$poisson$adonis, function(x) x$aov.tab["y", "Pr(>F)"]),
     "logistic" = sapply(models$poisson$logistic, function(x) coef(summary(x))[2:(p1 + 1), "Pr(>|z|)"]),
     "lm" = sapply(models$poisson$lm, function(x) coef(summary(x))["y", "Pr(>|z|)"]),
-    "gls" = sapply(models$poisson$gls, function(x) coef(summary(x))["y", "p-value"])
+    "gls" = sapply(models$poisson$gls, function(x) coef(summary(x))["y", "p-value"]),
+    "mds" = sapply(models$poisson$mds, mds_lm_pvals),
+    "gam" = sapply(models$poisson$gam, function(x) summary(x)$p.pv["y"])
   ),
   "gaussian" = list(
     "adonis" = sapply(models$gaussian$adonis, function(x) x$aov.tab["y", "Pr(>F)"]),
     "logistic" = sapply(models$gaussian$logistic, function(x) coef(summary(x))[2:(p1 + 1), "Pr(>|z|)"]),
     "lm" = sapply(models$gaussian$lm, function(x) coef(summary(x))["y", "Pr(>|t|)"]),
-    "gls" = sapply(models$gaussian$gls, function(x) coef(summary(x))["y", "p-value"])
+    "gls" = sapply(models$gaussian$gls, function(x) coef(summary(x))["y", "p-value"]),
+    "mds" = sapply(models$gaussian$mds, mds_lm_pvals),
+    "gam" = sapply(models$gaussian$gam, function(x) summary(x)$p.pv["y"])
   )
 )
 
 m_pvals <- melt(pvals)
 colnames(m_pvals) <- c("pval", "rsv", "sim", "method", "mechanism")
 
-m_pvals$method <- factor(m_pvals$method, levels = c("adonis", "logistic", "lm", "gls"))
+m_pvals$method <- factor(m_pvals$method, levels = names(pvals$poisson))
 p <- ggplot(m_pvals) +
   geom_histogram(aes(x = pval), binwidth = 0.02) +
   scale_y_continuous(breaks = trans_breaks(identity, identity, n = 2)) +
@@ -123,7 +132,7 @@ x <- t(rmvnorm(p1, sigma = K))
 p <- plot_species_counts(x, u, y)
 ggsave("../doc/gp_exper/figure/x_gaussian.png", p, width = 4, height = 1.7)
 
-plot_df <- data.frame("y" = y, "p" = probs, "u" = u)
+plot_df <- data.frame("y" = y, "p" = probs[, n_sim], "u" = u)
 p <- ggplot(plot_df) +
   geom_point(
     aes(x = u.1, y = p, size = u.2),
@@ -142,16 +151,3 @@ p <- ggplot(plot_df) +
     axis.text.y = element_text(size = 7)
   )
 ggsave("../doc/gp_exper/figure/p_gp.png", p, width = 4, height = 2)
-
-###############################################################################
-## How might we be able to salvage the linear model approach?
-###############################################################################
-
-## the model is not valid as is because the errors are correlated
-plot(u[, 1], resid(models$gaussian$lm[[1]]))
-plot(u[, 2], resid(models$gaussian$lm[[1]]))
-
-
-###############################################################################
-## Can we still try to leverage interesting distances?
-###############################################################################
