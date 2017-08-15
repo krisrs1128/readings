@@ -66,8 +66,11 @@ for (i in seq_len(n_sim)) {
   models$poisson$logistic[[i]] <- glm(y ~ x + u, family = binomial())
   models$poisson$lm[[i]] <- glm(x[, 1] ~ y + u, family = "poisson")
   models$poisson$gls[[i]] <- gls(x[, 1] ~ y + u)
-  models$poisson$mds[[i]] <- mds_lm(x, cbind(y, u))
-  models$poisson$gam[[i]] <- gam(x[, 1] ~ y + ti(u[, 1]) + ti(u[, 2]) + ti(u[, 1], u[, 2]))
+  models$poisson$gam[[i]] <- gam(
+    x[, 1] ~ y + ti(u[, 1]) + ti(u[, 2]) + ti(u[, 1], u[, 2]),
+    family = "poisson"
+  )
+  models$poisson$mds[[i]] <- mds_lm(x, y, u, method = "bray")
 }
 
 ## Gaussian setup
@@ -79,8 +82,8 @@ for (i in seq_len(n_sim)) {
   models$gaussian$logistic[[i]] <- glm(y ~ x + u, family = binomial())
   models$gaussian$lm[[i]] <- lm(x[, 1] ~ y + u)
   models$gaussian$gls[[i]] <- gls(x[, 1] ~ y + u)
-  models$gaussian$mds[[i]] <- mds_lm(x, cbind(y, u))
   models$gaussian$gam[[i]] <- gam(x[, 1] ~ y + ti(u[, 1]) + ti(u[, 2]) + ti(u[, 1], u[, 2]))
+  models$gaussian$mds[[i]] <- mds_lm(x, cbind(y, u))
 }
 
 ###############################################################################
@@ -113,7 +116,7 @@ p <- ggplot(m_pvals) +
   geom_histogram(aes(x = pval), binwidth = 0.02) +
   scale_y_continuous(breaks = trans_breaks(identity, identity, n = 2)) +
   facet_grid(method ~ mechanism, scales = "free_y")
-ggsave("../doc/gp_exper/figure/pvals_comparison.png", width = 4, height = 2)
+ggsave("../doc/gp_exper/figure/pvals_comparison.png", width = 4, height = 3)
 
 ## save to file
 dir.create("data")
