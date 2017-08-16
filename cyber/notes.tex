@@ -1,0 +1,44 @@
+\documentclass{article}
+\usepackage{natbib}
+\usepackage{graphicx}
+\input{preamble.tex}
+
+\title{Notes on ``Data Analysis for Network Cybersecurity''}
+\author{Kris Sankaran}
+
+\begin{document}
+\section{Inference for Graphs and Networks}
+\label{sec:chapter1}
+
+$A$ is the adjacency matrix. $c\left(i\right)$ are covariates associated with
+the $i^{th}$ node. This is depressing, people are getting hacked and all we can
+write about is the karate network??
+
+Definition of Erdos-Renyi: $A_{ij} \sim \Ber\left(p\right)$ for $i < j$ and then
+symmetrize. No self-loops. This is often treated as a kind of null. A natural
+alternative is that there is block structure, e.g.,
+$A_{ij} \sim \Ber\left(p_{c\left(i\right)}p_{c\left(j\right)}\right)$ defines
+the standard stochastic blockmodel.
+
+Estimation fo the underlying $p_{c\left(i\right)c\left(j\right)}$ is
+combinatorially hard when the blocks are unobserved, but you can get pretty good
+approximate answers using the eigenvalues of the laplacian $L = D - A$ where $D$
+is diagonal with the degrees of the nodes. The point is that if there are
+actually $K$ clusters, then $K$ of the eigenvalues will be zero.
+
+They use a $\chi^{2}$ test to see whether the inter and intra subgroup link
+probabilities are equal to each other. You can also do a generalized likelihood
+ratio of null erdos-renyi vs. stochastic blockmodel, usign the fact that MLE can
+be computed from the spectral clustering approximation.
+
+An issue is that the statistics so far have only depended on degree
+distributions. This is a very coarse view of a network. An alternative is to
+sample from graphs under the null with an apriori fixed degree distribution, and
+then compute whatever other statistics on this.
+
+One issue swept under the rug is that many edges or nodes might not actually be
+observed. There doesn't seem to be a good way of dealing with this.
+
+There are no applications to cybersecurity here, pretty disappointing.
+
+\end{document}
