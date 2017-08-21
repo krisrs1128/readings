@@ -41,4 +41,38 @@ observed. There doesn't seem to be a good way of dealing with this.
 
 There are no applications to cybersecurity here, pretty disappointing.
 
+\section{Chatper 5}
+\label{sec:chapter_5}
+
+Two main approaches are signature-based and statistical, which is framed as a
+changepoint problem. Signature approach also has limitation that it can't deal
+with new kinds of attacks (looks for previous signatures).
+
+DDoS attacks work by sending a SYN packet but knot responding to the
+acknowledgement (causing a timeout). This builds up a queue as new SYN packets
+arrive, overloading the server.
+
+One question is whether you can distribute the work in detecting anomalies, so
+that the ``collector'' machine with analysis results only has to see a little of
+the original data.
+
+Raw data are all source and destination IPs, source and destination ports, start
+and end time of a flow, the protocol, and number of exchanged packets. There can
+be millions of IPs over a few days.
+
+To deal with the fact that there are so many IPs, a dimension reduction step is
+applied first, collapsing many flows into a few signature flows. Right now seems
+like they do random failtering or aggregation.
+
+They propose a changepoint test statistic based on ranks. Asymptotic theory
+gives the distribution of their statistic in the case that the packet data are
+really i.i.d.
+
+To distribute, each monitor runs a test, and sends the series with the smallest
+$p$-values.
+
+The attack specifies a particular type of packet, and those packet requests are
+completely hidden in ordinary TCP traffic. It makes sense that aggregating flows
+leads to poor detection.
+
 \end{document}
