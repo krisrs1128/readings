@@ -77,4 +77,58 @@ adaptive smoothing, averaging different amounts depending on how regular the
 function appears. They also show that this procedure gets within a log-factor of
 the oracle error when you know the actual support of nonzero coefficients.
 
+Gabor was interested in time-frequency localizations of functions, motivated by
+the uncertainty principle (which gives a lower bound on the product of variances
+in these two domains). Building dictionaries amounts to tiling this
+time-frequency plane up to this width constraint.
+
+Two kinds of dictionaries are the windowed fourier transform and the continuous
+wavelet transform, which we denote by $Sf\left(u, \xi\right)$ and $Wf\left(u,
+s\right)$, respectively, where $u$ is position, $\xi$ is frequency, and $s$ is
+scale.
+
+Wavelet orthonormal bases are a subclass that create a perfect tiling. Wavelet
+packet bases are a generalization that produce tilings that aren't nested w.r.t
+a single time (over frequencies). The local cosine basis is the same idea but
+reversing roles of time and frequency. These tiling portraits seem quite useful.
+
+When working with dictionaries, the two basic problems are dual-syntehsis
+(compute the project $f_{\Lambda}$ onto subset of vectors $V_{\Lambda}$) and
+dual-analysis (compute coefficients w.r.t some basis elements).
+
+We'll often want to find which subset $\Lambda$ in the overcomplete basis
+provide a good approximation, it will turn out that this solves the lagrangian
+
+\begin{align}
+\mathcal{L}_{0}\left(T, f, \Lambda\right) &= \|f - f_{\Lambda}\|^{2} + T^{2}\absarg{\Lambda}
+\end{align}
+
+If you weren't working with orthogonal basis vectors, you have more flexibility,
+but have to come up with a reasonable search strategy. Two common ones are
+matching pursuit (similar to forwards stepwise) and basis pursuit (similar to
+lasso). These will work if an incoherence property is satisfied,
+
+\begin{align}
+\max_{q \notin \Lambda_{T}} \sum_{p \in \Lambda_{T}} \absarg{\left<\tilde{\varphi}_p, \varphi_q\right>} < 1
+\end{align}
+which basically means dictionary elements in $\Lambda_{T}$ are not too close to
+those in it.
+
+Another type of problem that is often interesting ask you to find $f$ after it
+has been passed through some operator $U$, which loses some information,
+\begin{align}
+Y = U f + W,
+\end{align}
+this is called an inverse problem. A first approach is to use an SVD, based on
+eigenvectors of $U$. Or, your can threshold the diagonal elements.
+
+Superresolution is the problem of recovering signals that have been
+undersampled. Important cases are compressive sensing (solving this lets you
+skip lots of acquisition / sensing and get nearly as good results) and blind
+source separation
+
+\section{The Fourier Kingdom}
+\label{sec:chapter_2}
+
+
 \end{document}
