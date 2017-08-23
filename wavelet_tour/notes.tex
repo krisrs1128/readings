@@ -1,0 +1,80 @@
+\documentclass{article}
+\usepackage{natbib}
+\usepackage{graphicx}
+\usepackage{amsmath, amsfonts, amssymb}
+\input{preamble.tex}
+
+\title{Notes}
+\author{Kris Sankaran}
+
+\begin{document}
+
+\section{Sparse Representations}
+\label{sec:chapter_1}
+
+Sparse representations are useful. We'll also want overcomplete dictionaries,
+because things can be expressed sparsely when there is some redundancy, just
+like in ordinary language.
+
+The fourier transform represents regular, time-invariant signals in a sparse
+way, and is ideal there. But it is cumbersome when we care about transient
+phenomena. In this case, it can be better to use wavelets. Here we write
+
+\begin{align}
+  f = \sum_{j, n} \left<f, \psi_{j, n}\right> \psi_{j, n}
+\end{align}
+where $\psi_{j, n}$ are dilations and translations of the haar function (-1 and
+1 on the two halves of the unit interval) and the correlation is
+\begin{align}
+\left<f, \psi_{j, n}\right> &= \int f\left(t\right) \psi_{j, n}\left(t\right) dt
+\end{align}
+
+It is necessary to go back and forth between continuous functions and discrete
+sequences in this field. Continuous functions are the right objects for
+developing theory, while discrete sequences are necessary for actual computer
+implementations.
+
+First we look at sampling with linear approximations. We sample a signal $f$
+supported on the unit interval using a low-pass response, resulting in the
+length $N$ array,
+
+\begin{align}
+f\left[n\right] &= \left<f\left(x\right), \varphi_{s}\left(x - ns\right)\right>,
+\end{align}
+we hope that the $\varphi_{s}$'s make up a basis of an appropriate approximation
+space.
+
+The projection onto some (other?) orthogonal basis $\bar{g}_{1}, \dots,
+\bar{g}_{N}$ looks like
+\begin{align}
+\bar{f}_{N}\left(x\right) &= \sum_{m = 0}^{N - 1} \left<\bar{f}, \bar{g}_{m}\right>\bar{g}_{m}\left(x\right)
+\end{align}
+Really we want to adapt sampling points to the signal (ir)regularity. For
+nonlinear approximations, we don't just apply a linear approximation to the
+array $f\left[n\right]$. For example, if we use thresholding, we choose the top
+$M$ largest (in absolute value) coefficients $\left<f, g_m\right>$ and make
+approximations using just these.
+
+For compression, one approach is to quantize the wavelet coefficients. Also,
+sometimes you can improve performance by incorporating known geometric
+regularity (e.g., curvelets).
+
+We might imagine noise is introduce in the analog to digital sampling,
+\begin{align}
+X\left[n\right] &= f\left[n\right] + W\left[n\right]
+\end{align}
+for noise $W$. We will recover an estimate $\tilde{F} = DX$ using an operator
+$D$. The risk is
+
+\begin{align}
+r\left(D, f\right) &= \Earg{\|f - DX\|^{2}}
+\end{align}
+and the goal will be either to minimize a bayes risk (which puts a prior $\pi$
+on the signal $f$) or to be minimax and minimize over all $f\in \Theta$.
+
+Donoho and Johnstone showed that thresholding wavelet coefficients provides
+adaptive smoothing, averaging different amounts depending on how regular the
+function appears. They also show that this procedure gets within a log-factor of
+the oracle error when you know the actual support of nonzero coefficients.
+
+\end{document}
