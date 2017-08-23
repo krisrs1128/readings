@@ -130,5 +130,30 @@ source separation
 \section{The Fourier Kingdom}
 \label{sec:chapter_2}
 
+Linear time invariance of an operator $L$ means
+
+\begin{align}
+g\left(t\right) = Lf\left(t\right) \implies g\left(t - \tau\right) = L f_{\tau}\left(t\right)
+\end{align}
+
+The impulse response of hte operator $L$ is defined by
+
+\begin{align}
+h\left(t\right) &= L \delta\left(t\right)
+\end{align}
+and by time invariance,
+\begin{align}
+Lf\left(t\right) &= h\star f\left(t\right)
+\end{align}
+where $\star$ denotes convolution.
+
+The complex exponentials are eigenvectors of convolutions, with eigenvalues
+equal to the fourier transforms at the associated frequency.
+
+Write the fourier integral
+\begin{align}
+\hat{f}\left(\omega\right) &= \int f\left(t\right) e^{-i\omega t} dt
+\end{align}
+for the ``amount'' of oscillation w.r.t frequency $\omega$.
 
 \end{document}
