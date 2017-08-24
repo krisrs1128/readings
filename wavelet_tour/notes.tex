@@ -156,4 +156,102 @@ Write the fourier integral
 \end{align}
 for the ``amount'' of oscillation w.r.t frequency $\omega$.
 
+Two important results are the inverse fourier transform (represent $f$ as
+mixture of complex exponentials),
+
+\begin{align}
+f\left(t\right) &= \frac{1}{2\pi} \int \hat{f}\left(\omega\right) e^{i\omega t} d\omega
+\end{align}
+
+and the convolution theorem,
+
+\begin{align}
+g = h \star f &\implies \hat{g}\left(\omega\right) = \hat{h}\left(\omega\right) \hat{f}\left(\omega\right)
+\end{align}
+(assuming integrability).
+
+Both are proved using variants of fubini and DCT (since integrability in one
+coordinate doesn't imply joint integrability, have to use a tempering argument).
+
+The parseval / plancheral formulas say that norms and inner products are
+conserved by the fourier transform whenever $f \in L^{1} \cap L^{2}$. This can
+be used to extend the fourier transform to $L^{2}$, defining them as limits of
+transforms in $L^{1} \cap L^{2}$, which is dense in $L^{2}$.
+
+There is a close relationship between the ``size'' $f$ assigns to higher
+frequencies and it's regularity. A typical theorem is that, if $f$ satisfies
+
+\begin{align}
+\int \absarg{\hat{f}\left(\omega\right)} \left(1 + \absarg{\omega}^{p}\right) d\omega < \infty
+\end{align}
+then it is bounded and in $C^{p}$.
+
+There is also a tradeoff between localization in time and frequency. For
+example, if you ``narrow'' a function while keeping its norm constant,
+
+\begin{align}
+f\left(t\right) \to \frac{1}{\sqrt{s}}f\left(\frac{t}{s}\right),
+\end{align}
+then the fourier transform gets dilated,
+\begin{align}
+\hat{f}\left(\omega\right) \to \sqrt{s}\hat{f}\left(s\omega\right).
+\end{align}
+This phenomena is pretty general, and is formalized by the heisenberg
+uncertainty principle, which gives a lower bound on the product of the variances
+in the time and frequency domains. The proof uses the plancherel identity,
+cauchy-schwarz, and finally integration by parts. The lower bound is attained by
+the gaussian density.
+
+The total variation is defined as
+\begin{align}
+\|f\|_{V} &= \int \absarg{f^{\prime}\left(t\right)}dt
+\end{align}
+which can be seen to be
+\begin{align}
+\sum_{p} \absarg{f\left(x_{p + 1}\right) - f\left(x_{p}\right)},
+\end{align}
+where $x_{p}$ are the positions of extrema. The discrete analog is the
+definition on finite sequences.
+
+The loss-pass filtered version (the loww-pass filter is $\indic{\omega\in
+  \left[-\xi, \xi\right]}$, of a discontinuous function converges to the
+function in $L^{2}$ but not uniformly, because of gibbs oscillations at the
+points of discontinuity.
+
+In two dimensions, there is a neat relationship between total variation of a
+function and its length level sets ($H^{1}\left(d\Omega_{y}\right)$ is the
+length of the level set of height $y$),
+
+\begin{align}
+\|f\|_{V} &= \int H^{1}\left(d\Omega_{y}\right) dy
+\end{align}
+
+The radon transform is the fourier transform along rays in $R^{2}$.
+
+\section{Discrete Revolution}
+\label{sec:chapter_3}
+
+Setup is that we start with analog $f\left(t\right)$ and then digitize by
+sampling along a grid, $\left(f\left(ns\right)\right)_{n \in \integers}$.
+
+The discretized signal is written as
+
+\begin{align}
+\sum_{n = -\infty}^{\infty} f\left(ns\right)\delta\left(t - ns\right)
+\end{align}
+which has fourier transform
+\begin{align}
+\sum_{n = -\infty}^{\infty} f\left(ns\right)e^{-ins\omega}.
+\end{align}
+
+If $\hat{f}$ is supported in $\left[-\frac{\pi}{s}, \frac{\pi}{s}\right]$, then
+the shannon-whittaker theorem lets us reconstruct $f$ by smooth interpolation on
+the sampled points,
+\begin{align}
+f\left(t\right) &= \sum_{n} f\left(ns\right) \frac{\sin\left(\pi\left(t - ns\right) / s\right)}{\pi \left(t - ns\right) / s}
+\end{align}
+
+Block samplers approximate functions by piecewise constant / polynomial / spline
+bases.
+
 \end{document}
