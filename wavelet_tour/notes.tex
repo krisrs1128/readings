@@ -254,4 +254,54 @@ f\left(t\right) &= \sum_{n} f\left(ns\right) \frac{\sin\left(\pi\left(t - ns\rig
 Block samplers approximate functions by piecewise constant / polynomial / spline
 bases.
 
+Now we start thinking about the space of signals with period $N$, endowed with
+the inner product
+
+\begin{align}
+\left<f, g\right> &= \sum_{n = 0}^{N - 1} f\left[n\right] g^{\ast}\left[n\right]
+\end{align}
+
+then the family
+
+\begin{align}
+\left{e_{k}\left[n\right] &= \exp{\frac{i 2\pi k n}{N}\right}_{0 \leq k \leq N}
+\end{align}
+is an orthogonal basis.
+
+The associated fourier transform is
+
+\begin{align}
+\hat{f}\left[k\right] &= \left<f, e_{k}\right>
+\end{align}
+and again you have a plancherel formula.
+
+By grouping mirror terms, you can calculate the fourier transform in $O\left(N
+\log N\right)$ time rather than $O\left(N^{2}\right)$ required by the naive
+implementation.
+
+You can get two dimensional versions of sampling theorem and fourier transforms.
+
+The windowed fourier atom with window $g$ around time $u$ and frequency
+$\xi$ is defined as
+
+\begin{align}
+g_{u, \xi}\left(t\right) &= e^{i \xi t}g\left(t - u\right).
+\end{align}
+
+This is how spectrograms are calculated.
+
+Since we think of atoms as having $\|g\|^{2} = 1$, we can think of
+$absarg{g\left(t\right)}^2$ as a probability density. Since the associated time
+and frequency variances don't depend on $u$ or $\xi$, this dictionary is an even
+tiling across the time-frequency plane.
+
+You can actually reconstruct a signal based just on its windowed fourier
+transform across a dictionary.
+
+There is also a discrete theory for windowed fourier transforms.
+
+Wavelets are an alternative to these fourier windowing functions. The dictionary
+is constructed from translations and dilations
+$\frac{1}{\sqrt{s}}\psi\left(\frac{t - u}{s}\right)$.
+
 \end{document}
