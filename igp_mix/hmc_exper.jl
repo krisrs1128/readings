@@ -28,9 +28,9 @@ function kernel(x::Matrix, y::Matrix, l::Float64, v0::Float64, v1::Float64)
 
   for i = 1:n1
     for j = 1:n2
-      K[i, j] = v0 * exp(- 1 / (2 * l^2) * norm(x[i, :] - y[j, :]) ^ 2)
+      K[i, j] = v0 * exp(- 1 / (2 * l ^ 2) * norm(x[i, :] - y[j, :]) ^ 2)
       if i == j
-        K[i, j] += v1
+        K[i, j] = v1 + K[i, j]
       end
     end
   end
@@ -38,19 +38,18 @@ function kernel(x::Matrix, y::Matrix, l::Float64, v0::Float64, v1::Float64)
   return K
 end
 
-
-function k_deriv_v0(x::Matrix, l::Float64)
-  return kernel(x, x, l, 1.0, 0.0)
+function k_deriv_logv0(x::Matrix, log_v0::Float64, log_l2::Float64)
+  return kernel(x, x, sqrt(exp(log_l2)), exp(log_v0), 0.0)
 end
 
-
-function k_deriv_l(x::Matrix, v0::Float64, l::Float64)
+function k_deriv_logl2(x::Matrix, log_v0::Float64, log_l2::Float64)
   n = size(x, 1)
   k_deriv = zeros(n, n)
   for i = 1:n
     for j = 1:n
       norm_sq = norm(x[i, :] - x[j, :]) ^ 2
-      k_deriv[i, j] = v0 * exp(- 1 / (2 * l ^ 2) * norm_sq) * 1 / (2 * l^3) * norm_sq
+      k_deriv[i, j] = exp(log_v0 - (1 / 2) * exp(-log_l2) * norm_sq) *
+        (exp(-log_l2) * norm_sq)
     end
   end
 
@@ -60,30 +59,27 @@ end
 function gradient_generator(y::Vector, x::Matrix)
 
   return function log_posterior_grad(theta::Vector)
-    v0 = theta[1]
-    v1 = theta[2]
-    l = theta[3]
+    log_l2 = theta[1]
+    log_v0 = theta[2]
+    log_v1 = theta[3]
 
-    k_theta = kernel(x, x, l, v0, v1)
+    n = size(y, 1)
+    k_theta = kernel(x, x, sqrt(exp(log_l2)), exp(log_v0), exp(log_v1))
 
     ## compute (unnormalized) posterior
-    n = size(y, 1)
-    unnorm_posterior = logpdf(MvNormal(zeros(n), k_theta), y)
+    unnorm_posterior = logpdf(MvNormal(zeros(n), k_theta), y) +
+      logpdf(Normal(0, 3), log_v0) +
+      logpdf(Normal(0, 3), log_v1) +
+      logpdf(Normal(0, 3), log_l2)
 
     ## compute gradient
-    grad_v0 = marginal_grad(k_theta, y, k_deriv_v0(x, l))
-    grad_v1 = marginal_grad(k_theta, y, eye(n))
-    grad_l = marginal_grad(k_theta, y, k_deriv_l(x, v0, l))
+    grad_logl2 = marginal_grad(k_theta, y, k_deriv_logl2(x, log_v0, log_l2))
+    grad_logv0 = marginal_grad(k_theta, y, k_deriv_logv0(x, log_v0, log_l2))
+    grad_logv1 = marginal_grad(k_theta, y, exp(log_v1) * eye(n))
+    println(exp(grad_logl2))
 
-    return unnorm_posterior, [grad_v0, grad_v1, grad_l]
-
+    return unnorm_posterior, [grad_logl2, grad_logv0, grad_logv1]
   end
-end
-
-function marginal_grad_wrapper(v0, v1, l)
-  marginal_grad(k_theta, y, eye(n))
-  marginal_grad(k_theta, y, k_deriv_v0(x, l))
-  marginal_grad(k_theta, y, k_deriv_l(x, v0, l))
 end
 
 """Simulate toy data
@@ -105,7 +101,24 @@ function simulate(n::Int, l::Float64, v0::Float64, v1::Float64)
   return x, y
 end
 
-epsilon = 0.1
-L = 50
-Sigma = eye(3)
-theta1 = HMCVariate([0.0, 0.0, 0.0], epsilon, L, logfgrad)
+x, y = simulate(100, 0.1, 1.0, 0.5)
+#plot(x = x[:, 1], y  =y)
+logf_grad = gradient_generator(y, x)
+
+epsilon = 0.05
+L = 3
+
+n_samples = 5000
+samples = zeros(n_samples, 3)
+theta = HMCVariate(samples[1, :], epsilon, L, logf_grad)
+
+for i = 1:n_samples
+  sample!(theta)
+  println(i)
+  samples[i, :] = theta
+end
+
+#plot(x = samples[:, 1], y = samples[:, 2])
+#plot(x = 1:100, y = samples[:, 1])
+#plot(x = 1:100, y = samples[:, 2])
+#plot(x = 1:100, y = samples[:, 3])
