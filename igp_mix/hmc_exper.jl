@@ -56,6 +56,7 @@ function k_deriv_logl2(x::Matrix, log_v0::Float64, log_l2::Float64)
   return k_deriv
 end
 
+
 function gradient_generator(y::Vector, x::Matrix)
 
   return function log_posterior_grad(theta::Vector)
@@ -108,7 +109,7 @@ logf_grad = gradient_generator(y, x)
 epsilon = 0.05
 L = 3
 
-n_samples = 5000
+n_samples = 10
 samples = zeros(n_samples, 3)
 theta = HMCVariate(samples[1, :], epsilon, L, logf_grad)
 
@@ -122,3 +123,65 @@ end
 #plot(x = 1:100, y = samples[:, 1])
 #plot(x = 1:100, y = samples[:, 2])
 #plot(x = 1:100, y = samples[:, 3])
+
+theta = rand(3)
+k_deriv_logl2(x, theta[1], theta[3])
+
+function f(x)
+  x
+end
+
+function g(x)
+  1
+end
+
+function k_deriv_lij(x::Matrix, log_v0::Float64)
+  function(log_l2::Float64)
+    k_theta_deriv = k_deriv_logl2(x, log_v0, log_l2)
+    k_theta_deriv[1, 2]
+  end
+end
+
+function k_theta_lij(
+  y::Vector,
+  x::Matrix,
+  log_v0::Float64,
+  log_v1::Float64)
+  function(log_l2::FLoat64)
+    k_theta = kernel(x, x, sqrt(exp(log_l2)), exp(log_v0), exp(log_v1))
+    k_theta[1, 2]
+  end
+end
+
+reference_f = k_theta_lij(y, x, theta[1], theta[2])
+test_f = k_deriv_lij(x, theta[1])
+check_derivative(reference_f, test_f, 10.0)
+check_derivative(reference_f, test_f, 2.0)
+check_derivative(reference_f, test_f, 1.0)
+check_derivative(reference_f, test_f, 0.0)
+
+
+function k_deriv_v0(x::Matrix, log_l2::Float64)
+  function(log_v0::Float64)
+    k_theta_deriv = k_deriv_logv0(x, log_v0, log_l2)
+    k_theta_deriv[10, 2]
+  end
+end
+
+function k_theta_v0(
+  y::Vector,
+  x::Matrix,
+  log_l2::Float64,
+  log_v1::Float64)
+  function(log_v0::Float64)
+    k_theta = kernel(x, x, sqrt(exp(log_l2)), exp(log_v0), exp(log_v1))
+    k_theta[10, 2]
+  end
+end
+
+reference_f = k_theta_v0(y, x, theta[3], theta[2])
+test_f = k_deriv_v0(x, theta[3])
+check_derivative(reference_f, test_f, 10.0)
+check_derivative(reference_f, test_f, 2.0)
+check_derivative(reference_f, test_f, 1.0)
+check_derivative(reference_f, test_f, 0.0)
