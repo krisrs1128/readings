@@ -49,7 +49,7 @@ function k_deriv_logl2(x::Matrix, log_v0::Float64, log_l2::Float64)
     for j = 1:n
       norm_sq = norm(x[i, :] - x[j, :]) ^ 2
       k_deriv[i, j] = exp(log_v0 - (1 / 2) * exp(-log_l2) * norm_sq) *
-        (exp(-log_l2) * norm_sq)
+        (exp(-log_l2) * norm_sq / 2)
     end
   end
 
@@ -74,7 +74,7 @@ function gradient_generator(y::Vector, x::Matrix)
       logpdf(Normal(0, 3), log_l2)
 
     ## compute gradient
-    grad_logl2 = marginal_grad(k_theta, y, k_deriv_logl2(x, log_v0, log_l2))
+    grad_logl2 = marginal_grad(k_theta, y, k_deriv_logl2(x, log_v0, log_l2)) # + prior grad is needed here
     grad_logv0 = marginal_grad(k_theta, y, k_deriv_logv0(x, log_v0, log_l2))
     grad_logv1 = marginal_grad(k_theta, y, exp(log_v1) * eye(n))
     println(exp(grad_logl2))
@@ -147,7 +147,7 @@ function k_theta_lij(
   x::Matrix,
   log_v0::Float64,
   log_v1::Float64)
-  function(log_l2::FLoat64)
+  function(log_l2::Float)
     k_theta = kernel(x, x, sqrt(exp(log_l2)), exp(log_v0), exp(log_v1))
     k_theta[1, 2]
   end
