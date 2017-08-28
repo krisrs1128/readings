@@ -57,7 +57,7 @@ function k_deriv_logl2(x::Matrix, log_v0::Float64, log_l2::Float64)
 end
 
 
-function gradient_generator(y::Vector, x::Matrix)
+function gradient_generator(y::Vector, x::Matrix, a::Float64 = 20.0)
 
   return function log_posterior_grad(theta::Vector)
     log_l2 = theta[1]
@@ -68,16 +68,19 @@ function gradient_generator(y::Vector, x::Matrix)
     k_theta = kernel(x, x, sqrt(exp(log_l2)), exp(log_v0), exp(log_v1))
 
     ## compute (unnormalized) posterior
+    n0a = Normal(0, a)
     unnorm_posterior = logpdf(MvNormal(zeros(n), k_theta), y) +
-      logpdf(Normal(0, 3), log_v0) +
-      logpdf(Normal(0, 3), log_v1) +
-      logpdf(Normal(0, 3), log_l2)
+      logpdf(n0a, log_v0) +
+      logpdf(n0a, log_v1) +
+      logpdf(n0a, log_l2)
 
     ## compute gradient
-    grad_logl2 = marginal_grad(k_theta, y, k_deriv_logl2(x, log_v0, log_l2)) # + prior grad is needed here
-    grad_logv0 = marginal_grad(k_theta, y, k_deriv_logv0(x, log_v0, log_l2))
-    grad_logv1 = marginal_grad(k_theta, y, exp(log_v1) * eye(n))
-    println(exp(grad_logl2))
+    grad_logl2 = marginal_grad(k_theta, y, k_deriv_logl2(x, log_v0, log_l2)) +
+      gradlogpdf(n0a, log_l2)
+    grad_logv0 = marginal_grad(k_theta, y, k_deriv_logv0(x, log_v0, log_l2)) +
+      gradlogpdf(n0a, log_v0)
+    grad_logv1 = marginal_grad(k_theta, y, exp(log_v1) * eye(n)) +
+      gradlogpdf(n0a, log_v1)
 
     return unnorm_posterior, [grad_logl2, grad_logv0, grad_logv1]
   end
@@ -94,7 +97,7 @@ julia> v1 = 0.02
 julia> simulate(n, l, v0, v1)
 ```
 """
-function simulate(n::Int, l::Float64, v0::Float64, v1::Float64)
+function simulate(n::Int64, l::Float64, v0::Float64, v1::Float64)
   x = rand(n, 1)
   K = kernel(x, x, l, v0, v1)
   y = rand(MultivariateNormal(zeros(n), K))
@@ -102,24 +105,23 @@ function simulate(n::Int, l::Float64, v0::Float64, v1::Float64)
   return x, y
 end
 
-x, y = simulate(100, 0.1, 1.0, 0.5)
-#plot(x = x[:, 1], y  =y)
-logf_grad = gradient_generator(y, x)
+x, y = simulate(50, sqrt(0.05), 10.0, 0.5)
+plot(x = x[:, 1], y = y)
 
-epsilon = 0.05
-L = 3
-
-n_samples = 10
+n_samples = 4000
 samples = zeros(n_samples, 3)
+logf_grad = gradient_generator(y, x)
+L = 10
+epsilon = 0.005
 theta = HMCVariate(samples[1, :], epsilon, L, logf_grad)
-
 for i = 1:n_samples
   sample!(theta)
-  println(i)
-  samples[i, :] = theta
+  samples[i, :] = exp.(theta)
+  print(i)
+  println(samples[i, :])
 end
 
-#plot(x = samples[:, 1], y = samples[:, 2])
-#plot(x = 1:100, y = samples[:, 1])
-#plot(x = 1:100, y = samples[:, 2])
-#plot(x = 1:100, y = samples[:, 3])
+plot(x = samples[:, 1], y = samples[:, 2])
+plot(x = 1:n_samples, y = samples[:, 1])
+plot(x = 1:n_samples, y = samples[:, 2])
+plot(x = 1:n_samples, y = samples[:, 3])
