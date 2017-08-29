@@ -13,6 +13,7 @@
 
 using Distributions
 include("igp_mix.jl")
+srand(824)
 
 theta = KernelParam(sqrt(0.05), 10.0, 0.5)
 x, y = simulate(70, theta)
@@ -31,7 +32,6 @@ for i in 1:size(samples, 1)
     continue
   end
 
-  println(i)
   theta_fit = param_from_theta(samples[i, :])
   post = gp_posterior(x_new, GPModel(theta_fit, x, y))
   post_data = [
