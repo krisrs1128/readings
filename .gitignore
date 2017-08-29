@@ -5,3 +5,4 @@
 *.pdf
 *.png
 adonis/src/data/*
+igp_mix/data/*
