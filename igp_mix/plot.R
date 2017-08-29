@@ -38,20 +38,28 @@ post <- read_tsv("data/post_data.tsv", col_names = F) %>%
 ggplot() +
   geom_line(
     data = post,
-    aes(x = x_new, y = mu, group = iter),
+    aes(
+      x = x_new,
+      y = mu,
+      group = iter,
+      col = iter
+    ),
+    alpha = 0.5,
+  ) +
+  geom_ribbon(
+    data = post,
+    aes(
+      x = x_new,
+      ymin = mu - 1.96 * sqrt(var),
+      ymax = mu + 1.96 * sqrt(var),
+      group = iter,
+      fill = iter
+    ),
     alpha = 0.05
-  ) +
-  geom_line(
-    data = post,
-    aes(x = x_new, y = mu + 1.96 * sqrt(var), group = iter),
-    alpha = 0.05, col = "red"
-  ) +
-  geom_line(
-    data = post,
-    aes(x = x_new, y = mu - 1.96 * sqrt(var), group = iter),
-    alpha = 0.05, col = "red"
   ) +
   geom_point(
     data = train_data,
     aes(x = x, y = y)
-  )
+  ) +
+  scale_color_gradient(low = "blue", high = "red") +
+  scale_fill_gradient(low = "blue", high = "red")
