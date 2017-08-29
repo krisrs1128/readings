@@ -8,6 +8,9 @@
 # author: sankaran.kris@gmail.com
 # date: 08/29/2018
 
+using Base.Test
+
+
 """Coordinatewise Projections of Kernel
 
 This returns a dictionary of functions that evaluate the kernel varying one
@@ -43,6 +46,7 @@ function k_coords(x::Matrix,
 
   f_list
 end
+
 
 """Analytical Derivatives of Kernel
 
@@ -84,8 +88,10 @@ end
 coord_f = k_coords(x, theta)
 deriv_f = k_deriv_coords(x, theta)
 
-for u in rand(Uniform(-10, 10), 10)
-  println(check_derivative(coord_f["l"], deriv_f["log_l2"], u))
-  println(check_derivative(coord_f["v0"], deriv_f["log_v0"], u))
-  println(check_derivative(coord_f["v1"], deriv_f["log_v1"], u))
+@testset "Derivative tests" begin
+  for u in rand(Uniform(-10, 10), 10)
+    @test check_derivative(coord_f["l"], deriv_f["log_l2"], u) ≈ 0 atol = 1e-5
+    @test check_derivative(coord_f["v0"], deriv_f["log_v0"], u) ≈ 0 atol = 1e-5
+    @test check_derivative(coord_f["v1"], deriv_f["log_v1"], u) ≈ 0 atol = 1e-5
+  end
 end
