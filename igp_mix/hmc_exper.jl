@@ -15,7 +15,9 @@ using Distributions
 using Gadfly
 using Mamba
 
-
+###############################################################################
+#                        Define types for GP inference                        #
+###############################################################################
 type KernelParam
   l::Float64
   v0::Float64
@@ -35,8 +37,24 @@ type GP
   a::GPHyper
 end
 
+###############################################################################
+#                      Define kernel and its derivatives                      #
+###############################################################################
 
-# Gaussian Kernel matrix (with noise)
+"""Covariance Kernel with Noise
+
+# Arguments
+x::Matrix: Each row gives a value for rows x_{i} in the matrix K(x_{i}, y_{j})
+y::Matrix: Each row gives a value for columns y_{j} in the matrix K(x_{i}, y_{j})
+theta::KernelParam: Parameters for the kernel (bandwidth l, amplitude v0, and
+  noise v1)
+
+# Examples
+```julia-repl
+theta = KernelParam(1, .2, 1)
+kernel(rand(10, 2), rand(10, 2), theta)
+```
+"""
 function kernel(x::Matrix, y::Matrix, theta::KernelParam)
   n1 = size(x, 1)
   n2 = size(y, 1)
@@ -51,22 +69,44 @@ function kernel(x::Matrix, y::Matrix, theta::KernelParam)
     end
   end
 
-  return K
+  K
 end
 
+"""Gradient of Marginal Likelihood
 
+Computes the gradient of the marginal likelihood, given dK / dtheta
+
+# Arguments
+k_theta::Matrix: The kernel matrix evaluated at some coordinates x
+y::Vector: The response at the coordinates x
+k_deriv: The matrix dK / dtheta
+"""
 function marginal_grad(k_theta::Matrix, y::Vector, k_deriv::Matrix)
   alpha = inv(k_theta) * y
   return trace((alpha * alpha' - inv(k_theta)) * k_deriv)
 end
 
 
+"""Derivative of Kernel w.r.t log-amplitude log_v0
+
+# Arguments
+x::Matrix: Coordinates at which the kernel matrix was evaluated
+theta::KernelParam: Parameters for the kernel (bandwidth l, amplitude v0, and
+  noise v1)
+"""
 function k_deriv_logv0(x::Matrix, theta::KernelParam)
   theta.v1 = 0
-  return kernel(x, x, theta)
+  kernel(x, x, theta)
 end
 
 
+"""Derivative of Kernel w.r.t. log-bandwidth log_l2
+
+# Arguments
+x::Matrix: Coordinates at which the kernel matrix was evaluated
+theta::KernelParam: Parameters for the kernel (bandwidth l, amplitude v0, and
+  noise v1)
+"""
 function k_deriv_logl2(x::Matrix, theta::KernelParam)
   n = size(x, 1)
   k_deriv = zeros(n, n)
@@ -78,13 +118,20 @@ function k_deriv_logl2(x::Matrix, theta::KernelParam)
     end
   end
 
-  return k_deriv
+  k_deriv
 end
 
 
+"""Gradient Functions at given Coordinates
+
+# Arguments
+y::Vector: The response at the coordinates x
+x::Matrix: Coordinates at which the kernel matrix was evaluated
+a::GPHyper: Priors for parameters in kernel function
+"""
 function gradient_generator(y::Vector, x::Matrix, a::GPHyper)
 
-  return function log_posterior_grad(log_theta::Vector)
+  function log_posterior_grad(log_theta::Vector)
     log_l2 = log_theta[1]
     log_v0 = log_theta[2]
     log_v1 = log_theta[3]
@@ -107,7 +154,7 @@ function gradient_generator(y::Vector, x::Matrix, a::GPHyper)
     grad_logv1 = marginal_grad(k_theta, y, exp(log_v1) * eye(n)) +
       gradlogpdf(a.log_v1, log_v1)
 
-    return unnorm_posterior, [grad_logl2, grad_logv0, grad_logv1]
+    unnorm_posterior, [grad_logl2, grad_logv0, grad_logv1]
   end
 end
 
