@@ -1,4 +1,25 @@
+#!/usr/bin/env julia
 
+# File description -------------------------------------------------------------
+# Test functions in hmc_exper.jl. In particular, check that the analytical
+# derivatives required for Hamiltonian Monte Carlo agree with the finite
+# difference approximation.
+#
+# author: sankaran.kris@gmail.com
+# date: 08/29/2018
+
+"""Coordinatewise Projections of Kernel
+
+This returns a dictionary of functions that evaluate the kernel varying one
+argument at a time.
+
+# Arguments
+
+x::Matrix: The data on which the kernel is evaluated
+theta::KernelParam: The bandwidth / noise parameters of the kernel
+i::Int64 = 1: The row-coordinate of the kernel matrix to return
+j::Int64 = 2: The column-coordinate of the kernel matrix to return
+"""
 function k_coords(x::Matrix,
                   theta::KernelParam,
                   i::Int64 = 1,
@@ -23,7 +44,17 @@ function k_coords(x::Matrix,
   f_list
 end
 
+"""Analytical Derivatives of Kernel
 
+Return a dictionary of the derivatives of the kernel function, one parameter at
+a time.
+
+# Arguments
+x::Matrix: The data on which the kernel derivative is evaluated
+theta::KernelParam: The bandwidth / noise parameters of the kernel
+i::Int64 = 1: The row-coordinate of the kernel derivative matrix to return
+j::Int64 = 2: The column-coordinate of the kernel derivative matrix to return
+"""
 function k_deriv_coords(x::Matrix,
                         theta::KernelParam,
                         i::Int64 = 1,
@@ -58,4 +89,3 @@ for u in rand(Uniform(-10, 10), 10)
   println(check_derivative(coord_f["v0"], deriv_f["log_v0"], u))
   println(check_derivative(coord_f["v1"], deriv_f["log_v1"], u))
 end
-
