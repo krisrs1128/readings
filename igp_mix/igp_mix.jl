@@ -110,6 +110,18 @@ function gp_posterior(x_new::Matrix,
   Distributions.MvNormal(mu, Hermitian(Sigma))
 end
 
+"""Log PDF for a GP Model
+
+During sampling, it is useful at various points to evaluate the log probability
+of a single GP model.
+"""
+function gp_logpdf(gp::GPModel)
+  k_theta = kernel(gp.x_train, gp.x_train, gp.theta)
+  gsn = MvNormal(zeros(length(gp.y_train)), k_theta)
+  logpdf(gsn, gp.y_train)
+end
+
+
 
 ###############################################################################
 #                   Define kernel derivatives and GP sampelr                  #
