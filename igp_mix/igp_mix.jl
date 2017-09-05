@@ -137,6 +137,30 @@ function dp_log_eppf(nk::Vector, alpha::Float64)
   K * log(alpha) + lgamma(alpha) - lgamma(alpha + sum(nk)) + sum(lgamma.(nk))
 end
 
+"""Table Probabilities for Next Customer in CRP
+
+```julia-repl
+c = [1, 2, 2, 1, 1, 3]
+alpha = 2.0
+crp_log_prob(c, alpha)
+# Case with no member in class 3
+c = [1, 2, 2, 1, 1, 4]
+crp_log_prob(c, alpha)
+```
+"""
+function crp_log_prob(c::Vector{Int64}, alpha::Float64)
+  K = maximum(c)
+  n = length(c) + 1
+
+  probs = zeros(K + 1)
+  probs[K + 1] = alpha / (n + alpha - 1)
+  for k = 1:K
+     probs[k] = sum(c .== k) / (n + alpha - 1)
+  end
+
+  probs
+end
+
 
 ###############################################################################
 #                   Define kernel derivatives and GP sampelr                  #
