@@ -121,6 +121,18 @@ function gp_logpdf(gp::GPModel)
   logpdf(gsn, gp.y_train)
 end
 
+"""Log PDF for Independent GPs
+
+This just adds together the log PDFs for several GP models.
+"""
+function mix_gp_logpdf(gps::Vector{GPModel})
+  K = length(gps)
+  logpdf = 0
+  for k = 1:K
+    logpdf += gp_logpdf(gps[k])
+  end
+end
+
 """Log EPPF for Dirichlet Process
 
 See page 23 in this tutorial, for example
