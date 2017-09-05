@@ -121,6 +121,21 @@ function gp_logpdf(gp::GPModel)
   logpdf(gsn, gp.y_train)
 end
 
+"""Log EPPF for Dirichlet Process
+
+See page 23 in this tutorial, for example
+https://www.stats.ox.ac.uk/~teh/teaching/npbayes2012/dp.pdf
+
+```julia-repl
+nk = [12, 5, 24]
+alpha = 2.0
+dp_log_eppf(nk, alpha)
+```
+"""
+function dp_log_eppf(nk::Vector, alpha::Float64)
+  K = length(nk)
+  K * log(alpha) + lgamma(alpha) - lgamma(alpha + sum(nk)) + sum(lgamma.(nk))
+end
 
 
 ###############################################################################
@@ -231,4 +246,3 @@ function GPSampler(x::Matrix,
 
   samples
 end
-
