@@ -9,7 +9,7 @@
 # step 3 in http://mlg.eng.cam.ac.uk/zoubin/papers/iMGPE.pdf
 #
 # author: sankaran.kris@gmail.com
-# date: 08/29/2017
+# date: 09/06/2017
 
 using Distributions
 using FreqTables
@@ -189,17 +189,6 @@ end
 ###############################################################################
 #        Conditional probabilities for sampling class memberships c[i]         #
 ###############################################################################
-c = rand(1:3, 70)
-alpha = 2.0
-theta = KernelParam(sqrt(0.05), 10.0, 0.5)
-x, y = simulate(70, theta)
-update_ix = 1
-thetas = [
-  KernelParam(sqrt(0.05), 5.0, 0.5),
-  KernelParam(sqrt(0.05), 10.0, 0.5),
-  KernelParam(sqrt(0.5), 6.0, 0.9)
-]
-
 function substitute_probs(update_ix::Int64,
                           c::Vector{Int64},
                           x::Matrix,
@@ -266,11 +255,11 @@ function class_conditional(update_ix::Int64,
   normalize_log_space(liks + prior)
 end
 
-function joint_prob(c::Vector{Int64},
-                    x::Matrix,
-                    y::Vector,
-                    thetas::Vector{KernelParam},
-                    alpha::Float64)
+function joint_log_prob(c::Vector{Int64},
+                        x::Matrix,
+                        y::Vector,
+                        thetas::Vector{KernelParam},
+                        alpha::Float64)
   liks = gp_logpdf_wrapper(c, x, y, thetas)
   nk = freqtables(c)
   eppf = dp_log_eppf(nk, alpha)

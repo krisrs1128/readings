@@ -95,3 +95,23 @@ deriv_f = k_deriv_coords(x, theta)
     @test check_derivative(coord_f["v1"], deriv_f["log_v1"], u) ≈ 0 atol = 1e-5
   end
 end
+
+## Generate toy data to check class conditionals
+n = 70
+c = rand(1:3, n)
+alpha = 2.0
+theta = KernelParam(sqrt(0.05), 10.0, 0.5)
+x, y = simulate(n, theta)
+update_ix = 1
+thetas = [
+  KernelParam(sqrt(0.05), 5.0, 0.5),
+  KernelParam(sqrt(0.05), 10.0, 0.5),
+  KernelParam(sqrt(0.5), 6.0, 0.9)
+]
+
+c_prime = c
+c_prime[update_ix] = (c + 1) %% 3
+joint_log_prob(c, x, y, thetas, alpha) -
+  joint_log_prob(c_prime, x, y, thetas, alpha)
+class_conditional(update_ix, c, x, y, thetas, alpha, a) -
+  class_conditional(update_ix, c_prime, x, y, thetas, alpha, a)
