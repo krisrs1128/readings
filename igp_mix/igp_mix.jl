@@ -235,6 +235,36 @@ function gp_logpdf_wrapper(c::Vector{Int64},
   ref_probs
 end
 
+function class_update_probs(update_ix::Int64,
+                            c::Vector{Int64},
+                            x::Matrix,
+                            y::Vector,
+                            thetas::Vector{KernelParam},
+                            alpha::Float64,
+                            a::GPHyper)
+  n = size(x, 1)
+  keep_ix = 1:n .!= update_ix
+  prior = crp_log_prob(c[keep_ix], alpha)
+  sub_probs = substitute_probs(update_ix, c, x, y, thetas)
+  ref_probs = gp_logpdf_wrapper(c[keep_ix], x[keep_ix, :], y[keep_ix], thetas)
+
+  rand_theta = KernelParam(
+    sqrt(exp(rand(a.log_l2))),
+    exp(rand(a.log_v0)),
+    exp(rand(a.log_v1))
+  )
+
+  K = length(thetas)
+  liks = zeros(K + 1)
+  for k = 1:K
+    liks[k] = sum(ref_probs[1:end .!= k]) + sub_probs[k]
+  end
+  liks[K + 1] = sum(ref_probs) +
+    gp_logpdf(GPModel(rand_theta, x[[update_ix], :], y[[update_ix]]))
+
+  normalize_log_space(liks + prior)
+end
+
 ###############################################################################
 #                   Define kernel derivatives and GP sampelr                  #
 ###############################################################################
