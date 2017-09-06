@@ -38,8 +38,20 @@ type GPModel
   y_train::Vector
 end
 
+###############################################################################
+#                           generic helper functions                          #
+###############################################################################
 function param_from_theta(theta::Vector)
   KernelParam(theta[1], theta[2], theta[3])
+end
+
+function lse(log_x::Vector)
+  m = maximum(log_x)
+  m + log(sum(exp.(log_x - m)))
+end
+
+function normalize_log_space(log_x::Vector{Float64})
+  log_x - ones(length(log_x)) * lse(log_x)
 end
 
 ###############################################################################
@@ -170,19 +182,57 @@ function crp_log_prob(c::Vector{Int64}, alpha::Float64)
      probs[k] = sum(c .== k) / (n + alpha - 1)
   end
 
-  probs
+  log(probs)
 end
 
 ###############################################################################
 #        Conditional probabilities for sampling class memberships c[i]         #
 ###############################################################################
+c = rand(1:3, 70)
+alpha = 2.0
+theta = KernelParam(sqrt(0.05), 10.0, 0.5)
+x, y = simulate(70, theta)
+update_ix = 1
+thetas = [
+  KernelParam(sqrt(0.05), 5.0, 0.5),
+  KernelParam(sqrt(0.05), 10.0, 0.5),
+  KernelParam(sqrt(0.5), 6.0, 0.9)
+]
 
-function class_update_probs(update_ix::Int64, c::Vector{Int64}, x::Matrix, y::Vector, update_ix::Int64, thetas::Vector{KernelParam})
-## define the reference log probabilities, using the appropriate GP models
-## loop over possible values of c
-## get eppf probs
-## get assignment probs but updating the one k_theta (and its associated GP)
-## Normalize all these probs
+function substitute_probs(update_ix::Int64,
+                          c::Vector{Int64},
+                          x::Matrix,
+                          y::Vector,
+                          thetas::Vector{KernelParam})
+  K = length(thetas)
+
+  ## add that sample into different sets
+  sub_probs = zeros(K)
+  for k = 1:K
+    c[update_ix] = k
+    sub_probs[k] = gp_logpdf(
+      GPModel(thetas[k], x[c .== k, :], y[c .== k])
+    )
+  end
+
+  sub_probs
+end
+
+function gp_logpdf_wrapper(c::Vector{Int64},
+                           x::Matrix,
+                           y::Vector,
+                           thetas::Vector{KernelParam})
+  K = length(thetas)
+  ref_probs = zeros(K)
+
+  ## Get probs leaving out current sample
+  for k = 1:K
+    ref_probs[k] = gp_logpdf(
+      GPModel(thetas[k], x[c .== k, :], y[c .== k])
+    )
+  end
+
+  ref_probs
 end
 
 ###############################################################################
