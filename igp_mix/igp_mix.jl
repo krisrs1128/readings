@@ -12,6 +12,7 @@
 # date: 08/29/2017
 
 using Distributions
+using FreqTables
 using Mamba
 
 ###############################################################################
@@ -235,13 +236,13 @@ function gp_logpdf_wrapper(c::Vector{Int64},
   ref_probs
 end
 
-function class_update_probs(update_ix::Int64,
-                            c::Vector{Int64},
-                            x::Matrix,
-                            y::Vector,
-                            thetas::Vector{KernelParam},
-                            alpha::Float64,
-                            a::GPHyper)
+function class_conditional(update_ix::Int64,
+                           c::Vector{Int64},
+                           x::Matrix,
+                           y::Vector,
+                           thetas::Vector{KernelParam},
+                           alpha::Float64,
+                           a::GPHyper)
   n = size(x, 1)
   keep_ix = 1:n .!= update_ix
   prior = crp_log_prob(c[keep_ix], alpha)
@@ -263,6 +264,17 @@ function class_update_probs(update_ix::Int64,
     gp_logpdf(GPModel(rand_theta, x[[update_ix], :], y[[update_ix]]))
 
   normalize_log_space(liks + prior)
+end
+
+function joint_prob(c::Vector{Int64},
+                    x::Matrix,
+                    y::Vector,
+                    thetas::Vector{KernelParam},
+                    alpha::Float64)
+  liks = gp_logpdf_wrapper(c, x, y, thetas)
+  nk = freqtables(c)
+  eppf = dp_log_eppf(nk, alpha)
+  sum(liks) + nk
 end
 
 ###############################################################################
