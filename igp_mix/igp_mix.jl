@@ -12,7 +12,6 @@
 # date: 09/06/2017
 
 using Distributions
-using FreqTables
 using Mamba
 
 ###############################################################################
@@ -106,6 +105,45 @@ function simulate(n::Int64, theta::KernelParam)
   x, y
 end
 
+function rand_kernel(a::GPHyper)
+  KernelParam(
+    sqrt(exp(rand(a.log_l2))),
+    exp(rand(a.log_v0)),
+    exp(rand(a.log_v1))
+  )
+end
+
+"""Simulate a Mixture of GPs
+
+# Arguments
+
+# Examples
+```julia-repl
+a = GPHyper(
+  Distributions.Normal(),
+  Distributions.Normal(),
+  Distributions.Normal(),
+)
+thetas = [rand_kernel(a), rand_kernel(a), rand_kernel(a)]
+c, x, y = simulate_mix(200, thetas)
+
+using Gadfly
+plot(x = x[:, 1], y = y, color = c)
+```
+"""
+function simulate_mix(n::Int64, thetas::Vector{KernelParam})
+  x = zeros(n, 1)
+  y = zeros(n)
+  K = length(thetas)
+  c = rand(1:K, n)
+
+  for k = 1:K
+    x[c .== k, :], y[c .== k] = simulate(sum(c .== k), thetas[k])
+    x[c .== k, :] += k / 2
+  end
+
+  c, x, y
+end
 
 function gp_posterior(x_new::Matrix,
                       gp::GPModel,
@@ -238,21 +276,24 @@ function class_conditional(update_ix::Int64,
   sub_probs = substitute_probs(update_ix, c, x, y, thetas)
   ref_probs = gp_logpdf_wrapper(c[keep_ix], x[keep_ix, :], y[keep_ix], thetas)
 
-  rand_theta = KernelParam(
-    sqrt(exp(rand(a.log_l2))),
-    exp(rand(a.log_v0)),
-    exp(rand(a.log_v1))
-  )
-
   K = length(thetas)
   liks = zeros(K + 1)
   for k = 1:K
     liks[k] = sum(ref_probs[1:end .!= k]) + sub_probs[k]
   end
   liks[K + 1] = sum(ref_probs) +
-    gp_logpdf(GPModel(rand_theta, x[[update_ix], :], y[[update_ix]]))
+    gp_logpdf(GPModel(rand_kernel(a), x[[update_ix], :], y[[update_ix]]))
 
   normalize_log_space(liks + prior)
+end
+
+function class_counts(c::Vector{Int64})
+  K = maximum(c)
+  counts = zeros(K)
+  for i = 1:length(c)
+    counts[c[i]] += 1
+  end
+  counts
 end
 
 function joint_log_prob(c::Vector{Int64},
@@ -261,9 +302,9 @@ function joint_log_prob(c::Vector{Int64},
                         thetas::Vector{KernelParam},
                         alpha::Float64)
   liks = gp_logpdf_wrapper(c, x, y, thetas)
-  nk = freqtables(c)
+  nk = class_counts(c)
   eppf = dp_log_eppf(nk, alpha)
-  sum(liks) + nk
+  sum(liks) + eppf
 end
 
 ###############################################################################
