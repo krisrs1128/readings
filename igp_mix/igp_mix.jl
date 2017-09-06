@@ -173,6 +173,17 @@ function crp_log_prob(c::Vector{Int64}, alpha::Float64)
   probs
 end
 
+###############################################################################
+#        Conditional probabilities for sampling class memberships c[i]         #
+###############################################################################
+
+function class_update_probs(update_ix::Int64, c::Vector{Int64}, x::Matrix, y::Vector, update_ix::Int64, thetas::Vector{KernelParam})
+## define the reference log probabilities, using the appropriate GP models
+## loop over possible values of c
+## get eppf probs
+## get assignment probs but updating the one k_theta (and its associated GP)
+## Normalize all these probs
+end
 
 ###############################################################################
 #                   Define kernel derivatives and GP sampelr                  #
