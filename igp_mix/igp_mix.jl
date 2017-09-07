@@ -228,11 +228,12 @@ end
 #        Conditional probabilities for sampling class memberships c[i]         #
 ###############################################################################
 function substitute_probs(update_ix::Int64,
-                          c::Vector{Int64},
+                          c0::Vector{Int64},
                           x::Matrix,
                           y::Vector,
                           thetas::Vector{KernelParam})
   K = length(thetas)
+  c = deepcopy(c0)
 
   ## add that sample into different sets
   sub_probs = zeros(K)
