@@ -96,27 +96,29 @@ deriv_f = k_deriv_coords(x, theta)
   end
 end
 
-## Generate toy data to check class conditionals
-for i = 1:5
-  n = 70
+## Check conditionals for gibbs sampler
+for i = 1:10
+
+  ## simulate toy data
+  n = 100
   K = 3
   c = rand(1:K, n)
   update_ix = rand(1:n)
   alpha = 2.0
   thetas = Array{KernelParam}(K)
+
   for k = 1:K
     thetas[k] = rand_kernel(a)
   end
-
   c, x, y = simulate_mix(n, K, thetas)
 
+  ## swap one element
   c_prime = deepcopy(c)
   c_prime[update_ix] = rand(1:K)
   joint_diff = joint_log_prob(c, x, y, thetas, alpha) -
     joint_log_prob(c_prime, x, y, thetas, alpha)
-
+  conditional_probs = class_conditional(update_ix, c, x, y, thetas, alpha, a)
   conditional_diff = conditional_probs[c[update_ix]] -
     conditional_probs[c_prime[update_ix]]
-
-  @test joint_diff - conditional_diff ≈ 0 atol = 1e-5
+  @test joint_diff - conditional_diff ≈ 0 atol = 1e-10
 end
