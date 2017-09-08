@@ -231,7 +231,7 @@ function substitute_probs(update_ix::Int64,
                           c0::Vector{Int64},
                           x::Matrix,
                           y::Vector,
-                          thetas::Dict{Int64, KernelParam})
+                          thetas::Vector{KernelParam})
   K = length(thetas)
   c = deepcopy(c0)
 
@@ -412,7 +412,6 @@ function GPSampler(x::Matrix,
   sampler = HMCVariate(theta0, epsilon, L, logf_grad)
   for i = 1:n_samples
     samples[i, :] = exp.(sampler)
-    println(i, "\t", samples[i, :])
     sample!(sampler)
   end
 
@@ -436,13 +435,13 @@ function sweep_indicators!(state::MixGPState,
   n = length(state.c)
 
   for i = 1:n
-    c_probs, new_kernel = class_conditional(
-      i, state.c, x, y, state.thetas, alpha, a
+    c_logprob, new_kernel = class_conditional(
+      i, state.c, x, y, collect(values(state.thetas)), alpha, a
     )
 
-    state.c[i] = rand(Categorical(c_probs))
-    if state.c[i] not in keys(state.thetas)
-      state.thetas[c_new[i]] = new_kernel
+    state.c[i] = rand(Categorical(exp.(c_logprob)))
+    if !(state.c[i] in collect(keys(state.thetas)))
+      state.thetas[state.c[i]] = new_kernel
     end
   end
 
@@ -463,34 +462,42 @@ function MixGPSampler(x::Matrix,
                       alpha::Float64,
                       a::GPHyper)
 
+  srand(10)
   ## initialize the sampling state
   n = length(y)
   state = MixGPState(
     ones(n),
     Dict(1 => rand_kernel(a))
   )
-  state_history = Vector(20)
+  state_history = Vector{MixGPState}(20)
 
   for iter = 1:20
+    println("iter ", iter)
+    state_history[iter] = state
     sweep_indicators!(state, x, y, alpha, a)
 
-    for k in unique(c_new)
-      theta_samples = GPSampler(x, y, a, 10, 5, 0.005, state.thetas[k])
-      state.thetas[k] = mean(theta_samples, 1)[1, :]
+    for k in unique(state.c)
+      theta0 = log.([state.thetas[k].l ^ 2, state.thetas[k].v0, state.thetas[k].v1])
+      theta_samples = GPSampler(x, y, a, 10, 5, 0.005, theta0)
+      state.thetas[k] = KernelParam(
+        sqrt(theta_samples[end, 1]),
+        theta_samples[end, 2],
+        theta_samples[end, 3]
+      )
     end
 
-    state_history[iter] = state
   end
 
   state_history
 end
 
 
-# theta = KernelParam(sqrt(0.05), 10.0, 0.5)
-# x, y = simulate(70, theta)
+theta = KernelParam(sqrt(0.05), 10.0, 0.5)
+x, y = simulate(70, theta)
+alpha = 1.0
 
-# a = GPHyper(
-#   Distributions.Logistic(-1, 4),
-#   Distributions.Logistic(-1, 4),
-#   Distributions.Logistic(-1, 4)
-# )
+a = GPHyper(
+  Distributions.Logistic(-1, 4),
+  Distributions.Logistic(-1, 4),
+  Distributions.Logistic(-1, 4)
+)
