@@ -443,6 +443,13 @@ function sweep_indicators(state::MixGPState,
   c_new
 end
 
+function add_kernels!(state::MixGPState,
+                      new_cs::Vector{Int64},
+                      a::GPHyper)
+  for c in new_cs
+    state.thetas[string(c)] = rand_kernel(a)
+  end
+end
 
 function MixGPSampler(x::Matrix,
                       y::Vector,
@@ -455,20 +462,19 @@ function MixGPSampler(x::Matrix,
     ones(n),
     Dict("1" => rand_kernel(a))
   )
-  K = 1
   state_history = Vector(20)
 
   for iter = 1:20
     c_new = sweep_indicators(state)
-    K = max(c_new)
+    new_components = setdiff(c_new, state.c)
 
-    if (K > length(state.thetas))
-      add_kernel!(state.thetas)
+    if (length(new_components) > 0)
+      add_kernel!(state.thetas, new_components, a)
     end
 
-    for k = 1:K
+    for k in unique(c_new)
       theta_samples = GPSampler(x, y, a, 10, 5, 0.005, state.thetas[k])
-      state.thetas[k] = mean(theta_samples, 1)[1, :]
+      state.thetas[string(k)] = mean(theta_samples, 1)[1, :]
     end
 
     state_history[iter] = state
