@@ -416,3 +416,56 @@ function GPSampler(x::Matrix,
 
   samples
 end
+
+###############################################################################
+#                             Mix-GP Gibbs sampler                            #
+###############################################################################
+
+type MixGPState
+  c::Vector{Int64}
+  thetas::Dict{String, KernelParam}
+end
+
+function MixGPSampler(x::Matrix,
+                      y::Vector,
+                      float::alpha,
+                      a::GPHyper)
+
+  ## initialize the sampling state
+  n = length(y)
+  state = MixGPState(
+    ones(n),
+    Dict("1" => rand_kernel(a))
+  )
+  K = 1
+  state_history = Vector(20)
+
+  for iter = 1:20
+    c_new = sweep_indicators(state)
+    K = max(c_new)
+
+    if (K > length(state.thetas))
+      add_kernel!(state.thetas)
+    end
+
+    for k = 1:K
+      theta_samples = GPSampler(x, y, a, 10, 5, 0.005, state.thetas[k])
+      state.thetas[k] = mean(theta_samples, 1)[1, :]
+    end
+
+    state_history[iter] = state
+  end
+
+  state_history
+end
+
+
+
+# theta = KernelParam(sqrt(0.05), 10.0, 0.5)
+# x, y = simulate(70, theta)
+
+# a = GPHyper(
+#   Distributions.Logistic(-1, 4),
+#   Distributions.Logistic(-1, 4),
+#   Distributions.Logistic(-1, 4)
+# )
