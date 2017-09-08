@@ -426,9 +426,27 @@ type MixGPState
   thetas::Dict{String, KernelParam}
 end
 
+function sweep_indicators(state::MixGPState,
+                          x::Matrix,
+                          y::Vector,
+                          alpha::Float64,
+                          a::GPHyper)
+  n = length(state.c)
+  c_new = deepcopy(state.c)
+
+  for i = 1:n
+    c_new[i] = update_ix(
+      i, c_new, x, y, state.thetas, alpha, a
+    )
+  end
+
+  c_new
+end
+
+
 function MixGPSampler(x::Matrix,
                       y::Vector,
-                      float::alpha,
+                      alpha::Float64,
                       a::GPHyper)
 
   ## initialize the sampling state
@@ -458,7 +476,6 @@ function MixGPSampler(x::Matrix,
 
   state_history
 end
-
 
 
 # theta = KernelParam(sqrt(0.05), 10.0, 0.5)
