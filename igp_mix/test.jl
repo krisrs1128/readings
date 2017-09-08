@@ -117,7 +117,7 @@ for i = 1:10
   c_prime[update_ix] = rand(1:K)
   joint_diff = joint_log_prob(c, x, y, thetas, alpha) -
     joint_log_prob(c_prime, x, y, thetas, alpha)
-  conditional_probs = class_conditional(update_ix, c, x, y, thetas, alpha, a)
+  conditional_probs = class_conditional(update_ix, c, x, y, thetas, alpha, a)[1]
   conditional_diff = conditional_probs[c[update_ix]] -
     conditional_probs[c_prime[update_ix]]
   @test joint_diff - conditional_diff ≈ 0 atol = 1e-10
