@@ -211,17 +211,16 @@ c = [1, 2, 2, 1, 1, 4]
 crp_log_prob(c, alpha)
 ```
 """
-function crp_log_prob(c::Vector{Int64}, alpha::Float64)
-  K = maximum(c)
+function crp_log_prob(c::Vector{Int64}, alpha::Float64, K::Int64)
   n = length(c) + 1
 
-  probs = zeros(K + 1)
-  probs[K + 1] = alpha / (n + alpha - 1)
+  log_probs = -Inf * ones(K + 1)
+  log_probs[K + 1] = log(alpha) - log(n + alpha - 1)
   for k = 1:K
-     probs[k] = sum(c .== k) / (n + alpha - 1)
+    log_probs[k] = log(sum(c .== k)) - log(n + alpha - 1)
   end
 
-  log.(probs)
+  normalize_log_space(log_probs)
 end
 
 ###############################################################################
@@ -254,7 +253,7 @@ function gp_logpdf_wrapper(c::Vector{Int64},
   K = length(thetas)
   ref_probs = zeros(K)
 
-  ## Get probs leaving out current sample
+  ## Get probs for each component
   for k = 1:K
     ref_probs[k] = gp_logpdf(
       GPModel(thetas[k], x[c .== k, :], y[c .== k])
@@ -272,15 +271,18 @@ function class_conditional(update_ix::Int64,
                            alpha::Float64,
                            a::GPHyper)
   n = size(x, 1)
+  K = length(thetas)
+
   keep_ix = 1:n .!= update_ix
-  prior = crp_log_prob(c[keep_ix], alpha)
+  prior = crp_log_prob(c[keep_ix], alpha, K)
   sub_probs = substitute_probs(update_ix, c, x, y, thetas)
   ref_probs = gp_logpdf_wrapper(c[keep_ix], x[keep_ix, :], y[keep_ix], thetas)
 
-  K = length(thetas)
-  liks = zeros(K + 1)
+  liks = -Inf * ones(K + 1)
   for k = 1:K
-    liks[k] = sum(ref_probs[1:end .!= k]) + sub_probs[k]
+    if any(c .== k)
+      liks[k] = sum(ref_probs[1:end .!= k]) + sub_probs[k]
+    end
   end
 
   theta_new = rand_kernel(a)
