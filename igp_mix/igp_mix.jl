@@ -221,7 +221,7 @@ function crp_log_prob(c::Vector{Int64}, alpha::Float64)
      probs[k] = sum(c .== k) / (n + alpha - 1)
   end
 
-  log(probs)
+  log.(probs)
 end
 
 ###############################################################################
@@ -231,7 +231,7 @@ function substitute_probs(update_ix::Int64,
                           c0::Vector{Int64},
                           x::Matrix,
                           y::Vector,
-                          thetas::Vector{KernelParam})
+                          thetas::Dict{Int64, KernelParam})
   K = length(thetas)
   c = deepcopy(c0)
 
@@ -425,14 +425,14 @@ end
 
 type MixGPState
   c::Vector{Int64}
-  thetas::Dict{String, KernelParam}
+  thetas::Dict{Int64, KernelParam}
 end
 
-function sweep_indicators(state::MixGPState,
-                          x::Matrix,
-                          y::Vector,
-                          alpha::Float64,
-                          a::GPHyper)
+function sweep_indicators!(state::MixGPState,
+                           x::Matrix,
+                           y::Vector,
+                           alpha::Float64,
+                           a::GPHyper)
   n = length(state.c)
 
   for i = 1:n
@@ -441,15 +441,13 @@ function sweep_indicators(state::MixGPState,
     )
 
     state.c[i] = rand(Categorical(c_probs))
-    if string(state.c[i]) not in keys(state.thetas)
-      state.thetas[string(c_new[i])] = new_kernel
+    if state.c[i] not in keys(state.thetas)
+      state.thetas[c_new[i]] = new_kernel
     end
   end
 
   state
 end
-
-rand(Categorical([0.01, 0.99]))
 
 
 function add_kernels!(state::MixGPState,
@@ -469,16 +467,16 @@ function MixGPSampler(x::Matrix,
   n = length(y)
   state = MixGPState(
     ones(n),
-    Dict("1" => rand_kernel(a))
+    Dict(1 => rand_kernel(a))
   )
   state_history = Vector(20)
 
   for iter = 1:20
-    sweep_indicators!(state)
+    sweep_indicators!(state, x, y, alpha, a)
 
     for k in unique(c_new)
       theta_samples = GPSampler(x, y, a, 10, 5, 0.005, state.thetas[k])
-      state.thetas[string(k)] = mean(theta_samples, 1)[1, :]
+      state.thetas[k] = mean(theta_samples, 1)[1, :]
     end
 
     state_history[iter] = state
