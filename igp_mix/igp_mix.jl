@@ -282,10 +282,12 @@ function class_conditional(update_ix::Int64,
   for k = 1:K
     liks[k] = sum(ref_probs[1:end .!= k]) + sub_probs[k]
   end
-  liks[K + 1] = sum(ref_probs) +
-    gp_logpdf(GPModel(rand_kernel(a), x[[update_ix], :], y[[update_ix]]))
 
-  normalize_log_space(liks + prior)
+  theta_new = rand_kernel(a)
+  liks[K + 1] = sum(ref_probs) +
+    gp_logpdf(GPModel(theta_new, x[[update_ix], :], y[[update_ix]]))
+
+  normalize_log_space(liks + prior), theta_new
 end
 
 function class_counts(c::Vector{Int64})
@@ -432,16 +434,23 @@ function sweep_indicators(state::MixGPState,
                           alpha::Float64,
                           a::GPHyper)
   n = length(state.c)
-  c_new = deepcopy(state.c)
 
   for i = 1:n
-    c_new[i] = update_ix(
-      i, c_new, x, y, state.thetas, alpha, a
+    c_probs, new_kernel = class_conditional(
+      i, state.c, x, y, state.thetas, alpha, a
     )
+
+    state.c[i] = rand(Categorical(c_probs))
+    if string(state.c[i]) not in keys(state.thetas)
+      state.thetas[string(c_new[i])] = new_kernel
+    end
   end
 
-  c_new
+  state
 end
+
+rand(Categorical([0.01, 0.99]))
+
 
 function add_kernels!(state::MixGPState,
                       new_cs::Vector{Int64},
@@ -465,12 +474,7 @@ function MixGPSampler(x::Matrix,
   state_history = Vector(20)
 
   for iter = 1:20
-    c_new = sweep_indicators(state)
-    new_components = setdiff(c_new, state.c)
-
-    if (length(new_components) > 0)
-      add_kernel!(state.thetas, new_components, a)
-    end
+    sweep_indicators!(state)
 
     for k in unique(c_new)
       theta_samples = GPSampler(x, y, a, 10, 5, 0.005, state.thetas[k])
