@@ -29,29 +29,32 @@ end
 c, x, y = simulate_mix(n, thetas)
 
 ## run the sampler, and keep last iteration
-samples = MixGPSampler(x, y, alpha, a, 30)
+state = MixGPSampler(x, y, alpha, a, 30)
 
 ## get posterior estimates for each component
 x_new = collect(minimum(x):0.01:maximum(x))[:, :]
-post = Dict{Int64, Distributions.MvNormal}()
-for k = 1:maximum(samples.c)
-  if sum(samples.c .== k) == 0
-    continue
-  end
-
-  gp = GPModel(samples.thetas[k], x, y)
-  post[k] = gp_posterior(x_new, gp)
-end
-
-## write posteriors to file
+post = mix_posteriors(x_new, state)
+write_post("data/mix_post.csv", post)
 writedlm("data/mix_data.csv", [x y])
 
-rm("data/post_mix.csv")
-open("data/post_mix.csv", "a") do x
-  for k in keys(post)
-    writedlm(
-      x,
-      [k * ones(length(post[k])) x_new mean(post[k])]
-    )
+## consider instead a zeros + departures dataset
+x = rand(150, 1)
+function f(x)
+  if x < 0.2
+    return 0
+  elseif x < 0.4
+    return -(x - 0.4) * (x - 0.2)
+  elseif x < 0.8
+    return 0
+  elseif x <= 1
+    return -(x - 0.8) * (x - 1.2)
   end
 end
+
+y = [f(z) for z in x[:, 1]]
+y += 0.1 * rand(length(y))
+
+state = MixGPSampler(x, y, alpha, a, 30)
+post mix_posteriors(x_new, state)
+write_posteriors("data/bump_posteriors.csv", post)
+writedlm("data/bump_data.csv", [x y])
