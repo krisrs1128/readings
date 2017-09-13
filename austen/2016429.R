@@ -140,9 +140,15 @@ passage_term <- book_index %>%
   arrange(desc(n)) %>%
   spread(word, n, fill = 0)
 
+passage_term <- passage_term[passage_term$book == "Pride & Prejudice", ]
 col_sums <- apply(passage_term[, -c(1, 2)], 2, sum)
 passage_sub <- passage_term[1:20, c(2, 1, 2 + order(col_sums, decreasing = TRUE)[1:8])]
 cat(sprintf("var document_term = %s", toJSON(passage_sub, auto_unbox = FALSE)), file = "~/Desktop/lab_meetings/20170519/document_term.js")
+
+rownames(passage_sub) <- NULL
+passage_sub <- passage_sub %>%
+  mutate_at(.vars = vars(-book), as.integer)
+cat(print(xtable(passage_sub), include.rownames = FALSE), file = "~/Desktop/lab_meetings/20170911/dtm.tex")
 
 ## Write top of microbiome counts matrix
 library("treelapse")
@@ -158,6 +164,8 @@ taxa_sub <- cbind(
 
 taxa_sub <- taxa_sub[, c(2, 1, 3:9)]
 rownames(taxa_sub) <- NULL
+taxa_sub$time <- as.integer(taxa_sub$time)
+cat(print(xtable(taxa_sub[, 1:7]), include.rownames = FALSE), file = "~/Desktop/lab_meetings/20170911/taxa.tex")
 cat(sprintf("var sample_rsv = %s", toJSON(taxa_sub, auto_unbox = FALSE)), file = "~/Desktop/lab_meetings/20170519/sample_rsv.js")
 
 ## topic evolution data
