@@ -41,3 +41,7 @@ ggplot() +
     aes(x = X1, y = X2)
   ) +
   ylim(-30, 10)
+
+bump <- read_tsv("data/bump_data.csv", col_names = FALSE)
+ggplot(bump) +
+  geom_point(aes(x = X1, y = X2))
