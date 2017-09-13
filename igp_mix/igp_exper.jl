@@ -10,7 +10,7 @@
 
 
 ## simulate toy data
-n = 50
+n = 150
 K = 3
 c = rand(1:K, n)
 update_ix = rand(1:n)
@@ -29,10 +29,10 @@ end
 c, x, y = simulate_mix(n, thetas)
 
 ## run the sampler, and keep last iteration
-samples = MixGPSampler(x, y, alpha, a, 10)
+samples = MixGPSampler(x, y, alpha, a, 30)
 
 ## get posterior estimates for each component
-x_new = collect(minimum(x):0.1:maximum(x))[:, :]
+x_new = collect(minimum(x):0.01:maximum(x))[:, :]
 post = Dict{Int64, Distributions.MvNormal}()
 for k = 1:maximum(samples.c)
   if sum(samples.c .== k) == 0
@@ -44,11 +44,14 @@ for k = 1:maximum(samples.c)
 end
 
 ## write posteriors to file
+writedlm("data/mix_data.csv", [x y])
+
+rm("data/post_mix.csv")
 open("data/post_mix.csv", "a") do x
   for k in keys(post)
     writedlm(
       x,
-      [k * ones(length(post[k])) mean(post[k])]
+      [k * ones(length(post[k])) x_new mean(post[k])]
     )
   end
 end
