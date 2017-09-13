@@ -161,7 +161,7 @@ function gp_posterior(x_new::Matrix,
   Distributions.MvNormal(mu, Hermitian(Sigma))
 end
 
-function mix_posteriors(x_new::Vector, state::MixGPState)
+function mix_posteriors(x_new::Matrix, state::MixGPState)
   post = Dict{Int64, Distributions.MvNormal}()
   for k = 1:maximum(state.c)
     if sum(state.c .== k) == 0
@@ -175,9 +175,12 @@ function mix_posteriors(x_new::Vector, state::MixGPState)
   post
 end
 
-function write_posteriors(output_path::string,
-                          post:Dict{Int64, Distributions.MvNormal})
-  rm(output_path)
+function write_posteriors(output_path::String,
+                          post::Dict{Int64, Distributions.MvNormal})
+  if isfile(output_path)
+    rm(output_path)
+  end
+
   open(output_path, "a") do x
     for k in keys(post)
       writedlm(
