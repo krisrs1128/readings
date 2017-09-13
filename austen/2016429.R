@@ -164,6 +164,8 @@ taxa_sub <- cbind(
 
 taxa_sub <- taxa_sub[, c(2, 1, 3:9)]
 rownames(taxa_sub) <- NULL
+taxa_sub$time <- as.integer(taxa_sub$time)
+cat(print(xtable(taxa_sub[, 1:7]), include.rownames = FALSE), file = "~/Desktop/lab_meetings/20170911/taxa.tex")
 cat(sprintf("var sample_rsv = %s", toJSON(taxa_sub, auto_unbox = FALSE)), file = "~/Desktop/lab_meetings/20170519/sample_rsv.js")
 
 ## topic evolution data
