@@ -52,9 +52,9 @@ function f(x)
 end
 
 y = [f(z) for z in x[:, 1]]
-y += 0.1 * rand(length(y))
+y += 0.01 * rand(length(y))
 
 state = MixGPSampler(x, y, alpha, a, 30)
-post mix_posteriors(x_new, state)
+post = mix_posteriors(x_new, state)
 write_posteriors("data/bump_posteriors.csv", post)
 writedlm("data/bump_data.csv", [x y])
