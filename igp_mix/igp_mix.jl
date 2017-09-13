@@ -124,14 +124,14 @@ a = GPHyper(
   Distributions.Normal(),
   Distributions.Normal(),
 )
-thetas = [rand_kernel(a), rand_kernel(a), rand_kernel(a)]
+thetas = Dict(1 => rand_kernel(a), 2 => rand_kernel(a), 3 => rand_kernel(a))
 c, x, y = simulate_mix(200, thetas)
 
 using Gadfly
 plot(x = x[:, 1], y = y, color = c)
 ```
 """
-function simulate_mix(n::Int64, thetas::Vector{KernelParam})
+function simulate_mix(n::Int64, thetas::Dict{Int64, KernelParam})
   x = zeros(n, 1)
   y = zeros(n)
   K = length(thetas)
@@ -304,7 +304,7 @@ end
 function joint_log_prob(c::Vector{Int64},
                         x::Matrix,
                         y::Vector,
-                        thetas::Vector{KernelParam},
+                        thetas::Dict{Int64, KernelParam},
                         alpha::Float64)
   liks = gp_logpdf_wrapper(c, x, y, thetas)
   nk = class_counts(c)
@@ -463,7 +463,10 @@ function MixGPSampler(x::Matrix,
                       y::Vector,
                       alpha::Float64,
                       a::GPHyper,
-                      n_iter::Int64 = 20)
+                      n_iter::Int64 = 20,
+                      n_hmc::Int64 = 10,
+                      L::Int64 = 5,
+                      epsilon::Float64 = 0.005)
   ## initialize the sampling state
   n = length(y)
   state = MixGPState(
@@ -484,14 +487,12 @@ function MixGPSampler(x::Matrix,
       end
 
       theta0 = log.([state.thetas[k].l ^ 2, state.thetas[k].v0, state.thetas[k].v1])
-      theta_samples = GPSampler(x[c .== k, :], y[c .== k], a, 10, 5, 0.005, theta0)
-      state.thetas[k] = KernelParam(
-        sqrt(theta_samples[end, 1]),
-        theta_samples[end, 2],
-        theta_samples[end, 3]
+      theta_samples = GPSampler(x[c .== k, :], y[c .== k], a, n_hmc, L, epsilon, theta0)
+      state.thetas[k] = param_from_theta(
+        [[sqrt(theta_samples[end, 1])];
+         theta_samples[end, 2:3]]
       )
     end
-
   end
 
   state
