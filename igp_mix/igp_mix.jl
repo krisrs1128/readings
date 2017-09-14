@@ -551,12 +551,12 @@ function MixGPSampler(x::Matrix,
 
     ## resample the kernel hyperparameters
     for k in unique(state.c)
-      if !any(c .== k)
+      if !any(state.c .== k)
         next
       end
 
       theta0 = log.([state.thetas[k].l ^ 2, state.thetas[k].v0, state.thetas[k].v1])
-      theta_samples = GPSampler(x[c .== k, :], y[c .== k], a, n_hmc, L, epsilon, theta0)
+      theta_samples = GPSampler(x[state.c .== k, :], y[state.c .== k], a, n_hmc, L, epsilon, theta0)
       state.thetas[k] = param_from_theta(
         [[sqrt(theta_samples[end, 1])];
          theta_samples[end, 2:3]]
