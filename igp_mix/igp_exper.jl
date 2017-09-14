@@ -42,22 +42,27 @@ writecsv("data/mix_data.csv", [c x y])
 x = rand(150, 1)
 function f(x)
   if x < 0.2
-    return 0
+    return 1, 0
   elseif x < 0.4
-    return -(x - 0.4) * (x - 0.2)
+    return 2, -(x - 0.4) * (x - 0.2)
   elseif x < 0.8
-    return 0
+    return 3, 0
   elseif x <= 1
-    return -(x - 0.8) * (x - 1.2)
+    return 4, -(x - 0.8) * (x - 1.2)
   end
 end
 
-y = [f(z) for z in x[:, 1]]
+## prepare data
+c = [f(z)[1] for z in x[:, 1]]
+y = [f(z)[2] for z in x[:, 1]]
 y += 0.01 * rand(length(y))
 y -= mean(y)
+
+## sample and write to file
+alpha = 3.0
 state = MixGPSampler(x, y, alpha, a, "data/samples/bump0914/", 500)
 
 x_new = collect(minimum(x):0.01:maximum(x))[:, :]
 post = mix_posteriors(x_new, state)
 write_posteriors("data/bump_posteriors.csv", post)
-writecsv("data/bump_data.csv", [x y])
+writecsv("data/bump_data.csv", [c x y])
