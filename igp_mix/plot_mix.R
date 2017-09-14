@@ -30,6 +30,10 @@ min_theme <- theme_update(
   legend.key = element_blank()
 )
 
+#' Preprocessing class memberships
+#'
+#' Useful column names / types for gibbs samples for c (the length n class
+#' membership variable).
 preprocess_c <- function(c_samples) {
   colnames(c_samples) <- c("iter", "sample", "class")
   c_samples$truth <- as.factor(data$class[c_samples$sample])
@@ -39,7 +43,11 @@ preprocess_c <- function(c_samples) {
   c_samples
 }
 
-coocurrence_counts <- function(x) {
+#' Count Cooccurrences
+#'
+#' We can study how many times pairs of samples get placed in the same class
+#' across gibbs sampling iterations.
+cooccurrence_counts <- function(x) {
   samples <- unique(x$sample)
   n <- length(samples)
   counts <- matrix(
@@ -68,7 +76,12 @@ coocurrence_counts <- function(x) {
   counts
 }
 
-## plot the raw data and the final estimated fits
+#' Plot Mix-GP Fits
+#'
+#' Plot the raw data and the estimated fits using the final sampled
+#' hyperparameters. A better strategy of course would look at the posterior
+#' means of the hyperparameters after accounting for label switching (see the
+#' plot_c function for that though).
 plot_fits <- function(data, post) {
   ggplot() +
     geom_line(
@@ -81,7 +94,10 @@ plot_fits <- function(data, post) {
     )
 }
 
-## plot the class memberships over time
+#' Plot Classes
+#'
+#' Plot the class memberships for individual samples over many iterations, after
+#' arranging the samples according to their true class memberships.
 plot_c <- function(c_samples) {
   ggplot(c_samples) +
     geom_tile(
@@ -103,21 +119,21 @@ plot_c <- function(c_samples) {
     )
 }
 
-plot_coocurrence(counts) {
+#' Plot Cooccurrences
+#'
+#' Plot the count of the number of times samples are placed into the same
+#' classes, after arranging samples according to their true class memberships.
+plot_cooccurrence <- function(counts, data) {
   mcounts <- counts %>%
     melt(
       varnames = c("i", "j"),
       value.name = "count"
     ) %>%
     mutate(
-      i = factor(i, levels = levels(c_samples$sample))
-      j = factor(j, levels = levels(c_samples$sample)),
-      class_group = factor(data$class[mcounts$i])
+      class_group = factor(data$class[i]),
+      i = factor(i, levels = order(data$class)),
+      j = factor(j, levels = order(data$class))
     )
-
-  mcounts$i <- factor(mcounts$i, levels = levels(c_samples$sample))
-  mcounts$j <- factor(mcounts$j, levels = levels(c_samples$sample))
-  mcounts$class_group <- factor(data$class[mcounts$i])
 
   ggplot(mcounts) +
     geom_tile(
@@ -138,15 +154,19 @@ colnames(post) <- c("class", "x", "y")
 data <- read_csv("data/mix_data.csv", col_names = FALSE)
 colnames(data) <- c("class", "x", "y")
 plot_fits(data, post)
+dir.create("figure")
+ggsave("figure/gp_fits.png")
 
 ## read in the cluster membership data
 c_samples <- read_csv("data/samples/sim0914/c.csv", col_names = FALSE) %>%
   preprocess_c()
 plot_c(c_samples)
+ggsave("figure/gp_c_samples.png")
 
 ## plot co-occurrence of classes between samples
-counts <- coocurrence_counts(c_samples)
-plot_coocurrence(counts)
+counts <- cooccurrence_counts(c_samples)
+plot_cooccurrence(counts, data)
+ggsave("figure/gp_cooccurrence.png")
 
 ###############################################################################
 ## Data generated from toy bump function
@@ -156,10 +176,13 @@ colnames(post) <- c("class", "x", "y")
 bump <- read_csv("data/bump_data.csv", col_names = FALSE)
 colnames(bump) <- c("class", "x", "y")
 plot_fits(bump, post)
+ggsave("figure/bump_fits.png")
 
 c_samples <- read_csv("data/samples/bump0914/c.csv", col_names = FALSE) %>%
   preprocess_c()
 plot_c(c_samples)
+ggsave("figure/bump_c_samples.png")
 
-counts <- coocurrence_counts(c_samples)
-plot_coocurrence(counts)
+counts <- cooccurrence_counts(c_samples)
+plot_cooccurrence(counts)
+ggsave("figure/bump_cooccurrence.png")
