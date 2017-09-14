@@ -114,17 +114,31 @@ ggplot(c_samples) +
 
 ## plot co-occurrence of classes between samples
 counts <- coocurrence_counts(c_samples)
-mcounts <- melt(
-  counts,
-  varnames = c("i", "j"),
-  value.name = "count"
-)
+
+mcounts <- counts %>%
+  melt(
+    varnames = c("i", "j"),
+    value.name = "count"
+  ) %>%
+  mutate(
+    i = factor(i, levels = levels(c_samples$sample))
+    j = factor(j, levels = levels(c_samples$sample)),
+    class_group = factor(data$class[mcounts$i])
+  )
+
+mcounts$i <- factor(mcounts$i, levels = levels(c_samples$sample))
+mcounts$j <- factor(mcounts$j, levels = levels(c_samples$sample))
+mcounts$class_group <- factor(data$class[mcounts$i])
 
 ggplot(mcounts) +
   geom_tile(
-    aes(x = i, y = j, fill = count)
+    aes(
+      x = i,
+      y = j,
+      fill = class_group,
+      alpha = count)
   ) +
-  scale_fill_gradient(low = "white", high = "black")
+  scale_alpha(range = c(0, 1))
 
 ## see how often samples were placed in the same cluster
 bump <- read_csv("data/bump_data.csv", col_names = FALSE)
