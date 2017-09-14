@@ -459,6 +459,37 @@ type MixGPState
   thetas::Dict{Int64, KernelParam}
 end
 
+function write_state(iter::Int64, state::MixGPState, out_dir::String)
+  n = length(state.c)
+
+  c_path = string(out_dir, "c.csv")
+  thetas_path = string(out_dir, "thetas.csv")
+
+  open(c_path, "a") do x
+    writecsv(x, [iter * ones(n) state.c])
+  end
+
+  open(thetas_path, "a") do x
+    theta_array = Matrix(state.thetas)
+    writecsv(x, [iter * ones(size(theta_array, 1)) theta_array])
+  end
+end
+
+function Vector(theta::KernelParam)
+  [theta.l theta.v0 theta.v1]
+end
+
+function Matrix(thetas::Dict{Int64, KernelParam})
+  theta_array = zeros(length(thetas), 4)
+  for (k,v) in thetas
+    theta_vec = Vector(thetas[k])
+    theta_array[k, 1] = k
+    theta_array[k, 2:4] = theta_vec
+  end
+
+  theta_array
+end
+
 function sweep_indicators!(state::MixGPState,
                            x::Matrix,
                            y::Vector,
@@ -493,6 +524,8 @@ function MixGPSampler(x::Matrix,
                       y::Vector,
                       alpha::Float64,
                       a::GPHyper,
+                      out_dir::String,
+                      thin::Int64 = 5,
                       n_iter::Int64 = 20,
                       n_hmc::Int64 = 10,
                       L::Int64 = 5,
@@ -506,6 +539,9 @@ function MixGPSampler(x::Matrix,
 
   for iter = 1:n_iter
     println("iter ", iter)
+    if iter % thin == 0
+      write_state(out_path, state)
+    end
 
     ## resample all the cs
     sweep_indicators!(state, x, y, alpha, a)
