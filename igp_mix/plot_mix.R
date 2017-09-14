@@ -124,13 +124,16 @@ plot_c <- function(c_samples) {
 #' Plot the count of the number of times samples are placed into the same
 #' classes, after arranging samples according to their true class memberships.
 plot_cooccurrence <- function(counts, data) {
+  classes <- min(data$class):max(data$class)
+  diag(counts) <- 0
   mcounts <- counts %>%
     melt(
       varnames = c("i", "j"),
       value.name = "count"
     ) %>%
     mutate(
-      class_group = factor(data$class[i]),
+      class_group1 = factor(data$class[i], levels = rev(classes)),
+      class_group2 = factor(data$class[j], levels = classes),
       i = factor(i, levels = order(data$class)),
       j = factor(j, levels = order(data$class))
     )
@@ -140,10 +143,10 @@ plot_cooccurrence <- function(counts, data) {
       aes(
         x = i,
         y = j,
-        fill = class_group,
-        alpha = count)
+        fill = count)
     ) +
-    scale_alpha(range = c(0, 1))
+    scale_fill_gradient(low = "white", high = "black") +
+    facet_grid(class_group2 ~ class_group1, scales = "free", space = "free")
 }
 
 ###############################################################################
