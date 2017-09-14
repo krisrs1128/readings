@@ -34,7 +34,7 @@ min_theme <- theme_update(
 #'
 #' Useful column names / types for gibbs samples for c (the length n class
 #' membership variable).
-preprocess_c <- function(c_samples) {
+preprocess_c <- function(c_samples, data) {
   colnames(c_samples) <- c("iter", "sample", "class")
   c_samples$truth <- as.factor(data$class[c_samples$sample])
   c_samples$class <- factor(c_samples$class, levels = names(sort(table(c_samples$class), decreasing = TRUE)))
@@ -162,7 +162,7 @@ ggsave("figure/gp_fits.png")
 
 ## read in the cluster membership data
 c_samples <- read_csv("data/samples/sim0914/c.csv", col_names = FALSE) %>%
-  preprocess_c()
+  preprocess_c(data)
 plot_c(c_samples)
 ggsave("figure/gp_c_samples.png")
 
@@ -182,7 +182,7 @@ plot_fits(bump, post)
 ggsave("figure/bump_fits.png")
 
 c_samples <- read_csv("data/samples/bump0914/c.csv", col_names = FALSE) %>%
-  preprocess_c()
+  preprocess_c(bump)
 plot_c(c_samples)
 ggsave("figure/bump_c_samples.png")
 
