@@ -43,5 +43,13 @@ ggplot() +
   ylim(-30, 10)
 
 bump <- read_tsv("data/bump_data.csv", col_names = FALSE)
-ggplot(bump) +
-  geom_point(aes(x = X1, y = X2))
+post <- read_tsv("data/bump_posteriors.csv", col_names = FALSE)
+ggplot() +
+  geom_point(
+    data = bump,
+    aes(x = X1, y = X2)
+  ) +
+  geom_line(
+    data = post,
+    aes(x = X2, y = X3, group = X1)
+  )

@@ -18,9 +18,9 @@ alpha = 2.0
 thetas = Dict{Int64, KernelParam}()
 
 a = GPHyper(
-  Distributions.Logistic(-1, 4),
-  Distributions.Logistic(-1, 4),
-  Distributions.Logistic(-1, 4)
+  Distributions.Normal(),
+  Distributions.Normal(),
+  Distributions.Normal()
 )
 
 for k = 1:K
@@ -53,8 +53,11 @@ end
 
 y = [f(z) for z in x[:, 1]]
 y += 0.01 * rand(length(y))
+y -= mean(y)
 
-state = MixGPSampler(x, y, alpha, a, 30)
+state = MixGPSampler(x, y, alpha, a, 100)
+
+x_new = collect(minimum(x):0.01:maximum(x))[:, :]
 post = mix_posteriors(x_new, state)
 write_posteriors("data/bump_posteriors.csv", post)
 writedlm("data/bump_data.csv", [x y])
