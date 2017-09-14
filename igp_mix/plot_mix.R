@@ -9,6 +9,7 @@
 
 library("tidyverse")
 library("forcats")
+library("reshape2")
 
 scale_colour_discrete <- function(...)
   scale_colour_brewer(..., palette="Set2")
@@ -38,6 +39,36 @@ preprocess_c <- function(c_samples) {
   c_samples
 }
 
+coocurrence_counts <- function(x) {
+  samples <- unique(x$sample)
+  n <- length(samples)
+  counts <- matrix(
+    0,
+    nrow = n,
+    ncol = n,
+    dimnames = list(samples, samples)
+  )
+
+  for (i in unique(x$iter)) {
+    message("Processing ", i)
+    cur_data <- x %>%
+      filter(iter == i) %>%
+      select(sample, class)
+    cur_data <- setNames(cur_data$class, cur_data$sample)
+
+    for (j in samples) {
+      for (k in samples) {
+        if (cur_data[j] == cur_data[k]) {
+          counts[j, k] <- 1 + counts[j, k]
+        }
+      }
+    }
+
+  }
+  counts
+}
+
+
 ###############################################################################
 ## Data generated from true mixture of GPs model
 ###############################################################################
@@ -61,7 +92,7 @@ ggplot() +
 c_samples <- read_csv("data/samples/sim0914/c.csv", col_names = FALSE) %>%
   preprocess_c()
 
-
+## plot the class memberships over time
 ggplot(c_samples) +
   geom_tile(
     aes(x = sample, y = iter, fill = class_group)
@@ -80,6 +111,20 @@ ggplot(c_samples) +
     panel.border = element_rect(size = 0.5, fill = "transparent"),
     panel.spacing = unit(0, "cm")
   )
+
+## plot co-occurrence of classes between samples
+counts <- coocurrence_counts(c_samples)
+mcounts <- melt(
+  counts,
+  varnames = c("i", "j"),
+  value.name = "count"
+)
+
+ggplot(mcounts) +
+  geom_tile(
+    aes(x = i, y = j, fill = count)
+  ) +
+  scale_fill_gradient(low = "white", high = "black")
 
 ## see how often samples were placed in the same cluster
 bump <- read_csv("data/bump_data.csv", col_names = FALSE)
