@@ -10,17 +10,18 @@
 
 
 ## simulate toy data
-n = 150
-K = 3
+srand(09142017)
+n = 100
+K = 4
 c = rand(1:K, n)
 update_ix = rand(1:n)
-alpha = 2.0
+alpha = 1.0
 thetas = Dict{Int64, KernelParam}()
 
 a = GPHyper(
-  Distributions.Normal(),
-  Distributions.Normal(),
-  Distributions.Normal()
+  Distributions.Logistic(-1, 1),
+  Distributions.Logistic(-1, 1),
+  Distributions.Logistic(-1, 1)
 )
 
 for k = 1:K
@@ -29,13 +30,13 @@ end
 c, x, y = simulate_mix(n, thetas)
 
 ## run the sampler, and keep last iteration
-state = MixGPSampler(x, y, alpha, a, 30)
+state = MixGPSampler(x, y, alpha, a, "data/samples/sim0914/", 500)
 
 ## get posterior estimates for each component
 x_new = collect(minimum(x):0.01:maximum(x))[:, :]
 post = mix_posteriors(x_new, state)
-write_post("data/mix_post.csv", post)
-writedlm("data/mix_data.csv", [x y])
+write_posteriors("data/mix_post.csv", post)
+writecsv("data/mix_data.csv", [c x y])
 
 ## consider instead a zeros + departures dataset
 x = rand(150, 1)
@@ -60,4 +61,4 @@ state = MixGPSampler(x, y, alpha, a, 100)
 x_new = collect(minimum(x):0.01:maximum(x))[:, :]
 post = mix_posteriors(x_new, state)
 write_posteriors("data/bump_posteriors.csv", post)
-writedlm("data/bump_data.csv", [x y])
+writecsv("data/bump_data.csv", [x y])
