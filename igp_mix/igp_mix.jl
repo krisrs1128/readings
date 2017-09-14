@@ -147,7 +147,7 @@ end
 
 function gp_posterior(x_new::Matrix,
                       gp::GPModel,
-                      epsilon::Float64 = 1e-5)
+                      epsilon::Float64 = 1e-8)
   theta_noiseless = deepcopy(gp.theta)
   theta_noiseless.v1 = 0
 
@@ -183,7 +183,7 @@ function write_posteriors(output_path::String,
 
   open(output_path, "a") do x
     for k in keys(post)
-      writedlm(
+      writecsv(
         x,
         [k * ones(length(post[k])) x_new mean(post[k])]
       )
@@ -459,14 +459,13 @@ type MixGPState
   thetas::Dict{Int64, KernelParam}
 end
 
-function write_state(iter::Int64, state::MixGPState, out_dir::String)
+function write_state(iter::Int64, state::MixGPState, out_path::String)
+  c_path = string(out_path, "c.csv")
+  thetas_path = string(out_path, "thetas.csv")
+
   n = length(state.c)
-
-  c_path = string(out_dir, "c.csv")
-  thetas_path = string(out_dir, "thetas.csv")
-
   open(c_path, "a") do x
-    writecsv(x, [iter * ones(n) state.c])
+    writecsv(x, [iter * ones(n) collect(1:n) state.c])
   end
 
   open(thetas_path, "a") do x
@@ -511,7 +510,6 @@ function sweep_indicators!(state::MixGPState,
   state
 end
 
-
 function add_kernels!(state::MixGPState,
                       new_cs::Vector{Int64},
                       a::GPHyper)
@@ -524,12 +522,17 @@ function MixGPSampler(x::Matrix,
                       y::Vector,
                       alpha::Float64,
                       a::GPHyper,
-                      out_dir::String,
-                      thin::Int64 = 5,
+                      out_path::String,
                       n_iter::Int64 = 20,
+                      thin::Int64 = 5,
                       n_hmc::Int64 = 10,
                       L::Int64 = 5,
                       epsilon::Float64 = 0.005)
+  if ispath(out_path)
+    rm(out_path, recursive = true)
+  end
+  mkpath(out_path)
+
   ## initialize the sampling state
   n = length(y)
   state = MixGPState(
@@ -539,8 +542,8 @@ function MixGPSampler(x::Matrix,
 
   for iter = 1:n_iter
     println("iter ", iter)
-    if iter % thin == 0
-      write_state(out_path, state)
+    if (iter - 1) % thin == 0
+      write_state(iter, state, out_path)
     end
 
     ## resample all the cs
