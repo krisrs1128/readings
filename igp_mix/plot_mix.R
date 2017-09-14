@@ -148,7 +148,18 @@ plot_c(c_samples)
 counts <- coocurrence_counts(c_samples)
 plot_coocurrence(counts)
 
-## see how often samples were placed in the same cluster
-bump <- read_csv("data/bump_data.csv", col_names = FALSE)
+###############################################################################
+## Data generated from toy bump function
+###############################################################################
 post <- read_csv("data/bump_posteriors.csv", col_names = FALSE)
+colnames(post) <- c("class", "x", "y")
+bump <- read_csv("data/bump_data.csv", col_names = FALSE)
+colnames(bump) <- c("class", "x", "y")
 plot_fits(bump, post)
+
+c_samples <- read_csv("data/samples/bump0914/c.csv", col_names = FALSE) %>%
+  preprocess_c()
+plot_c(c_samples)
+
+counts <- coocurrence_counts(c_samples)
+plot_coocurrence(counts)
