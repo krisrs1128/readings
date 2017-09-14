@@ -124,14 +124,14 @@ a = GPHyper(
   Distributions.Normal(),
   Distributions.Normal(),
 )
-thetas = [rand_kernel(a), rand_kernel(a), rand_kernel(a)]
+thetas = Dict(1 => rand_kernel(a), 2 => rand_kernel(a), 3 => rand_kernel(a))
 c, x, y = simulate_mix(200, thetas)
 
 using Gadfly
 plot(x = x[:, 1], y = y, color = c)
 ```
 """
-function simulate_mix(n::Int64, thetas::Vector{KernelParam})
+function simulate_mix(n::Int64, thetas::Dict{Int64, KernelParam})
   x = zeros(n, 1)
   y = zeros(n)
   K = length(thetas)
@@ -159,6 +159,36 @@ function gp_posterior(x_new::Matrix,
   mu = k_x_xnew' * inv_k_train * gp.y_train
   Sigma = k_xnew_xnew - k_x_xnew' * inv_k_train * k_x_xnew + epsilon * eye(size(x_new, 1))
   Distributions.MvNormal(mu, Hermitian(Sigma))
+end
+
+function mix_posteriors(x_new::Matrix, state::MixGPState)
+  post = Dict{Int64, Distributions.MvNormal}()
+  for k = 1:maximum(state.c)
+    if sum(state.c .== k) == 0
+      continue
+    end
+
+    gp = GPModel(state.thetas[k], x, y)
+    post[k] = gp_posterior(x_new, gp)
+  end
+
+  post
+end
+
+function write_posteriors(output_path::String,
+                          post::Dict{Int64, Distributions.MvNormal})
+  if isfile(output_path)
+    rm(output_path)
+  end
+
+  open(output_path, "a") do x
+    for k in keys(post)
+      writecsv(
+        x,
+        [k * ones(length(post[k])) x_new mean(post[k])]
+      )
+    end
+  end
 end
 
 """Log PDF for a GP Model
@@ -304,7 +334,7 @@ end
 function joint_log_prob(c::Vector{Int64},
                         x::Matrix,
                         y::Vector,
-                        thetas::Vector{KernelParam},
+                        thetas::Dict{Int64, KernelParam},
                         alpha::Float64)
   liks = gp_logpdf_wrapper(c, x, y, thetas)
   nk = class_counts(c)
@@ -429,6 +459,36 @@ type MixGPState
   thetas::Dict{Int64, KernelParam}
 end
 
+function write_state(iter::Int64, state::MixGPState, out_path::String)
+  c_path = string(out_path, "c.csv")
+  thetas_path = string(out_path, "thetas.csv")
+
+  n = length(state.c)
+  open(c_path, "a") do x
+    writecsv(x, [iter * ones(n) collect(1:n) state.c])
+  end
+
+  open(thetas_path, "a") do x
+    theta_array = Matrix(state.thetas)
+    writecsv(x, [iter * ones(size(theta_array, 1)) theta_array])
+  end
+end
+
+function Vector(theta::KernelParam)
+  [theta.l theta.v0 theta.v1]
+end
+
+function Matrix(thetas::Dict{Int64, KernelParam})
+  theta_array = zeros(length(thetas), 4)
+  for (k,v) in thetas
+    theta_vec = Vector(thetas[k])
+    theta_array[k, 1] = k
+    theta_array[k, 2:4] = theta_vec
+  end
+
+  theta_array
+end
+
 function sweep_indicators!(state::MixGPState,
                            x::Matrix,
                            y::Vector,
@@ -450,7 +510,6 @@ function sweep_indicators!(state::MixGPState,
   state
 end
 
-
 function add_kernels!(state::MixGPState,
                       new_cs::Vector{Int64},
                       a::GPHyper)
@@ -463,7 +522,17 @@ function MixGPSampler(x::Matrix,
                       y::Vector,
                       alpha::Float64,
                       a::GPHyper,
-                      n_iter::Int64 = 20)
+                      out_path::String,
+                      n_iter::Int64 = 20,
+                      thin::Int64 = 5,
+                      n_hmc::Int64 = 10,
+                      L::Int64 = 5,
+                      epsilon::Float64 = 0.005)
+  if ispath(out_path)
+    rm(out_path, recursive = true)
+  end
+  mkpath(out_path)
+
   ## initialize the sampling state
   n = length(y)
   state = MixGPState(
@@ -473,25 +542,26 @@ function MixGPSampler(x::Matrix,
 
   for iter = 1:n_iter
     println("iter ", iter)
+    if (iter - 1) % thin == 0
+      write_state(iter, state, out_path)
+    end
 
     ## resample all the cs
     sweep_indicators!(state, x, y, alpha, a)
 
     ## resample the kernel hyperparameters
     for k in unique(state.c)
-      if !any(c .== k)
+      if !any(state.c .== k)
         next
       end
 
       theta0 = log.([state.thetas[k].l ^ 2, state.thetas[k].v0, state.thetas[k].v1])
-      theta_samples = GPSampler(x[c .== k, :], y[c .== k], a, 10, 5, 0.005, theta0)
-      state.thetas[k] = KernelParam(
-        sqrt(theta_samples[end, 1]),
-        theta_samples[end, 2],
-        theta_samples[end, 3]
+      theta_samples = GPSampler(x[state.c .== k, :], y[state.c .== k], a, n_hmc, L, epsilon, theta0)
+      state.thetas[k] = param_from_theta(
+        [[sqrt(theta_samples[end, 1])];
+         theta_samples[end, 2:3]]
       )
     end
-
   end
 
   state
