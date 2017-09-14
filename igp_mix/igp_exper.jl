@@ -55,8 +55,7 @@ end
 y = [f(z) for z in x[:, 1]]
 y += 0.01 * rand(length(y))
 y -= mean(y)
-
-state = MixGPSampler(x, y, alpha, a, 100)
+state = MixGPSampler(x, y, alpha, a, "data/samples/bump0914/", 500)
 
 x_new = collect(minimum(x):0.01:maximum(x))[:, :]
 post = mix_posteriors(x_new, state)
