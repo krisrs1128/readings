@@ -43,6 +43,13 @@ preprocess_c <- function(c_samples, data) {
   c_samples
 }
 
+preprocess_post <- function(post) {
+  colnames(post) <- c("iter", "class", "x", "y")
+  post$class <- factor(post$class, levels = names(sort(table(post$class), decreasing = TRUE)))
+  post$class_group <- fct_lump(post$class, n = 6)
+  post
+}
+
 #' Count Cooccurrences
 #'
 #' We can study how many times pairs of samples get placed in the same class
@@ -84,14 +91,15 @@ cooccurrence_counts <- function(x) {
 #' plot_c function for that though).
 plot_fits <- function(data, post) {
   ggplot() +
-    geom_line(
-      data = post,
-      aes(x = x, y = y, group = class),
-      ) +
     geom_point(
       data = data,
-      aes(x = x, y = y, col = as.factor(class))
-    )
+      aes(x = x, y = y)
+    ) +
+    geom_line(
+      data = post,
+      aes(x = x, y = y, group = interaction(class, iter), col = class_group)
+    ) +
+    facet_wrap(~iter)
 }
 
 #' Plot Classes
@@ -201,20 +209,25 @@ ggsave("figure/bump_cooccurrence.png")
 ## Antibiotics dataset
 ###############################################################################
 library("treelapse")
+library("phyloseq")
 data(abt)
+cur_data <- abt %>%
+  subset_samples(ind == "F") %>%
+  get_taxa()
 write.table(
-  phyloseq::get_taxa(abt)["Unc063x1", ],
+  cur_data["Unc063x1", ],
   file = "data/unc063x1_data.csv",
   sep = ",",
   row.names = FALSE,
   col.names = FALSE
 )
 
-post <- read_csv("data/unc063x1_posteriors.csv", col_names = FALSE)
-colnames(post) <- c("class", "x", "y")
+post <- read_csv("data/unc063x1_posteriors.csv", col_names = FALSE) %>%
+  preprocess_post()
 data <- read_csv("data/unc063x1_data.csv", col_names = FALSE)
 colnames(data) <- c("class", "x", "y")
-plot_fits(data, post)
+plot_fits(data, post %>% filter(iter < 60))
+plot_fits(data, post %>% filter(iter > 100))
 ggsave("figure/unc063x1_fits.png")
 
 c_samples <- read_csv("data/samples/unc063x1/c.csv", col_names = FALSE) %>%
