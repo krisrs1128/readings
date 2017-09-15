@@ -566,3 +566,23 @@ function write_posteriors(output_path::String,
     end
   end
 end
+
+"""Read States from File
+
+This reads the thetas written to file by write_state().
+"""
+function read_states(input_path::String)
+  states_array = readcsv(input_path)
+  iters = unique(states_array[:, 1])
+
+  param_dict = Dict{Int64, Dict{Int64, KernelParam}}()
+
+  for i in iters
+    cur_data = states_array[states_array[:, 1] .== i, :]
+    param_dict[Int(i)] = Dict{Int64, KernelParam}()
+    for j in 1:size(cur_data, 1)
+      param_dict[Int(i)][j] = param_from_theta(cur_data[j, 3:5])
+    end
+  end
+
+end
