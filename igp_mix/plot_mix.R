@@ -166,6 +166,13 @@ c_samples <- read_csv("data/samples/sim0914/c.csv", col_names = FALSE) %>%
 plot_c(c_samples)
 ggsave("figure/gp_c_samples.png")
 
+data_copy <- data
+data_copy$class <- c_samples %>%
+  filter(iter == max(iter)) %>%
+  .[["class"]]
+plot_fits(data, post)
+plot_fits(data_copy, post)
+
 ## plot co-occurrence of classes between samples
 counts <- cooccurrence_counts(c_samples)
 plot_cooccurrence(counts, data)
@@ -187,5 +194,29 @@ plot_c(c_samples)
 ggsave("figure/bump_c_samples.png")
 
 counts <- cooccurrence_counts(c_samples)
-plot_cooccurrence(counts)
+plot_cooccurrence(counts, bump)
 ggsave("figure/bump_cooccurrence.png")
+
+###############################################################################
+## Antibiotics dataset
+###############################################################################
+library("treelapse")
+data(abt)
+write.table(
+  phyloseq::get_taxa(abt)["Unc063x1", ],
+  file = "data/unc063x1_data.csv",
+  sep = ",",
+  row.names = FALSE,
+  col.names = FALSE
+)
+
+post <- read_csv("data/unc063x1_posteriors.csv", col_names = FALSE)
+colnames(post) <- c("class", "x", "y")
+data <- read_csv("data/unc063x1_data.csv", col_names = FALSE)
+colnames(data) <- c("class", "x", "y")
+plot_fits(data, post)
+ggsave("figure/unc063x1_fits.png")
+
+c_samples <- read_csv("data/samples/unc063x1/c.csv", col_names = FALSE) %>%
+  preprocess_c(bump)
+plot_c(c_samples)
