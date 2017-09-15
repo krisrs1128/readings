@@ -72,9 +72,14 @@ writecsv("data/bump_data.csv", [c x y])
 alpha = 1.0
 y = readcsv("data/unc063x1_data.csv")[:]
 x = collect(linspace(0, 1, length(y)))[:, :]
-state = MixGPSampler(x, y, alpha, a, "data/samples/unc063x1/", n_iter)
+MixGPSampler(x, y, alpha, a, "data/samples/unc063x1/", n_iter)
+
+states = read_states(
+  "data/samples/unc063x1/thetas.csv",
+  "data/samples/unc063x1/c.csv"
+)
 
 x_new = collect(minimum(x):0.01:maximum(x))[:, :]
-post = mix_posteriors(x_new, state)
-write_posteriors("data/unc063x1_posteriors.csv", post)
+posteriors = mix_posteriors(x_new, states)
+write_posteriors("data/unc063x1_posteriors.csv", x_new[:], posteriors)
 writecsv("data/unc063x1_data.csv", [zeros(length(y)) x y])
