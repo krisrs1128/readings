@@ -161,36 +161,6 @@ function gp_posterior(x_new::Matrix,
   Distributions.MvNormal(mu, Hermitian(Sigma))
 end
 
-function mix_posteriors(x_new::Matrix, state::MixGPState)
-  post = Dict{Int64, Distributions.MvNormal}()
-  for k = 1:maximum(state.c)
-    if sum(state.c .== k) == 0
-      continue
-    end
-
-    gp = GPModel(state.thetas[k], x, y)
-    post[k] = gp_posterior(x_new, gp)
-  end
-
-  post
-end
-
-function write_posteriors(output_path::String,
-                          post::Dict{Int64, Distributions.MvNormal})
-  if isfile(output_path)
-    rm(output_path)
-  end
-
-  open(output_path, "a") do x
-    for k in keys(post)
-      writecsv(
-        x,
-        [k * ones(length(post[k])) x_new mean(post[k])]
-      )
-    end
-  end
-end
-
 """Log PDF for a GP Model
 
 During sampling, it is useful at various points to evaluate the log probability
@@ -565,4 +535,34 @@ function MixGPSampler(x::Matrix,
   end
 
   state
+end
+
+function mix_posteriors(x_new::Matrix, state::MixGPState)
+  post = Dict{Int64, Distributions.MvNormal}()
+  for k = 1:maximum(state.c)
+    if sum(state.c .== k) == 0
+      continue
+    end
+
+    gp = GPModel(state.thetas[k], x, y)
+    post[k] = gp_posterior(x_new, gp)
+  end
+
+  post
+end
+
+function write_posteriors(output_path::String,
+                          post::Dict{Int64, Distributions.MvNormal})
+  if isfile(output_path)
+    rm(output_path)
+  end
+
+  open(output_path, "a") do x
+    for k in keys(post)
+      writecsv(
+        x,
+        [k * ones(length(post[k])) x_new mean(post[k])]
+      )
+    end
+  end
 end
