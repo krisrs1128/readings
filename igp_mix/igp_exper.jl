@@ -6,13 +6,14 @@
 ## model.
 ##
 ## author: sankaran.kris@gmail.com
-## date: 09/13/2017
-
+## date: 09/15/2017
 
 ## simulate toy data
+include("igp_mix.jl")
 srand(09142017)
-n = 100
-K = 4
+n = 60
+n_iter = 200
+K = 3
 c = rand(1:K, n)
 update_ix = rand(1:n)
 alpha = 1.0
@@ -30,7 +31,7 @@ end
 c, x, y = simulate_mix(n, thetas)
 
 ## run the sampler, and keep last iteration
-state = MixGPSampler(x, y, alpha, a, "data/samples/sim0914/", 500)
+state = MixGPSampler(x, y, alpha, a, "data/samples/sim0914/", n_iter)
 
 ## get posterior estimates for each component
 x_new = collect(minimum(x):0.01:maximum(x))[:, :]
@@ -39,7 +40,7 @@ write_posteriors("data/mix_post.csv", post)
 writecsv("data/mix_data.csv", [c x y])
 
 ## consider instead a zeros + departures dataset
-x = rand(150, 1)
+x = rand(n, 1)
 function f(x)
   if x < 0.2
     return 1, 0
@@ -60,9 +61,20 @@ y -= mean(y)
 
 ## sample and write to file
 alpha = 3.0
-state = MixGPSampler(x, y, alpha, a, "data/samples/bump0914/", 500)
+state = MixGPSampler(x, y, alpha, a, "data/samples/bump0914/", n_iter)
 
 x_new = collect(minimum(x):0.01:maximum(x))[:, :]
 post = mix_posteriors(x_new, state)
 write_posteriors("data/bump_posteriors.csv", post)
 writecsv("data/bump_data.csv", [c x y])
+
+## consider real microbiome series
+alpha = 1.0
+y = readcsv("data/unc063x1_data.csv")[:]
+x = collect(linspace(0, 1, length(y)))[:, :]
+state = MixGPSampler(x, y, alpha, a, "data/samples/unc063x1/", n_iter)
+
+x_new = collect(minimum(x):0.01:maximum(x))[:, :]
+post = mix_posteriors(x_new, state)
+write_posteriors("data/unc063x1_posteriors.csv", post)
+writecsv("data/unc063x1_data.csv", [zeros(length(y)) x y])
