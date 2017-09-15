@@ -147,7 +147,7 @@ end
 
 function gp_posterior(x_new::Matrix,
                       gp::GPModel,
-                      epsilon::Float64 = 1e-8)
+                      epsilon::Float64 = 1e-5)
   theta_noiseless = deepcopy(gp.theta)
   theta_noiseless.v1 = 0
 
@@ -159,36 +159,6 @@ function gp_posterior(x_new::Matrix,
   mu = k_x_xnew' * inv_k_train * gp.y_train
   Sigma = k_xnew_xnew - k_x_xnew' * inv_k_train * k_x_xnew + epsilon * eye(size(x_new, 1))
   Distributions.MvNormal(mu, Hermitian(Sigma))
-end
-
-function mix_posteriors(x_new::Matrix, state::MixGPState)
-  post = Dict{Int64, Distributions.MvNormal}()
-  for k = 1:maximum(state.c)
-    if sum(state.c .== k) == 0
-      continue
-    end
-
-    gp = GPModel(state.thetas[k], x, y)
-    post[k] = gp_posterior(x_new, gp)
-  end
-
-  post
-end
-
-function write_posteriors(output_path::String,
-                          post::Dict{Int64, Distributions.MvNormal})
-  if isfile(output_path)
-    rm(output_path)
-  end
-
-  open(output_path, "a") do x
-    for k in keys(post)
-      writecsv(
-        x,
-        [k * ones(length(post[k])) x_new mean(post[k])]
-      )
-    end
-  end
 end
 
 """Log PDF for a GP Model
@@ -565,4 +535,96 @@ function MixGPSampler(x::Matrix,
   end
 
   state
+end
+
+function mix_posteriors(x_new::Matrix, state::MixGPState)
+  post = Dict{Int64, Distributions.MvNormal}()
+  for k = 1:maximum(state.c)
+    if sum(state.c .== k) == 0
+      continue
+    end
+
+    gp = GPModel(state.thetas[k], x, y)
+    post[k] = gp_posterior(x_new, gp)
+  end
+
+  post
+end
+
+function mix_posteriors(x_new::Matrix, states::Dict{Int64, MixGPState})
+  posteriors = Dict{Int64, Dict{Int64, Distributions.MvNormal}}()
+  for k in keys(states)
+    println("Processing ", k)
+    posteriors[k] = mix_posteriors(x_new, states[k])
+  end
+
+  posteriors
+end
+
+function write_posteriors(output_path::String,
+                          x_new::Matrix,
+                          post::Dict{Int64, Distributions.MvNormal})
+  if isfile(output_path)
+    rm(output_path)
+  end
+
+  open(output_path, "a") do x
+    for k in keys(post)
+      append_component(x, k, x_new, post[k])
+    end
+  end
+end
+
+function write_posteriors(output_path::String,
+                          x_new::Vector,
+                          posteriors::Dict{Int64, Dict{Int64, Distributions.MvNormal}})
+  if isfile(output_path)
+    rm(output_path)
+  end
+
+  open(output_path, "a") do x
+    for i in keys(posteriors)
+      for k in keys(posteriors[i])
+        append_component(i, x, k, x_new, posteriors[i][k])
+      end
+    end
+  end
+end
+
+function append_component(i::Int64,
+                          x::IOStream,
+                          k::Int64,
+                          x_new::Vector,
+                          distn::Distributions.MvNormal)
+  ones_d = ones(length(distn))
+  writecsv(x, [i * ones_d k * ones_d x_new mean(distn)])
+end
+
+"""Read States from File
+
+This reads the thetas and cs written to file by write_state().
+"""
+function read_states(thetas_path::String, c_path::String)
+  thetas_array = readcsv(thetas_path)
+  c_array = readcsv(c_path)
+  iters = unique(thetas_array[:, 1])
+  states = Dict{Int64, MixGPState}()
+
+  for iter in iters
+    cur_thetas = thetas_array[thetas_array[:, 1] .== iter, :]
+    cur_c = c_array[c_array[:, 1] .== iter, 3]
+
+    ## construct kernel hyperparameter dictionary
+    cur_param = Dict{Int64, KernelParam}()
+    for j in 1:size(cur_thetas, 1)
+      cur_param[j] = param_from_theta(cur_thetas[j, 3:5])
+    end
+
+    states[iter] = MixGPState(
+      [Int64(ci) for ci in cur_c],
+      cur_param
+    )
+  end
+
+  states
 end
