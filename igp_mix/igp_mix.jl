@@ -147,7 +147,7 @@ end
 
 function gp_posterior(x_new::Matrix,
                       gp::GPModel,
-                      epsilon::Float64 = 1e-8)
+                      epsilon::Float64 = 1e-5)
   theta_noiseless = deepcopy(gp.theta)
   theta_noiseless.v1 = 0
 
@@ -549,6 +549,15 @@ function mix_posteriors(x_new::Matrix, state::MixGPState)
   end
 
   post
+end
+
+function mix_posteriors(x_new::Matrix, states::Vector{MixGPState})
+  posteriors = Dict{Int64, Dict{Int64, Distributions.MvNormal}}()
+  for (i, state) in enumerate(states)
+    posteriors[i] = mix_posteriors(x_new, state)
+  end
+
+  posteriors
 end
 
 function write_posteriors(output_path::String,
