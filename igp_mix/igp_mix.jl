@@ -551,16 +551,18 @@ function mix_posteriors(x_new::Matrix, state::MixGPState)
   post
 end
 
-function mix_posteriors(x_new::Matrix, states::Vector{MixGPState})
+function mix_posteriors(x_new::Matrix, states::Dict{Int64, MixGPState})
   posteriors = Dict{Int64, Dict{Int64, Distributions.MvNormal}}()
-  for (i, state) in enumerate(states)
-    posteriors[i] = mix_posteriors(x_new, state)
+  for k in keys(states)
+    println("Processing ", k)
+    posteriors[k] = mix_posteriors(x_new, states[k])
   end
 
   posteriors
 end
 
 function write_posteriors(output_path::String,
+                          x_new::Matrix,
                           post::Dict{Int64, Distributions.MvNormal})
   if isfile(output_path)
     rm(output_path)
@@ -568,14 +570,35 @@ function write_posteriors(output_path::String,
 
   open(output_path, "a") do x
     for k in keys(post)
-      writecsv(
-        x,
-        [k * ones(length(post[k])) x_new mean(post[k])]
-      )
+      append_component(x, k, x_new, post[k])
     end
   end
 end
 
+function write_posteriors(output_path::String,
+                          x_new::Vector,
+                          posteriors::Dict{Int64, Dict{Int64, Distributions.MvNormal}})
+  if isfile(output_path)
+    rm(output_path)
+  end
+
+  open(output_path, "a") do x
+    for i in keys(posteriors)
+      for k in keys(posteriors[i])
+        append_component(i, x, k, x_new, posteriors[i][k])
+      end
+    end
+  end
+end
+
+function append_component(i::Int64,
+                          x::IOStream,
+                          k::Int64,
+                          x_new::Vector,
+                          distn::Distributions.MvNormal)
+  ones_d = ones(length(distn))
+  writecsv(x, [i * ones_d k * ones_d x_new mean(distn)])
+end
 
 """Read States from File
 
@@ -584,10 +607,10 @@ This reads the thetas and cs written to file by write_state().
 function read_states(thetas_path::String, c_path::String)
   thetas_array = readcsv(thetas_path)
   c_array = readcsv(c_path)
-  iters = unique(states_array[:, 1])
-  states = Vector{MixGPState}(length(iters))
+  iters = unique(thetas_array[:, 1])
+  states = Dict{Int64, MixGPState}()
 
-  for (i, iter) in enumerate(iters)
+  for iter in iters
     cur_thetas = thetas_array[thetas_array[:, 1] .== iter, :]
     cur_c = c_array[c_array[:, 1] .== iter, 3]
 
@@ -597,7 +620,7 @@ function read_states(thetas_path::String, c_path::String)
       cur_param[j] = param_from_theta(cur_thetas[j, 3:5])
     end
 
-    states[i] = MixGPState(
+    states[iter] = MixGPState(
       [Int64(ci) for ci in cur_c],
       cur_param
     )
