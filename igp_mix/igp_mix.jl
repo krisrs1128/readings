@@ -567,22 +567,32 @@ function write_posteriors(output_path::String,
   end
 end
 
+
 """Read States from File
 
-This reads the thetas written to file by write_state().
+This reads the thetas and cs written to file by write_state().
 """
-function read_states(input_path::String)
-  states_array = readcsv(input_path)
+function read_states(thetas_path::String, c_path::String)
+  thetas_array = readcsv(thetas_path)
+  c_array = readcsv(c_path)
   iters = unique(states_array[:, 1])
+  states = Vector{MixGPState}(length(iters))
 
-  param_dict = Dict{Int64, Dict{Int64, KernelParam}}()
+  for (i, iter) in enumerate(iters)
+    cur_thetas = thetas_array[thetas_array[:, 1] .== iter, :]
+    cur_c = c_array[c_array[:, 1] .== iter, 3]
 
-  for i in iters
-    cur_data = states_array[states_array[:, 1] .== i, :]
-    param_dict[Int(i)] = Dict{Int64, KernelParam}()
-    for j in 1:size(cur_data, 1)
-      param_dict[Int(i)][j] = param_from_theta(cur_data[j, 3:5])
+    ## construct kernel hyperparameter dictionary
+    cur_param = Dict{Int64, KernelParam}()
+    for j in 1:size(cur_thetas, 1)
+      cur_param[j] = param_from_theta(cur_thetas[j, 3:5])
     end
+
+    states[i] = MixGPState(
+      [Int64(ci) for ci in cur_c],
+      cur_param
+    )
   end
 
+  states
 end
