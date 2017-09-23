@@ -1,0 +1,307 @@
+\documentclass{article}
+\usepackage{natbib}
+\usepackage{graphicx}
+\usepackage{amsmath, amsfonts, amssymb}
+\input{preamble.tex}
+
+\title{Notes}
+\author{Kris Sankaran}
+
+\begin{document}
+
+\section{Sparse Representations}
+\label{sec:chapter_1}
+
+Sparse representations are useful. We'll also want overcomplete dictionaries,
+because things can be expressed sparsely when there is some redundancy, just
+like in ordinary language.
+
+The fourier transform represents regular, time-invariant signals in a sparse
+way, and is ideal there. But it is cumbersome when we care about transient
+phenomena. In this case, it can be better to use wavelets. Here we write
+
+\begin{align}
+  f = \sum_{j, n} \left<f, \psi_{j, n}\right> \psi_{j, n}
+\end{align}
+where $\psi_{j, n}$ are dilations and translations of the haar function (-1 and
+1 on the two halves of the unit interval) and the correlation is
+\begin{align}
+\left<f, \psi_{j, n}\right> &= \int f\left(t\right) \psi_{j, n}\left(t\right) dt
+\end{align}
+
+It is necessary to go back and forth between continuous functions and discrete
+sequences in this field. Continuous functions are the right objects for
+developing theory, while discrete sequences are necessary for actual computer
+implementations.
+
+First we look at sampling with linear approximations. We sample a signal $f$
+supported on the unit interval using a low-pass response, resulting in the
+length $N$ array,
+
+\begin{align}
+f\left[n\right] &= \left<f\left(x\right), \varphi_{s}\left(x - ns\right)\right>,
+\end{align}
+we hope that the $\varphi_{s}$'s make up a basis of an appropriate approximation
+space.
+
+The projection onto some (other?) orthogonal basis $\bar{g}_{1}, \dots,
+\bar{g}_{N}$ looks like
+\begin{align}
+\bar{f}_{N}\left(x\right) &= \sum_{m = 0}^{N - 1} \left<\bar{f}, \bar{g}_{m}\right>\bar{g}_{m}\left(x\right)
+\end{align}
+Really we want to adapt sampling points to the signal (ir)regularity. For
+nonlinear approximations, we don't just apply a linear approximation to the
+array $f\left[n\right]$. For example, if we use thresholding, we choose the top
+$M$ largest (in absolute value) coefficients $\left<f, g_m\right>$ and make
+approximations using just these.
+
+For compression, one approach is to quantize the wavelet coefficients. Also,
+sometimes you can improve performance by incorporating known geometric
+regularity (e.g., curvelets).
+
+We might imagine noise is introduce in the analog to digital sampling,
+\begin{align}
+X\left[n\right] &= f\left[n\right] + W\left[n\right]
+\end{align}
+for noise $W$. We will recover an estimate $\tilde{F} = DX$ using an operator
+$D$. The risk is
+
+\begin{align}
+r\left(D, f\right) &= \Earg{\|f - DX\|^{2}}
+\end{align}
+and the goal will be either to minimize a bayes risk (which puts a prior $\pi$
+on the signal $f$) or to be minimax and minimize over all $f\in \Theta$.
+
+Donoho and Johnstone showed that thresholding wavelet coefficients provides
+adaptive smoothing, averaging different amounts depending on how regular the
+function appears. They also show that this procedure gets within a log-factor of
+the oracle error when you know the actual support of nonzero coefficients.
+
+Gabor was interested in time-frequency localizations of functions, motivated by
+the uncertainty principle (which gives a lower bound on the product of variances
+in these two domains). Building dictionaries amounts to tiling this
+time-frequency plane up to this width constraint.
+
+Two kinds of dictionaries are the windowed fourier transform and the continuous
+wavelet transform, which we denote by $Sf\left(u, \xi\right)$ and $Wf\left(u,
+s\right)$, respectively, where $u$ is position, $\xi$ is frequency, and $s$ is
+scale.
+
+Wavelet orthonormal bases are a subclass that create a perfect tiling. Wavelet
+packet bases are a generalization that produce tilings that aren't nested w.r.t
+a single time (over frequencies). The local cosine basis is the same idea but
+reversing roles of time and frequency. These tiling portraits seem quite useful.
+
+When working with dictionaries, the two basic problems are dual-syntehsis
+(compute the project $f_{\Lambda}$ onto subset of vectors $V_{\Lambda}$) and
+dual-analysis (compute coefficients w.r.t some basis elements).
+
+We'll often want to find which subset $\Lambda$ in the overcomplete basis
+provide a good approximation, it will turn out that this solves the lagrangian
+
+\begin{align}
+\mathcal{L}_{0}\left(T, f, \Lambda\right) &= \|f - f_{\Lambda}\|^{2} + T^{2}\absarg{\Lambda}
+\end{align}
+
+If you weren't working with orthogonal basis vectors, you have more flexibility,
+but have to come up with a reasonable search strategy. Two common ones are
+matching pursuit (similar to forwards stepwise) and basis pursuit (similar to
+lasso). These will work if an incoherence property is satisfied,
+
+\begin{align}
+\max_{q \notin \Lambda_{T}} \sum_{p \in \Lambda_{T}} \absarg{\left<\tilde{\varphi}_p, \varphi_q\right>} < 1
+\end{align}
+which basically means dictionary elements in $\Lambda_{T}$ are not too close to
+those in it.
+
+Another type of problem that is often interesting ask you to find $f$ after it
+has been passed through some operator $U$, which loses some information,
+\begin{align}
+Y = U f + W,
+\end{align}
+this is called an inverse problem. A first approach is to use an SVD, based on
+eigenvectors of $U$. Or, your can threshold the diagonal elements.
+
+Superresolution is the problem of recovering signals that have been
+undersampled. Important cases are compressive sensing (solving this lets you
+skip lots of acquisition / sensing and get nearly as good results) and blind
+source separation
+
+\section{The Fourier Kingdom}
+\label{sec:chapter_2}
+
+Linear time invariance of an operator $L$ means
+
+\begin{align}
+g\left(t\right) = Lf\left(t\right) \implies g\left(t - \tau\right) = L f_{\tau}\left(t\right)
+\end{align}
+
+The impulse response of hte operator $L$ is defined by
+
+\begin{align}
+h\left(t\right) &= L \delta\left(t\right)
+\end{align}
+and by time invariance,
+\begin{align}
+Lf\left(t\right) &= h\star f\left(t\right)
+\end{align}
+where $\star$ denotes convolution.
+
+The complex exponentials are eigenvectors of convolutions, with eigenvalues
+equal to the fourier transforms at the associated frequency.
+
+Write the fourier integral
+\begin{align}
+\hat{f}\left(\omega\right) &= \int f\left(t\right) e^{-i\omega t} dt
+\end{align}
+for the ``amount'' of oscillation w.r.t frequency $\omega$.
+
+Two important results are the inverse fourier transform (represent $f$ as
+mixture of complex exponentials),
+
+\begin{align}
+f\left(t\right) &= \frac{1}{2\pi} \int \hat{f}\left(\omega\right) e^{i\omega t} d\omega
+\end{align}
+
+and the convolution theorem,
+
+\begin{align}
+g = h \star f &\implies \hat{g}\left(\omega\right) = \hat{h}\left(\omega\right) \hat{f}\left(\omega\right)
+\end{align}
+(assuming integrability).
+
+Both are proved using variants of fubini and DCT (since integrability in one
+coordinate doesn't imply joint integrability, have to use a tempering argument).
+
+The parseval / plancheral formulas say that norms and inner products are
+conserved by the fourier transform whenever $f \in L^{1} \cap L^{2}$. This can
+be used to extend the fourier transform to $L^{2}$, defining them as limits of
+transforms in $L^{1} \cap L^{2}$, which is dense in $L^{2}$.
+
+There is a close relationship between the ``size'' $f$ assigns to higher
+frequencies and it's regularity. A typical theorem is that, if $f$ satisfies
+
+\begin{align}
+\int \absarg{\hat{f}\left(\omega\right)} \left(1 + \absarg{\omega}^{p}\right) d\omega < \infty
+\end{align}
+then it is bounded and in $C^{p}$.
+
+There is also a tradeoff between localization in time and frequency. For
+example, if you ``narrow'' a function while keeping its norm constant,
+
+\begin{align}
+f\left(t\right) \to \frac{1}{\sqrt{s}}f\left(\frac{t}{s}\right),
+\end{align}
+then the fourier transform gets dilated,
+\begin{align}
+\hat{f}\left(\omega\right) \to \sqrt{s}\hat{f}\left(s\omega\right).
+\end{align}
+This phenomena is pretty general, and is formalized by the heisenberg
+uncertainty principle, which gives a lower bound on the product of the variances
+in the time and frequency domains. The proof uses the plancherel identity,
+cauchy-schwarz, and finally integration by parts. The lower bound is attained by
+the gaussian density.
+
+The total variation is defined as
+\begin{align}
+\|f\|_{V} &= \int \absarg{f^{\prime}\left(t\right)}dt
+\end{align}
+which can be seen to be
+\begin{align}
+\sum_{p} \absarg{f\left(x_{p + 1}\right) - f\left(x_{p}\right)},
+\end{align}
+where $x_{p}$ are the positions of extrema. The discrete analog is the
+definition on finite sequences.
+
+The loss-pass filtered version (the loww-pass filter is $\indic{\omega\in
+  \left[-\xi, \xi\right]}$, of a discontinuous function converges to the
+function in $L^{2}$ but not uniformly, because of gibbs oscillations at the
+points of discontinuity.
+
+In two dimensions, there is a neat relationship between total variation of a
+function and its length level sets ($H^{1}\left(d\Omega_{y}\right)$ is the
+length of the level set of height $y$),
+
+\begin{align}
+\|f\|_{V} &= \int H^{1}\left(d\Omega_{y}\right) dy
+\end{align}
+
+The radon transform is the fourier transform along rays in $R^{2}$.
+
+\section{Discrete Revolution}
+\label{sec:chapter_3}
+
+Setup is that we start with analog $f\left(t\right)$ and then digitize by
+sampling along a grid, $\left(f\left(ns\right)\right)_{n \in \integers}$.
+
+The discretized signal is written as
+
+\begin{align}
+\sum_{n = -\infty}^{\infty} f\left(ns\right)\delta\left(t - ns\right)
+\end{align}
+which has fourier transform
+\begin{align}
+\sum_{n = -\infty}^{\infty} f\left(ns\right)e^{-ins\omega}.
+\end{align}
+
+If $\hat{f}$ is supported in $\left[-\frac{\pi}{s}, \frac{\pi}{s}\right]$, then
+the shannon-whittaker theorem lets us reconstruct $f$ by smooth interpolation on
+the sampled points,
+\begin{align}
+f\left(t\right) &= \sum_{n} f\left(ns\right) \frac{\sin\left(\pi\left(t - ns\right) / s\right)}{\pi \left(t - ns\right) / s}
+\end{align}
+
+Block samplers approximate functions by piecewise constant / polynomial / spline
+bases.
+
+Now we start thinking about the space of signals with period $N$, endowed with
+the inner product
+
+\begin{align}
+\left<f, g\right> &= \sum_{n = 0}^{N - 1} f\left[n\right] g^{\ast}\left[n\right]
+\end{align}
+
+then the family
+
+\begin{align}
+\left{e_{k}\left[n\right] &= \exp{\frac{i 2\pi k n}{N}\right}_{0 \leq k \leq N}
+\end{align}
+is an orthogonal basis.
+
+The associated fourier transform is
+
+\begin{align}
+\hat{f}\left[k\right] &= \left<f, e_{k}\right>
+\end{align}
+and again you have a plancherel formula.
+
+By grouping mirror terms, you can calculate the fourier transform in $O\left(N
+\log N\right)$ time rather than $O\left(N^{2}\right)$ required by the naive
+implementation.
+
+You can get two dimensional versions of sampling theorem and fourier transforms.
+
+The windowed fourier atom with window $g$ around time $u$ and frequency
+$\xi$ is defined as
+
+\begin{align}
+g_{u, \xi}\left(t\right) &= e^{i \xi t}g\left(t - u\right).
+\end{align}
+
+This is how spectrograms are calculated.
+
+Since we think of atoms as having $\|g\|^{2} = 1$, we can think of
+$absarg{g\left(t\right)}^2$ as a probability density. Since the associated time
+and frequency variances don't depend on $u$ or $\xi$, this dictionary is an even
+tiling across the time-frequency plane.
+
+You can actually reconstruct a signal based just on its windowed fourier
+transform across a dictionary.
+
+There is also a discrete theory for windowed fourier transforms.
+
+Wavelets are an alternative to these fourier windowing functions. The dictionary
+is constructed from translations and dilations
+$\frac{1}{\sqrt{s}}\psi\left(\frac{t - u}{s}\right)$.
+
+\end{document}
