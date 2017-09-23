@@ -230,4 +230,373 @@ converges to an $F_{0}$ Brownian Bridge under $F_{0}$.
 There are cases where these theorems don't obtain. See Cox 1993 or Freedman
 1999.
 
+\section{Chapter 3}
+\label{sec:chapter_3}
+
+We'll start on mixture modeling (haven't been typing up my notes so much
+lately). The setup is the usual DPMM, draw the $\theta_{i}$'s from a Dirichlet
+Process, and then have continuous observations $X_{i}$ drawn from
+$F_{\theta_{i}}$. Since many of the $\theta_{i}$s are equal to one another, this
+induces a mixture model on the $X_{i}$.
+
+The posterior for the $\theta_{i}^{\ast}$s looks like
+\begin{align}
+\Pi_{k}^{(n)}\left(n_{1}, \dots, n_{i}\right) \prod_{j} \prod_{i \in C_{j}} k\left(x_{i}, \theta_{j}^{\ast}\right) P_{0}\left(d\theta_{j}^{\ast}\right).
+\end{align}
+Here the $\Pi_{k}^{(n)}$ gives the prior for the observed partition structure,
+the $P_{0}\left(d\theta_{j}^{\ast}\right)$ gives the prior for the observed
+locations of the mixture components, the $k$ gives a likelihood of the $x_{i}$s
+given their component.
+
+From here, you can get a bayesian posterior density estimate for the
+hierarchical mixture model, but it requries a sum over all partitions of $n$
+into $k$ components (for all $k \leq n$). So you need to do MCMC, like in
+Escobar and West. While most people write the algorithm for the DPMM, all you
+really need is the predictive of a new $\theta_{j}^{\ast}$ given the observed
+ones, along with a way to evaluate the EPPFs $\Pi_{k}^{(n)}$.
+
+The idea of the gibbs sampling scheme is to draw each $\theta_{i}^{(t)}$ from
+the full conditional on all other $\theta_{i}^{(t-1) or t}$s, using the
+predictive distributions, which can be written in terms of the EPPFs
+$\Pi_{k_{i, n - 1} + 1}^{(n)}$ and $\Pi_{k_{i}, n -1}^{(n)}$. An issue is that
+clusters will switch very slowly, since you have to pass through valleys in the
+posterior corresponding to half-swapped clusters. One remedy is to model the
+posterior directly -- these are called conditional methods, as opposed to the
+``marginal'' methods presented above.
+
+In the Poisson Dirichlet case, the update weights are
+\begin{align}
+\left(\theta + \sigma k_{i, n - 1}\right) \int_{\Theta}k\left(x_{i}, \theta\right)P_{0}\left(d\theta\right)
+\end{align}
+for a new cluster component and
+\begin{align}
+\left(n_{i, j} - \sigma\right)k\left(x_{i}, \theta_{ij}^{\ast}\right)
+\end{align}
+for a previously observed cluster.
+
+One interesting idea is to put a prior on $\sigma$ in the PD model -- you can
+get an updated posterior, which helps you learn the relative sizes / total
+numbers of clusters.
+
+Another example is random bernstein polynomials. The idea is that this family
+uniformly approximates any $C\left[0, 1\right]$ function. So you can construct
+random members of this family by randomizing the degree and mixture weights --
+these look like mixtures of different $\beta$ densities. There is also a latent
+variable interpretation of this model, which leads to a suitable gibbs sampler
+-- see Petrone 1999.
+
+Now moving on to polya trees. Let $\Gamma = \left(\Gamma_{k}\right)$ be a family
+of nested partitions (get refinements with increasing $k$). A density
+$\tilde{p}$ is called tail-free if there exists some R.V.s $V_{k, B}$ such that
+
+\begin{itemize}
+\item $\{V_{1, B}: B\in \Gamma_{1}\}, \{V_{2, B} : B \in \Gamma_{2}\}, \dots, $ are independent
+\item If $B_{k} \subset B_{k - 1} \subset \dots \subset B_{1}$, then
+  $\tilde{p}\left(B_{k}\right) = \prod_{j = 1}^{k} V_{j, B_{j}}$.
+\end{itemize}
+
+The special case where the $\Gamma_{k}$s are dyadic intervals and the
+$V_{j, B_{j}}$ are beta R.V.s gives the Polya tree process. It turns out that
+the posterior of the polya tree is still a polya tree. You can write it down
+pretty directly as the analogous sequences of beta distributed variables where
+the parameters are updated by counts of the number of points within the
+associated partition bin.
+
+It's possible to get priors that put more mass on different parts of the
+interval by sizing the bins unevenly. While it's neat that polya trees put
+priors on continuous densities, a disadvantage is that they can be dependent on
+the specific partition structure.
+
+Now random means. This means that we are studying
+$\tilde{p}\left(f\right) = \int f d\tilde{p}$ for some function $f$.
+An interesting identity when $\tilde{p}$ is a dirichlet process is the
+regazzini-cifarelli identity:
+
+\begin{align}
+  \Earg{\frac{1}{\left(1 + i t \tilde{p}\left(f\right)\right)^{\theta}}} &= \exp{-\int \log\left(1 + itf\right) d\alpha},
+\end{align}
+the interpretation is the left hand side is the stieltjes transform of
+$\tilde{p}\left(f\right)$ while the right hand side is a laplace transform of
+$\int f d\tilde{\gamma}$ under a gamma process prior $\tilde{gamma}$.
+
+Hook walks? Young diagram? What is this black magic??
+
+Closing remarks: It's valuable to think about frequentist properties of bayesian
+models. De Finetti is the ultimate motivating theorem for this type of analysis.
+
+\section{Chapter 6}
+\label{sec:chapter_6}
+
+What computational issues arise when working with bayesian nonparametric
+objects (considering things are infinite dimensional, shouldn't be surprising
+that there are a few)?
+
+``we see no reason why in general Nature should adhere to a small collection of
+computationally convenient model forms.''
+
+Basic motivation for bayesian modeling comes from de Finetti representation,
+
+\begin{align}
+p\left(x_{1}, \dots, x_{n}\right) &= \int_{T} \prod_{i = 1}^{n} F\left(x_{i}\right) dQ\left(F\right).
+\end{align}
+You can think of $Q\left(F\right) = \lim_{n} p\left(F_{n}\right)$ where $F_{n}$
+are empirical CDFs. In parametric modeling, we assume restricted form of $Q$ --
+idea in bnp is to remove this.
+
+For computation in the DPMM, it is useful to consider a latent variable
+interpretation, where the latent variables are cluster memberships and the
+probabilities for the different clusters come from a stick breaking / GEM.
+
+
+Alternatively, you can integrate out the cluster positions and work only with
+the partition structure, via a polya urn scheme. This can be done in closed form
+when the likelihood is conjugate to the prior for a single component, since
+
+\begin{align}
+p\left(s_{1}, \dots, s_{n}\vert y\right) \propto p\left(s_{1}, \dots, s_{n}\right) p\left(y \vert s_{1}, \dots, s_{n}\right),
+\end{align}
+and the prior term can be computed from a polya urn and the likelihood is just a
+mixture once the components are known. This can be used to derive a gibbs
+sampling scheme.
+
+Mixing can be slow since cluster memberships have to be updated one at a time,
+and there might be low probability valleys between two modes. An alternative is
+the split-merge (or ebb-flow) algorithm.
+
+Sometimes we don't have to have to rely on integrating out the nonparametric
+$F$. Some alternatives are truncation, retrospective sampling, and slice
+sampling.
+
+There sampling in the truncation scheme is actually approximate. But you can try
+to bound the TV distance between the truncated and full priors, as a function of
+$K$, and use this to set $K$. Then, the stick breaking weights and model
+parameters can be updated in blocks.
+
+The idea in retrosupective sampling is to use inversion sampling for discrete
+distributions. Draw a uniform and find the $K$ such that the sum of stick
+breaking weights up to $K$ is larger than that uniform. This $K$ is random and
+supported on all natural numbers, but in any given iteration it will be finite.
+You can then make an update for all parameters via mcmc.
+
+In slice sampling, you simulate uniforms $u_{1}, \dots, u_{n}$ such that the
+joint $p\left(s_{i} = k, u_{i}\right) = \indic{u_{i} < w_{k}}$, where the
+$s_{i}$ are cluster membership variables. You can then setup a gibbs sampler,
+since the posterior is proportional to
+\begin{align}
+p\left(w_{1}, \dots, w_{K}\right)\prod_{1}^{n} \indic{u_{j} < w_{s_{j}}} g\left(y_{j} \vert \theta_{s_{j}}\right) \prod_{1}^{K} h\left(\theta_{i}\right)
+\end{align}
+where $K$ is chosen so the amount of stick left in the stick breaking process is
+less than $\min\left(u_{i}\right)$.
+
+Slice sampling can also be extended to normalized CRMs, using a clever
+application of the Levy-Khintchine formula to take an infinite sum into a
+one-dimensional integral.
+
+\section{Chapter 7}
+\label{sec:chapter_7}
+
+It's common in biomedicine these days to make high-dimensional measurements.
+Classical nonparametric methods can fail in this setting, some sort of sharing
+or latent variable reductions are necessary, and this can be accomplished in the
+BNP paradigm. Another advantage is that complex study structure can often be
+modeled easily probabilistically.
+
+A motivating example is an extension of the usual random effects model for the
+$j^{th}$ observation in subject $i$ to
+\begin{align}
+  \label{eq:simple_re}
+  y_{ij} &= \Gsn\left(\mu_{i}, \sigma^{2}\right) \\
+  \mu_{i} &\sim P,
+\end{align}
+for some nonparametric $P$ instead of the usual
+$\mu_{i} \sim \Gsn\left(\mu, \tau^{2}\right)$. You might imagine there are
+latent subpopulations, for example, which would warrant several modes in $P$.
+
+Apparently in a DP with $\alpha = 10$, we have $\infty \approx 50$ (sigh...).
+
+``It is important not to view the DP model as a magic clustering approach, which
+avoids assuming a fixed number of clusters and specification of an arbitrarily
+penalty. Instead, one must carefully consider how the penalty for model
+complexity or overfitting arises in the DP implementation....''
+
+A problem that people don't often talk about is sensitivity of the DP
+specification to the choice of base measure (as opposed to concentration, which
+everyone knows is related to the fitted $K$). The issue is that in the polya
+scheme, the probability of choosing a new cluster is proportional to
+
+\begin{align}
+\int \prod_{j = 1}^{n} \Gsn\left(y_{ij}; \mu_{i}, \sigma^{2}\right) dP_{0}\left(\mu_{i}\right)
+\end{align}
+which can depend a lot on (say) the mean and variance of $P_{0}$ if it is
+normal. E.g., if $\sigma^{2}$ is too small, we'll introduce new clusters all the
+time, while if it's too big, we won't ever introduce new clusters. The usual
+solution is to make an informed choice by looking at the data, or to just
+standardize everything.
+
+On to posterior computation. The three main types of MCMC people use are
+collapsed gibbs, block gibbs, and reversible-jump type samplers. In the
+collapsed samplers, the stick breaking weights are integrated out and the
+partition structure is sampled instead, via a polya urn. In the block gibbs
+samplers, a truncation is applied to the original stick breaking representation
+instead. The updates look like,
+
+\begin{itemize}
+\item Allocate individuals to components
+\item Update stick breaking weights
+\item Update the atoms (model parameters)
+\item Update hyperparameters, and hyperhyperparameters
+\end{itemize}
+
+When people ask about the difference between a parametric model with some $K$
+and a truncated DPMM, you can say that the $K$ in the DPMM is more like an upper
+bound for the number of clusters.
+
+We can extend the random effects model \ref{eq:simple_re} to
+
+\begin{align}
+  y_{ij} &\sim \Gsn\left(x_{ij}^{T}\beta + z_{ij}^{T}b_{i}, \sigma^{2}\right)\\
+  b_{i} &\sim P
+\end{align}
+for random effects $b_{i}$. An issue with interpretation of the fixed effects
+$\beta$ is that we don't necessarily have to have $P$ have zero mean. There are
+some proposals in the literature for addressing this though.
+
+Often, instead of random effects, we want latent variables instead. This can
+look like
+
+\begin{align}
+  y_{ij} &\sim \Gsn\left(\mu_{j} + \lambda_{j} \eta_{i}, \sigma^{2}\right) \\
+  \eta_{i} &= x_{i}^{T}\beta + \delta_{i} \\
+  \delta_{i} &\sim P
+\end{align}
+where you interpret $\eta_{i}$ as scores and $\lambda_{j}$ as loadings.
+
+Now on to functional data analysis. Idea is you have a different function for
+each subject, but want to share information across subjects. This looks like
+
+\begin{align}
+  y_{i}\left(t\right) &= \eta_{i}\left(t\right) + \eps_{i}\left(t\right) \\
+  \eps_{i}\left(t\right) &\sim \Gsn\left(0, \sigma^{2}\right) \\
+  \eta_{i} &\sim P
+\end{align}
+
+The methods reviewed differ mainly in how they model the random functions
+$\eta_{i}$. A first approach is to expand $\eta$ according to some basis
+functions (e.g., splines). Then you can put a nonparametric prior on the
+coefficients of these basis functions, see Ray and Mallick 2006. Note that you
+have to be careful about label switching when doing MCMC. See Stephens 2005 for
+some postprocessing techniques. But beware that sometimes you encounter
+different partition configurations during sampling (the clusters don't have the
+same interpretation across iterations) so you should instead think of some sort
+of averaging within a selected partition (see Medvedovic and Sivaganesan).
+
+Instead of specifying a basis, you could use a functional DP,
+$P \sim DP\left(\alpha P_{0}\right)$ where $P_{0}$ is a gaussian process. Of
+course, you still need to specify the covariance function.
+
+Another alternative is to use kernel smooething ideas: represent each
+$\eta\left(t\right)$ as
+\begin{align}
+\eta\left(t\right) &= \int_{T} K\left(x, u\right) d\gamma\left(u\right).
+\end{align}
+
+A different problems is joint modeling. The idea is to come up with clusters
+simultaneously across data types (multitable extensions?). A variation is to
+cluster on subsets of attributes (Cosa -- see Friedman and Muelman or Guindani
+and Gelfand). For sharing information across distinct centers, one approach is a
+``Mixture of Dependent DP''s which has one global DP and many center specific
+ones, another is the hierarchical DP. If you want the DPs to potentially be
+exactly the same across two centers, you can use a nested DP.
+
+Next we consider modeling in regression-like contexts. An idea is to index
+families of nonparametric priors according to predictors,
+\begin{align}
+P_{\mathcal{X}} &= \{P_{x} : x \in \mathcal{X}\} \sim \mathcal{P}
+\end{align}
+
+This is useful for modeling conditional densities $f\left(y \vert x\right)$.
+One approach is to write mixture models like
+\begin{align}
+f\left(y \vert x\right) &= \int \int g\left(y; x, \theta, \varphi\right)dP_{x}\left(\theta\right) d\pi\left(\varphi\right)
+\end{align}
+where $\varphi$ gets a parametric prior and $\theta$ gets a nonparametric prior.
+
+Another idea is the dependent dirichlet process,
+\begin{align}
+  P_{x} &= \sum \pi_{k}\left(x\right)\delta_{\Theta_{k}}\left(x\right) \\
+  \Theta_{k} &\sim P_{0}
+\end{align}
+where the stick-breaking weights *and* the base measure draws are correlated
+according to $x$ (e.g., $P_{0}$ could be a GP). As is, this model is
+computationally intractable, but it is common to consider either varying weights
+or stochastic process base measures.
+
+Another idea is to mix between underlying DPs using a kernel. E.g.,
+\begin{align}
+f\left(y \vert x\right) &= \frac{1}{K\left(x, 0\right) + K\left(x, 1\right)}\left[K\left(x, 0\right)f_{0}^{\ast}\left(y\right) + K\left(x, 1\right)f_{1}^{\ast}\right]
+\end{align}
+interpolates between two (potentially nonparametric) densities $f_{0}$ and
+$f_{1}$ smoothly as a function of $x$.
+
+A related idea is to use
+
+\begin{align}
+  P_{x} &= \sum_{i = 1}^{n} \frac{\gamma_{i}K\left(x, x_{i}\right)}{\sum_{l = 1}^{n} \gamma_{l}K\left(x, x_{l}\right)} P_{i}^{\ast} \\
+  P_{i}^{\ast} &\sim DP\left(\alpha P_{0}\right)
+\end{align}
+and then plug this into the mixture model integral above to get a density
+$f\left(y \vert x\right)$.
+
+One appealing aspect of this nonparametric density modeling approach is that it
+allows modeling the full shapes of distributions of interest (e.g., gestational
+age at delivery, or BMI). This is useful when there is interest in the tails
+(e.g., people usually binarize extreme things so they can study risk in that
+way). On a related note, you don't expect the predictors to just change the mean
+of the distributions, but actually the entire shapes. Figure 7.7 is a really
+nice example of this, showing the difference in gestational age densities given
+different covariate values.
+
+Talks a bit about differential expression, GWAS, and haplotype inference
+applications of BNP. Also an application of species sapling to ESTs.
+
+BNP bayes factors seems not as well developed...
+
+\section{Chapter 8}
+\label{sec:chapter_8}
+
+Focus here is on product partition, species sampling, and polya tree models,
+instead of dirichlet process.
+
+Product partition models has usual likelihood when given clusters, but defines
+probabilities over partitions according to the product,
+
+\begin{align}
+p\left(\rho\right) &=\prod c\left(S_{i}\right)
+\end{align}
+
+Species sampling models further require that this probability is only a function
+of partition sizes,
+\begin{align}
+p\left(\rho\right) &= p\left(\absarg{S_{1}}, \dots, \absarg{S_{k}}\right)
+\end{align}
+
+Reviews polya trees a bit. An interesting trick is to cap the maximum number of
+levels in the tree -- this simplifies computation without changing inference
+much.
+
+There is an interesting survival analysis application usign the ANOVA DDP, which
+is a variation of DDPs described in chapter 7, but where the draws from the base
+measure are written as main and interaction effects coming from a pair of
+factors.
+
+Another application: ordinal data coming from many raters. An observed
+phenomenon is that raters tend to agree on extreme cases but not intermediate
+ones. This can make a naive application of bivariate ordinal probit models
+inappropriate. They instead use a two dimensional DPMM for the latent scores for
+two raters, where different mixture components can have different correlations
+(corresponding to different types of cases having more or less interrater
+reliability).
+
+They use a mixture of markov chains to model loss of heterozygosity data.
+
 \end{document}
