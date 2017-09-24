@@ -168,7 +168,7 @@ of a single GP model.
 """
 function gp_logpdf(gp::GPModel)
   k_theta = kernel(gp.x_train, gp.x_train, gp.theta)
-  gsn = MvNormal(zeros(length(gp.y_train)), k_theta)
+  gsn = MvNormal(k_theta)
   logpdf(gsn, gp.y_train)
 end
 
@@ -384,7 +384,7 @@ function gradient_generator(y::Vector, x::Matrix, a::GPHyper)
     n = length(y)
 
     ## compute (unnormalized) posterior
-    unnorm_posterior = logpdf(MvNormal(zeros(n), k_theta), y) +
+    unnorm_posterior = logpdf(MvNormal(k_theta), y) +
       logpdf(a.log_l2, log_v0) +
       logpdf(a.log_v0, log_v1) +
       logpdf(a.log_v1, log_l2)
@@ -494,7 +494,7 @@ function MixGPSampler(x::Matrix,
                       a::GPHyper,
                       out_path::String,
                       n_iter::Int64 = 20,
-                      thin::Int64 = 5,
+                      thin::Int64 = 20,
                       n_hmc::Int64 = 10,
                       L::Int64 = 5,
                       epsilon::Float64 = 0.005)

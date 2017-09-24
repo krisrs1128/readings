@@ -160,16 +160,16 @@ plot_cooccurrence <- function(counts, data) {
 ###############################################################################
 ## Data generated from true mixture of GPs model
 ###############################################################################
-post <- read_csv("data/mix_post.csv", col_names = FALSE)
+post <- read_csv("data/sim0914/post.csv", col_names = FALSE)
 colnames(post) <- c("class", "x", "y")
-data <- read_csv("data/mix_data.csv", col_names = FALSE)
+data <- read_csv("data/sim0914/data.csv", col_names = FALSE)
 colnames(data) <- c("class", "x", "y")
 plot_fits(data, post)
 dir.create("figure")
 ggsave("figure/gp_fits.png")
 
 ## read in the cluster membership data
-c_samples <- read_csv("data/samples/sim0914/c.csv", col_names = FALSE) %>%
+c_samples <- read_csv("data/sim0914/samples/c.csv", col_names = FALSE) %>%
   preprocess_c(data)
 plot_c(c_samples)
 ggsave("figure/gp_c_samples.png")
@@ -189,14 +189,14 @@ ggsave("figure/gp_cooccurrence.png")
 ###############################################################################
 ## Data generated from toy bump function
 ###############################################################################
-post <- read_csv("data/bump_posteriors.csv", col_names = FALSE)
-colnames(post) <- c("class", "x", "y")
-bump <- read_csv("data/bump_data.csv", col_names = FALSE)
+post <- read_csv("data/bump0914/posteriors.csv", col_names = FALSE) %>%
+  preprocess_post()
+bump <- read_csv("data/bump0914/data.csv", col_names = FALSE)
 colnames(bump) <- c("class", "x", "y")
 plot_fits(bump, post)
 ggsave("figure/bump_fits.png")
 
-c_samples <- read_csv("data/samples/bump0914/c.csv", col_names = FALSE) %>%
+c_samples <- read_csv("data/bump0914/samples/c.csv", col_names = FALSE) %>%
   preprocess_c(bump)
 plot_c(c_samples)
 ggsave("figure/bump_c_samples.png")
@@ -216,20 +216,20 @@ cur_data <- abt %>%
   get_taxa()
 write.table(
   cur_data["Unc063x1", ],
-  file = "data/unc063x1_data.csv",
+  file = "data/unc063x1/data.csv",
   sep = ",",
   row.names = FALSE,
   col.names = FALSE
 )
 
-post <- read_csv("data/unc063x1_posteriors.csv", col_names = FALSE) %>%
+post <- read_csv("data/unc063x1/posteriors.csv", col_names = FALSE) %>%
   preprocess_post()
-data <- read_csv("data/unc063x1_data.csv", col_names = FALSE)
+data <- read_csv("data/unc063x1/data.csv", col_names = FALSE)
 colnames(data) <- c("class", "x", "y")
 plot_fits(data, post %>% filter(iter < 60))
 plot_fits(data, post %>% filter(iter > 100))
 ggsave("figure/unc063x1_fits.png")
 
-c_samples <- read_csv("data/samples/unc063x1/c.csv", col_names = FALSE) %>%
-  preprocess_c(bump)
+c_samples <- read_csv("data/unc063x1/samples/c.csv", col_names = FALSE) %>%
+  preprocess_c(data)
 plot_c(c_samples)
