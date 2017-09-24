@@ -227,7 +227,7 @@ post <- read_csv("data/unc063x1/posteriors.csv", col_names = FALSE) %>%
 data <- read_csv("data/unc063x1/data.csv", col_names = FALSE)
 colnames(data) <- c("class", "x", "y")
 plot_fits(data, post %>% filter(iter < 60))
-plot_fits(data, post %>% filter(iter > 100))
+plot_fits(data, post %>% filter(iter > 2000, iter < 2500))
 ggsave("figure/unc063x1_fits.png")
 
 c_samples <- read_csv("data/unc063x1/samples/c.csv", col_names = FALSE) %>%
