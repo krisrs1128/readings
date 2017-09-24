@@ -79,7 +79,7 @@ function kernel(x::Matrix, y::Matrix, theta::KernelParam)
   for i = 1:n1
     for j = 1:n2
       K[i, j] = theta.v0 * exp(- 1 / (2 * theta.l ^ 2) * norm(x[i, :] - y[j, :]) ^ 2)
-      if i == j
+      if x[i] == y[j]
         K[i, j] = theta.v1 + K[i, j]
       end
     end
@@ -228,9 +228,37 @@ end
 ###############################################################################
 function substitute_probs(update_ix::Int64,
                           c0::Vector{Int64},
+                          ref_probs::Vector{Float64},
                           x::Matrix,
                           y::Vector,
                           thetas::Dict{Int64, KernelParam})
+  K = length(thetas)
+  c = deepcopy(c0)
+
+  ## add that sample into different sets
+  sub_probs = zeros(K)
+  for k = 1:K
+    ref_ix = (c .== k) .& (1:length(y) .!= update_ix)
+    kxixi = kernel(x[[update_ix], :], x[[update_ix], :], thetas[k])
+    inv_kxx = inv(kernel(x[ref_ix, :], x[ref_ix, :], thetas[k]))
+    kxxi = kernel(x[ref_ix, :], x[[update_ix], :], thetas[k])
+
+    condit_distn = Normal(
+      (kxxi' * inv_kxx * x[ref_ix, :])[1],
+      sqrt((kxixi - kxxi' * inv_kxx * kxxi)[1])
+    )
+
+    sub_probs[k] = ref_probs[k] + logpdf(condit_distn, y[update_ix])
+  end
+
+  sub_probs
+end
+
+function substitute_probs2(update_ix::Int64,
+                           c0::Vector{Int64},
+                           x::Matrix,
+                           y::Vector,
+                           thetas::Dict{Int64, KernelParam})
   K = length(thetas)
   c = deepcopy(c0)
 
@@ -275,8 +303,8 @@ function class_conditional(update_ix::Int64,
 
   keep_ix = 1:n .!= update_ix
   prior = crp_log_prob(c[keep_ix], alpha, K)
-  sub_probs = substitute_probs(update_ix, c, x, y, thetas)
   ref_probs = gp_logpdf_wrapper(c[keep_ix], x[keep_ix, :], y[keep_ix], thetas)
+  sub_probs = substitute_probs(update_ix, c, ref_probs, x, y, thetas)
 
   liks = -Inf * ones(K + 1)
   for k = 1:K
