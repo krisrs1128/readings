@@ -228,6 +228,7 @@ end
 ###############################################################################
 function substitute_probs(update_ix::Int64,
                           c0::Vector{Int64},
+                          ref_probs::Vector{Float64},
                           x::Matrix,
                           y::Vector,
                           thetas::Dict{Int64, KernelParam})
@@ -237,10 +238,16 @@ function substitute_probs(update_ix::Int64,
   ## add that sample into different sets
   sub_probs = zeros(K)
   for k = 1:K
-    c[update_ix] = k
-    sub_probs[k] = gp_logpdf(
-      GPModel(thetas[k], x[c .== k, :], y[c .== k])
+    kxixi = kernel(x[update_ix, :], x[update_ix, :])
+    inv_kxx = inv(kernel(x[c .== k, :], x[c .== k, :], thetas[k]))
+    kxxi = kernel(x[c .== k, :], x[update_ix, :], thetas[k])
+
+    condit_distn = Normal(
+      kxxi' * inv_kxx * x[c .== k, :]
+      kxixi - kxxi' * inv_kxx * kxxi
     )
+
+    sub_probs[k] = ref_probs[k] + logpdf(condit_distn, y[update_ix])
   end
 
   sub_probs
@@ -275,8 +282,8 @@ function class_conditional(update_ix::Int64,
 
   keep_ix = 1:n .!= update_ix
   prior = crp_log_prob(c[keep_ix], alpha, K)
-  sub_probs = substitute_probs(update_ix, c, x, y, thetas)
   ref_probs = gp_logpdf_wrapper(c[keep_ix], x[keep_ix, :], y[keep_ix], thetas)
+  sub_probs = substitute_probs(update_ix, c, ref_probs, x, y, thetas)
 
   liks = -Inf * ones(K + 1)
   for k = 1:K
