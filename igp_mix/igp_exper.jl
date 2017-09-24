@@ -70,7 +70,7 @@ writecsv("data/bump0914/data.csv", [c x y])
 
 ## consider real microbiome series
 alpha = 1.0
-y = readcsv("data/unc063x1/data.csv")[:]
+y = readcsv("data/unc063x1/raw_data.csv")[:]
 x = collect(linspace(0, 1, length(y)))[:, :]
 MixGPSampler(x, y, alpha, a, "data/unc063x1/samples/", n_iter)
 

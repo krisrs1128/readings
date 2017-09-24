@@ -216,7 +216,7 @@ cur_data <- abt %>%
   get_taxa()
 write.table(
   cur_data["Unc063x1", ],
-  file = "data/unc063x1/data.csv",
+  file = "data/unc063x1/raw_data.csv",
   sep = ",",
   row.names = FALSE,
   col.names = FALSE
