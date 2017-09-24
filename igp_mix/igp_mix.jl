@@ -301,7 +301,7 @@ function class_conditional(update_ix::Int64,
   liks[maximum(keys(prior))] = ref_sum +
     gp_logpdf(GPModel(theta_new, x[[update_ix], :], y[[update_ix]]))
 
-  post = merge(+, b, e)
+  post = merge(+, prior, liks)
   normalize_log_space(post), theta_new
 end
 
@@ -538,10 +538,7 @@ function MixGPSampler(x::Matrix,
     ## resample the kernel hyperparameters
     for k in collect(keys(state.thetas))
       if !any(state.c .== k)
-        println("deleting state")
         delete!(state.thetas, k)
-        print(k)
-        print(keys(state.thetas))
         continue
       end
 
