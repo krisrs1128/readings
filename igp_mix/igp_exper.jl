@@ -12,7 +12,7 @@
 include("igp_mix.jl")
 srand(09142017)
 n = 60
-n_iter = 200
+n_iter = 10000
 K = 3
 c = rand(1:K, n)
 update_ix = rand(1:n)

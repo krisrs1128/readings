@@ -231,5 +231,5 @@ plot_fits(data, post %>% filter(iter > 100))
 ggsave("figure/unc063x1_fits.png")
 
 c_samples <- read_csv("data/samples/unc063x1/c.csv", col_names = FALSE) %>%
-  preprocess_c(bump)
+  preprocess_c(data)
 plot_c(c_samples)
