@@ -238,13 +238,14 @@ function substitute_probs(update_ix::Int64,
   ## add that sample into different sets
   sub_probs = zeros(K)
   for k = 1:K
-    kxixi = kernel(x[update_ix, :], x[update_ix, :])
-    inv_kxx = inv(kernel(x[c .== k, :], x[c .== k, :], thetas[k]))
-    kxxi = kernel(x[c .== k, :], x[update_ix, :], thetas[k])
+    ref_ix = (c .== k) & (1:length(y) .!= update_ix)
+    kxixi = kernel(x[[update_ix], :], x[[update_ix], :], thetas[k])
+    inv_kxx = inv(kernel(x[ref_ix, :], x[ref_ix, :], thetas[k]))
+    kxxi = kernel(x[ref_ix, :], x[[update_ix], :], thetas[k])
 
     condit_distn = Normal(
-      kxxi' * inv_kxx * x[c .== k, :]
-      kxixi - kxxi' * inv_kxx * kxxi
+      (kxxi' * inv_kxx * x[ref_ix, :])[1],
+      (kxixi - kxxi' * inv_kxx * kxxi)[1]
     )
 
     sub_probs[k] = ref_probs[k] + logpdf(condit_distn, y[update_ix])
