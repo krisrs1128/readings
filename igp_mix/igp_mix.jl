@@ -559,11 +559,7 @@ end
 
 function mix_posteriors(x_new::Matrix, state::MixGPState)
   post = Dict{Int64, Distributions.MvNormal}()
-  for k = 1:maximum(state.c)
-    if sum(state.c .== k) == 0
-      continue
-    end
-
+  for k in keys(state.thetas)
     gp = GPModel(state.thetas[k], x, y)
     post[k] = gp_posterior(x_new, gp)
   end
