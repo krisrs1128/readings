@@ -54,6 +54,18 @@ function normalize_log_space(log_x::Vector{Float64})
   log_x - ones(length(log_x)) * lse(log_x)
 end
 
+function normalize_log_space(log_x::Dict{Int64, Float64})
+  dict_keys = collect(keys(log_x))
+  new_vals = normalize_log_space(collect(values(log_x)))
+
+  normalized_log_x = Dict{Int64, Float64}()
+  for k in 1:length(dict_keys)
+    normalized_log_x[dict_keys[k]] = new_vals[k]
+  end
+
+  return normalized_log_x
+end
+
 ###############################################################################
 #                                Define kernel                                #
 ###############################################################################
@@ -214,9 +226,9 @@ crp_log_prob(c, alpha)
 function crp_log_prob(c::Vector{Int64}, alpha::Float64, K::Int64)
   n = length(c) + 1
 
-  log_probs = -Inf * ones(K + 1)
-  log_probs[K + 1] = log(alpha) - log(n + alpha - 1)
-  for k = 1:K
+  log_probs = Dict{Int64, Float64}()
+  log_probs[maximum(c) + 1] = log(alpha) - log(n + alpha - 1)
+  for k in unique(c)
     log_probs[k] = log(sum(c .== k)) - log(n + alpha - 1)
   end
 
@@ -235,8 +247,8 @@ function substitute_probs(update_ix::Int64,
   c = deepcopy(c0)
 
   ## add that sample into different sets
-  sub_probs = zeros(K)
-  for k = 1:K
+  sub_probs = Dict{Int64, Float64}()
+  for k in collect(keys(thetas))
     c[update_ix] = k
     sub_probs[k] = gp_logpdf(
       GPModel(thetas[k], x[c .== k, :], y[c .== k])
@@ -251,10 +263,10 @@ function gp_logpdf_wrapper(c::Vector{Int64},
                            y::Vector,
                            thetas::Dict{Int64, KernelParam})
   K = length(thetas)
-  ref_probs = zeros(K)
+  ref_probs = Dict{Int64, Float64}()
 
   ## Get probs for each component
-  for k = 1:K
+  for k in collect(keys(thetas))
     ref_probs[k] = gp_logpdf(
       GPModel(thetas[k], x[c .== k, :], y[c .== k])
     )
@@ -270,26 +282,27 @@ function class_conditional(update_ix::Int64,
                            thetas::Dict{Int64, KernelParam},
                            alpha::Float64,
                            a::GPHyper)
-  n = size(x, 1)
-  K = length(thetas)
+  keep_ix = 1:size(x, 1) .!= update_ix
+  prior = crp_log_prob(c[keep_ix], alpha, maximum(keys(thetas)))
+  if !(c[update_ix] in keys(prior))
+    prior[c[update_ix]] = 0
+  end
 
-  keep_ix = 1:n .!= update_ix
-  prior = crp_log_prob(c[keep_ix], alpha, K)
   sub_probs = substitute_probs(update_ix, c, x, y, thetas)
   ref_probs = gp_logpdf_wrapper(c[keep_ix], x[keep_ix, :], y[keep_ix], thetas)
 
-  liks = -Inf * ones(K + 1)
-  for k = 1:K
-    if any(c .== k)
-      liks[k] = sum(ref_probs[1:end .!= k]) + sub_probs[k]
-    end
+  liks = Dict{Int64, Float64}()
+  ref_sum = sum(collect(values(ref_probs)))
+  for k in unique(c)
+    liks[k] = ref_sum + sub_probs[k] - ref_probs[k]
   end
 
   theta_new = rand_kernel(a)
-  liks[K + 1] = sum(ref_probs) +
+  liks[maximum(keys(prior))] = ref_sum +
     gp_logpdf(GPModel(theta_new, x[[update_ix], :], y[[update_ix]]))
 
-  normalize_log_space(liks + prior), theta_new
+  post = merge(+, b, e)
+  normalize_log_space(post), theta_new
 end
 
 function class_counts(c::Vector{Int64})
@@ -450,9 +463,10 @@ end
 
 function Matrix(thetas::Dict{Int64, KernelParam})
   theta_array = zeros(length(thetas), 4)
-  for (k,v) in thetas
-    theta_vec = Vector(thetas[k])
-    theta_array[k, 1] = k
+  dict_keys = collect(keys(thetas))
+  for k = 1:length(dict_keys)
+    theta_vec = Vector(thetas[dict_keys[k]])
+    theta_array[k, 1] = dict_keys[k]
     theta_array[k, 2:4] = theta_vec
   end
 
@@ -471,7 +485,9 @@ function sweep_indicators!(state::MixGPState,
       i, state.c, x, y, state.thetas, alpha, a
     )
 
-    state.c[i] = rand(Categorical(exp.(c_logprob)))
+    log_probs = collect(values(c_logprob))
+    state_index = rand(Categorical(exp.(log_probs)))
+    state.c[i] = collect(keys(c_logprob))[state_index]
     if !(state.c[i] in collect(keys(state.thetas)))
       state.thetas[state.c[i]] = new_kernel
     end
@@ -520,9 +536,13 @@ function MixGPSampler(x::Matrix,
     sweep_indicators!(state, x, y, alpha, a)
 
     ## resample the kernel hyperparameters
-    for k in unique(state.c)
+    for k in collect(keys(state.thetas))
       if !any(state.c .== k)
-        next
+        println("deleting state")
+        delete!(state.thetas, k)
+        print(k)
+        print(keys(state.thetas))
+        continue
       end
 
       theta0 = log.([state.thetas[k].l ^ 2, state.thetas[k].v0, state.thetas[k].v1])
@@ -539,11 +559,7 @@ end
 
 function mix_posteriors(x_new::Matrix, state::MixGPState)
   post = Dict{Int64, Distributions.MvNormal}()
-  for k = 1:maximum(state.c)
-    if sum(state.c .== k) == 0
-      continue
-    end
-
+  for k in keys(state.thetas)
     gp = GPModel(state.thetas[k], x, y)
     post[k] = gp_posterior(x_new, gp)
   end
