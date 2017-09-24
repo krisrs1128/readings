@@ -494,7 +494,7 @@ function MixGPSampler(x::Matrix,
                       a::GPHyper,
                       out_path::String,
                       n_iter::Int64 = 20,
-                      thin::Int64 = 5,
+                      thin::Int64 = 20,
                       n_hmc::Int64 = 10,
                       L::Int64 = 5,
                       epsilon::Float64 = 0.005)
