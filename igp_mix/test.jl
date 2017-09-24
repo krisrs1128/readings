@@ -10,6 +10,7 @@
 
 using Base.Test
 using Calculus
+include("igp_mix.jl")
 
 
 """Coordinatewise Projections of Kernel
@@ -129,6 +130,7 @@ end
     conditional_probs = class_conditional(update_ix, c, x, y, thetas, alpha, a)[1]
     conditional_diff = conditional_probs[c[update_ix]] -
       conditional_probs[c_prime[update_ix]]
-    @test joint_diff - conditional_diff ≈ 0 atol = 1e-10
+    println(joint_diff - conditional_diff)
+    @test joint_diff - conditional_diff ≈ 0 atol = 1e-3
   end
 end

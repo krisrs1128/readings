@@ -31,6 +31,7 @@ end
 c, x, y = simulate_mix(n, thetas)
 
 ## run the sampler, and keep last iteration
+include("igp_mix.jl")
 state = MixGPSampler(x, y, alpha, a, "data/samples/sim0914/", n_iter)
 
 ## get posterior estimates for each component
