@@ -12,7 +12,7 @@
 include("igp_mix.jl")
 srand(09142017)
 n = 60
-n_iter = 40
+n_iter = 10000
 K = 3
 c = rand(1:K, n)
 update_ix = rand(1:n)
@@ -31,11 +31,15 @@ end
 c, x, y = simulate_mix(n, thetas)
 
 ## run the sampler, and keep last iteration
-state = MixGPSampler(x, y, alpha, a, "data/sim0914/samples/", n_iter)
+MixGPSampler(x, y, alpha, a, "data/sim0914/samples/", n_iter)
 
 ## get posterior estimates for each component
+states = read_states(
+  "data/sim0914/samples/thetas.csv",
+  "data/sim0914/samples/c.csv"
+)
 x_new = collect(minimum(x):0.01:maximum(x))[:, :]
-post = mix_posteriors(x_new, state)
+post = mix_posteriors(x_new, states)
 write_posteriors("data/sim0914/post.csv", x_new, post)
 writecsv("data/sim0914/data.csv", [c x y])
 
@@ -61,11 +65,16 @@ y -= mean(y)
 
 ## sample and write to file
 alpha = 3.0
-state = MixGPSampler(x, y, alpha, a, "data/bump0914/samples/", n_iter)
+MixGPSampler(x, y, alpha, a, "data/bump0914/samples/", n_iter)
+
+states = read_states(
+  "data/bump0914/samples/thetas.csv",
+  "data/bump0914/samples/c.csv"
+)
 
 x_new = collect(minimum(x):0.01:maximum(x))[:, :]
-post = mix_posteriors(x_new, state)
-write_posteriors("data/bump0914/posteriors.csv", x_new, post)
+posteriors = mix_posteriors(x_new, states)
+write_posteriors("data/bump0914/posteriors.csv", x_new, posteriors)
 writecsv("data/bump0914/data.csv", [c x y])
 
 ## consider real microbiome series
