@@ -577,28 +577,30 @@ end
 function write_posteriors(output_path::String,
                           x_new::Matrix,
                           post::Dict{Int64, Distributions.MvNormal})
-  if isfile(output_path)
-    rm(output_path)
+  if ispath(output_path)
+    rm(output_path, recursive = true)
   end
+  mkpath(dirname(output_path))
 
   open(output_path, "a") do x
     for k in keys(post)
-      append_component(x, k, x_new, post[k])
+      append_component(1, x, k, x_new[:], post[k])
     end
   end
 end
 
 function write_posteriors(output_path::String,
-                          x_new::Vector,
+                          x_new::Matrix,
                           posteriors::Dict{Int64, Dict{Int64, Distributions.MvNormal}})
-  if isfile(output_path)
-    rm(output_path)
+  if ispath(output_path)
+    rm(output_path, recursive = true)
   end
+  mkpath(dirname(output_path))
 
   open(output_path, "a") do x
     for i in keys(posteriors)
       for k in keys(posteriors[i])
-        append_component(i, x, k, x_new, posteriors[i][k])
+        append_component(i, x, k, x_new[:], posteriors[i][k])
       end
     end
   end
