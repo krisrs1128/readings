@@ -575,6 +575,7 @@ function mix_posteriors(x_new::Matrix, states::Dict{Int64, MixGPState})
 end
 
 function write_posteriors(output_path::String,
+                          x::Matrix,
                           x_new::Matrix,
                           post::Dict{Int64, Distributions.MvNormal})
   if isfile(output_path)
@@ -583,12 +584,13 @@ function write_posteriors(output_path::String,
 
   open(output_path, "a") do x
     for k in keys(post)
-      append_component(x, k, x_new, post[k])
+      append_component(i, x, k, x_new, post[k])
     end
   end
 end
 
 function write_posteriors(output_path::String,
+                          x::Vector,
                           x_new::Vector,
                           posteriors::Dict{Int64, Dict{Int64, Distributions.MvNormal}})
   if isfile(output_path)
