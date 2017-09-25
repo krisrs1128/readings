@@ -590,7 +590,7 @@ function write_posteriors(output_path::String,
 end
 
 function write_posteriors(output_path::String,
-                          x_new::Vector,
+                          x_new::Matrix,
                           posteriors::Dict{Int64, Dict{Int64, Distributions.MvNormal}})
   if ispath(output_path)
     rm(output_path, recursive = true)
@@ -600,7 +600,7 @@ function write_posteriors(output_path::String,
   open(output_path, "a") do x
     for i in keys(posteriors)
       for k in keys(posteriors[i])
-        append_component(i, x, k, x_new, posteriors[i][k])
+        append_component(i, x, k, x_new[:], posteriors[i][k])
       end
     end
   end
