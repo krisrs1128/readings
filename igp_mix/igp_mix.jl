@@ -575,27 +575,27 @@ function mix_posteriors(x_new::Matrix, states::Dict{Int64, MixGPState})
 end
 
 function write_posteriors(output_path::String,
-                          x::Matrix,
                           x_new::Matrix,
                           post::Dict{Int64, Distributions.MvNormal})
-  if isfile(output_path)
-    rm(output_path)
+  if ispath(output_path)
+    rm(output_path, recursive = true)
   end
+  mkpath(dirname(output_path))
 
   open(output_path, "a") do x
     for k in keys(post)
-      append_component(i, x, k, x_new, post[k])
+      append_component(1, x, k, x_new[:], post[k])
     end
   end
 end
 
 function write_posteriors(output_path::String,
-                          x::Vector,
                           x_new::Vector,
                           posteriors::Dict{Int64, Dict{Int64, Distributions.MvNormal}})
-  if isfile(output_path)
-    rm(output_path)
+  if ispath(output_path)
+    rm(output_path, recursive = true)
   end
+  mkpath(dirname(output_path))
 
   open(output_path, "a") do x
     for i in keys(posteriors)
