@@ -69,13 +69,13 @@ my <- melt(
     i = as.numeric(gsub("F", "", i))
   )
 
-p <- ggplot() +
+ggplot() +
   geom_hline(yintercept = 0) +
   stat_smooth(
     data = my %>% filter(iter > 1),
     aes(x = i, y = y),
     position = position_jitter(h = 0.1),
-    col = "red", size = 0.9,
+    col = "#bd3a3a", size = 0.9,
     level = 0.99,
     span = 0.1,
     method = "loess"
@@ -83,12 +83,20 @@ p <- ggplot() +
   geom_point(
     data = my %>% filter(y <= 0),
     aes(x = i, y = y),
-    col = "red", size = 0.9, alpha = 0.1,
+    col = "#bd3a3a", size = 0.9, alpha = 0.1,
   ) +
   geom_point(
     data = my %>% filter(iter == 1),
     aes(x = i, y = y),
     size = 1.5
   )
+ggsave("abt_scan.png", width = 4.59, height = 2.21)
 
-ggsave("abt_scan.png", p, width = 4.59, height = 2.21)
+ggplot() +
+  geom_hline(yintercept = 0) +
+  geom_point(
+    data = my %>% filter(iter == 1),
+    aes(x = i, y = y),
+    size = 1.5
+  )
+ggsave("abt_zeros.png", width = 4.59, height = 2.21)
