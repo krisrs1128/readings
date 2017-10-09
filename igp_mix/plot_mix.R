@@ -228,8 +228,11 @@ data <- read_csv("data/unc063x1/data.csv", col_names = FALSE)
 colnames(data) <- c("class", "x", "y")
 plot_fits(data, post %>% filter(iter < 60))
 plot_fits(data, post %>% filter(iter > 2000, iter < 2500))
+plot_fits(data, post %>% filter(iter > 9000, iter < 9500))
 ggsave("figure/unc063x1_fits.png")
 
 c_samples <- read_csv("data/unc063x1/samples/c.csv", col_names = FALSE) %>%
   preprocess_c(data)
-plot_c(c_samples)
+plot_c(c_samples %>% filter(iter > 9000, iter < 9500))
+ggplot(data) +
+  geom_point(aes(x = x, y = y))
