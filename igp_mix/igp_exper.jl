@@ -12,7 +12,7 @@
 include("igp_mix.jl")
 srand(09142017)
 n = 60
-n_iter = 2000
+n_iter = 15
 K = 3
 c = rand(1:K, n)
 update_ix = rand(1:n)
@@ -22,7 +22,7 @@ thetas = Dict{Int64, KernelParam}()
 a = GPHyper(
   Distributions.Logistic(-3, 2),
   Distributions.Logistic(0, 0.1),
-  Distributions.Logistic(-1, 1.5)
+  Distributions.Logistic(-1, 1)
 )
 
 for k = 1:K
@@ -89,7 +89,7 @@ states = read_states(
   "data/unc063x1/samples/c.csv"
 )
 
-x_new = collect(minimum(x):0.01:maximum(x))[:, :]
+x_new = collect(minimum(x):0.005:maximum(x))[:, :]
 posteriors = mix_posteriors(x_new, states)
 write_posteriors("data/unc063x1/posteriors.csv", x_new, posteriors)
 writecsv("data/unc063x1/data.csv", [zeros(length(y)) x y])
