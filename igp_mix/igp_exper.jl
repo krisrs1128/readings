@@ -20,9 +20,9 @@ alpha = 1.0
 thetas = Dict{Int64, KernelParam}()
 
 a = GPHyper(
-  Distributions.Logistic(-6, 3),
-  Distributions.Logistic(-1, 1),
-  Distributions.Logistic(-1, 1)
+  Distributions.Logistic(-3, 2),
+  Distributions.Logistic(0, 0.1),
+  Distributions.Logistic(-1, 1.5)
 )
 
 for k = 1:K
@@ -82,7 +82,7 @@ alpha = 0.1
 y = readcsv("data/unc063x1/raw_data.csv")[:]
 y += 0.01 * rand(length(y))
 x = collect(linspace(0, 1, length(y)))[:, :]
-MixGPSampler(x, y, alpha, a, "data/unc063x1/samples/", n_iter)
+MixGPSampler(x, y, alpha, a, "data/unc063x1/samples/", n_iter, 2)
 
 states = read_states(
   "data/unc063x1/samples/thetas.csv",

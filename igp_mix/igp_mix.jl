@@ -17,20 +17,17 @@ using Mamba
 ###############################################################################
 #                        Define types for GP inference                        #
 ###############################################################################
-
 type KernelParam
   l::Float64
   v0::Float64
   v1::Float64
 end
 
-
 type GPHyper
   log_l2
   log_v0
   log_v1
 end
-
 
 type GPModel
   theta::KernelParam
