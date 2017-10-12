@@ -17,7 +17,8 @@ scale_fill_discrete <- function(...)
   scale_fill_brewer(..., palette="Set2")
 
 theme_set(theme_bw())
-min_theme <- theme_update(
+theme_update(
+  panel.background = element_rect(fill = "#F7F7F7"),
   panel.border = element_blank(),
   panel.grid = element_blank(),
   axis.ticks = element_blank(),
@@ -37,7 +38,7 @@ min_theme <- theme_update(
 preprocess_c <- function(c_samples, data) {
   colnames(c_samples) <- c("iter", "sample", "class")
   c_samples$truth <- as.factor(data$class[c_samples$sample])
-  c_samples$class <- factor(c_samples$class, levels = names(sort(table(c_samples$class), decreasing = TRUE)))
+  c_samples$class <- as.factor(as.character(c_samples$class))
   c_samples$class_group <- fct_lump(c_samples$class, n = 7)
   c_samples$sample <- factor(c_samples$sample, levels = order(data$class))
   c_samples
@@ -45,8 +46,7 @@ preprocess_c <- function(c_samples, data) {
 
 preprocess_post <- function(post) {
   colnames(post) <- c("iter", "class", "x", "y")
-  post$class <- factor(post$class, levels = names(sort(table(post$class), decreasing = TRUE)))
-  post$class_group <- fct_lump(post$class, n = 6)
+  post$class <- as.factor(as.character(post$class))
   post
 }
 
@@ -89,15 +89,23 @@ cooccurrence_counts <- function(x) {
 #' hyperparameters. A better strategy of course would look at the posterior
 #' means of the hyperparameters after accounting for label switching (see the
 #' plot_c function for that though).
-plot_fits <- function(data, post) {
+plot_fits <- function(data, post, c_samples, min_iter = 0, max_iter = Inf) {
+  data <- data %>%
+    select(-class) %>%
+    mutate(sample = factor(1:n())) %>%
+    left_join(c_samples %>% filter(iter <= max_iter, iter >= min_iter))
+  post <- post %>%
+    left_join(c_samples %>% select(iter, class, class_group)) %>%
+    filter(iter <= max_iter, iter >= min_iter)
   ggplot() +
-    geom_point(
-      data = data,
-      aes(x = x, y = y)
-    ) +
     geom_line(
       data = post,
-      aes(x = x, y = y, group = interaction(class, iter), col = class_group)
+      aes(x = x, y = y, group = interaction(class, iter), col = class_group),
+      size = 1
+    ) +
+    geom_point(
+      data = data,
+      aes(x = x, y = y, col = class_group)
     ) +
     facet_wrap(~iter)
 }
@@ -161,7 +169,7 @@ plot_cooccurrence <- function(counts, data) {
 ## Data generated from true mixture of GPs model
 ###############################################################################
 post <- read_csv("data/sim0914/post.csv", col_names = FALSE)
-colnames(post) <- c("class", "x", "y")
+colnames(post) <- c("class", "iter", "x", "y")
 data <- read_csv("data/sim0914/data.csv", col_names = FALSE)
 colnames(data) <- c("class", "x", "y")
 plot_fits(data, post)
@@ -212,24 +220,33 @@ library("treelapse")
 library("phyloseq")
 data(abt)
 cur_data <- abt %>%
+  filter_taxa(function(x) var(x) > 4, prune = TRUE) %>%
   subset_samples(ind == "F") %>%
   get_taxa()
 write.table(
-  cur_data["Unc063x1", ],
+  cur_data[3, ],
   file = "data/unc063x1/raw_data.csv",
   sep = ",",
   row.names = FALSE,
   col.names = FALSE
 )
 
+data <- read_csv("data/unc063x1/data.csv", col_names = FALSE) %>%
+  rename(class = X1, x = X2, y = X3)
 post <- read_csv("data/unc063x1/posteriors.csv", col_names = FALSE) %>%
   preprocess_post()
-data <- read_csv("data/unc063x1/data.csv", col_names = FALSE)
-colnames(data) <- c("class", "x", "y")
-plot_fits(data, post %>% filter(iter < 60))
-plot_fits(data, post %>% filter(iter > 2000, iter < 2500))
-ggsave("figure/unc063x1_fits.png")
-
 c_samples <- read_csv("data/unc063x1/samples/c.csv", col_names = FALSE) %>%
   preprocess_c(data)
+
+plot_fits(data, post, c_samples, 0, 100)
+plot_fits(data, post, c_samples, 1700, 1900)
+ggsave("figure/abt_fits.png", width = 7.5, height = 3.88)
+
 plot_c(c_samples)
+ggsave("figure/abt_states.png", width = 5.24, height = 3.17)
+
+counts <- cooccurrence_counts(c_samples)
+plot_cooccurrence(counts, data) +
+  coord_fixed() +
+  theme(axis.text = element_blank())
+ggsave("figure/abt_cooccurrence.png", width = 4.88, height = 4.07)

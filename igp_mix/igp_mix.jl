@@ -17,20 +17,17 @@ using Mamba
 ###############################################################################
 #                        Define types for GP inference                        #
 ###############################################################################
-
 type KernelParam
   l::Float64
   v0::Float64
   v1::Float64
 end
 
-
 type GPHyper
   log_l2
   log_v0
   log_v1
 end
-
 
 type GPModel
   theta::KernelParam
@@ -159,7 +156,7 @@ end
 
 function gp_posterior(x_new::Matrix,
                       gp::GPModel,
-                      epsilon::Float64 = 1e-5)
+                      epsilon::Float64 = 1e-3)
   theta_noiseless = deepcopy(gp.theta)
   theta_noiseless.v1 = 0
 
@@ -632,7 +629,7 @@ function read_states(thetas_path::String, c_path::String)
     ## construct kernel hyperparameter dictionary
     cur_param = Dict{Int64, KernelParam}()
     for j in 1:size(cur_thetas, 1)
-      cur_param[j] = param_from_theta(cur_thetas[j, 3:5])
+      cur_param[cur_thetas[j, 2]] = param_from_theta(cur_thetas[j, 3:5])
     end
 
     states[iter] = MixGPState(
