@@ -6,13 +6,13 @@
 ## model.
 ##
 ## author: sankaran.kris@gmail.com
-## date: 09/15/2017
+## date: 10/08/2017
 
 ## simulate toy data
 include("igp_mix.jl")
 srand(09142017)
 n = 60
-n_iter = 10000
+n_iter = 2000
 K = 3
 c = rand(1:K, n)
 update_ix = rand(1:n)
@@ -20,7 +20,7 @@ alpha = 1.0
 thetas = Dict{Int64, KernelParam}()
 
 a = GPHyper(
-  Distributions.Logistic(-1, 1),
+  Distributions.Logistic(-6, 3),
   Distributions.Logistic(-1, 1),
   Distributions.Logistic(-1, 1)
 )
@@ -78,8 +78,9 @@ write_posteriors("data/bump0914/posteriors.csv", x_new, posteriors)
 writecsv("data/bump0914/data.csv", [c x y])
 
 ## consider real microbiome series
-alpha = 1.0
+alpha = 0.1
 y = readcsv("data/unc063x1/raw_data.csv")[:]
+y += 0.01 * rand(length(y))
 x = collect(linspace(0, 1, length(y)))[:, :]
 MixGPSampler(x, y, alpha, a, "data/unc063x1/samples/", n_iter)
 
