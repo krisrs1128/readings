@@ -632,7 +632,7 @@ function read_states(thetas_path::String, c_path::String)
     ## construct kernel hyperparameter dictionary
     cur_param = Dict{Int64, KernelParam}()
     for j in 1:size(cur_thetas, 1)
-      cur_param[j] = param_from_theta(cur_thetas[j, 3:5])
+      cur_param[cur_thetas[j, 2]] = param_from_theta(cur_thetas[j, 3:5])
     end
 
     states[iter] = MixGPState(
