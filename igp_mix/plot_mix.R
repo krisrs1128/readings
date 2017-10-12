@@ -12,9 +12,9 @@ library("forcats")
 library("reshape2")
 
 scale_colour_discrete <- function(...)
-  scale_colour_brewer(..., palette="Set3")
+  scale_colour_brewer(..., palette="Set2")
 scale_fill_discrete <- function(...)
-  scale_fill_brewer(..., palette="Set3")
+  scale_fill_brewer(..., palette="Set2")
 
 theme_set(theme_bw())
 theme_update(
@@ -100,7 +100,8 @@ plot_fits <- function(data, post, c_samples, min_iter = 0, max_iter = Inf) {
   ggplot() +
     geom_line(
       data = post,
-      aes(x = x, y = y, group = interaction(class, iter), col = class_group)
+      aes(x = x, y = y, group = interaction(class, iter), col = class_group),
+      size = 1
     ) +
     geom_point(
       data = data,
@@ -237,7 +238,7 @@ post <- read_csv("data/unc063x1/posteriors.csv", col_names = FALSE) %>%
 c_samples <- read_csv("data/unc063x1/samples/c.csv", col_names = FALSE) %>%
   preprocess_c(data)
 
-plot_fits(data, post, c_samples, 0, 200)
+plot_fits(data, post, c_samples, 0, 100)
 plot_fits(data, post, c_samples, 1700, 1900)
 ggsave("figure/abt_fits.png", width = 7.5, height = 3.88)
 
