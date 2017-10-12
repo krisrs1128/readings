@@ -156,7 +156,7 @@ end
 
 function gp_posterior(x_new::Matrix,
                       gp::GPModel,
-                      epsilon::Float64 = 1e-3)
+                      epsilon::Float64 = 1e-8)
   theta_noiseless = deepcopy(gp.theta)
   theta_noiseless.v1 = 0
 
