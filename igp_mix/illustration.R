@@ -26,4 +26,4 @@ ggplot(msim) +
     size = 0.5
   ) +
   facet_wrap(~bandwidth)
-ggsave("figure/gp_bandwidths.png", width = 4, height = 2.09)
+ggsave("figure/gp_bandwidths.png", width = 4, height = 1.5)
