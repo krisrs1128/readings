@@ -13,14 +13,13 @@ cd ../../applications/MIDAS/database/
 wget http://lighthouse.ucsf.edu/MIDAS/midas_db_v1.2.tar.gz
 tar -zxvf midas_db_v1.2.tar.gz
 
-cd ../../programming/research/readings/midas/example/
+cd ../../programming/research/readings/midas/
 wget http://lighthouse.ucsf.edu/MIDAS/example.tar.gz
 tar -zxvf example.tar.gz
 
-cd ..
-export PYTHONPATH=$PYTHONPATH:MIDAS
-export PATH=$PATH:MIDAS/scripts
-export MIDAS_DB=midas_db_v1.2
+export PYTHONPATH=$PYTHONPATH:/scratch/users/kriss1/applications/MIDAS
+export PATH=$PATH:/scratch/users/kriss1/applications/MIDAS/scripts
+export MIDAS_DB=/scratch/users/kriss1/applications/MIDAS/database/midas_db_v1.2
 
 ## first step of MIDAS workflow (species and gene profiling)
 mkdir output
@@ -31,5 +30,5 @@ run_midas.py genes output/sample_1 -1 example/sample_1.fq.gz
 run_midas.py genes output/sample_2 -1 example/sample_2.fq.gz
 
 ## second step of MIDAS workflow (merging)
-merge_midas.py species species -i output/sample_1,output/sample_2 -t list
-merge_midas.py genes -i output/sample_1,output/sample_2 -t list
+merge_midas.py species output/species -i output/sample_1,output/sample_2 -t list
+merge_midas.py genes output/genes -i output/sample_1,output/sample_2 -t list
