@@ -26,6 +26,8 @@ mkdir output
 run_midas.py species output/sample_1 -1 example/sample_1.fq.gz
 run_midas.py species output/sample_2 -1 example/sample_2.fq.gz
 
+module load biology
+module load samtools/1.6
 run_midas.py genes output/sample_1 -1 example/sample_1.fq.gz
 run_midas.py genes output/sample_2 -1 example/sample_2.fq.gz
 
