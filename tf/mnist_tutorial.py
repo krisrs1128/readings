@@ -8,6 +8,50 @@ date: 12/01/2017
 
 import tensorflow as tf
 from tensorflow.examples.tutorials.mnist import input_data
+
+###############################################################################
+## functions used below
+###############################################################################
+def weight_variable(shape):
+    """
+    Weight initialization function
+    """
+    initial = tf.truncated_normal(shape, stddev=0.1)
+    return tf.Variable(initial)
+
+
+def bias_variable(shape):
+    """Bias initialization function
+    """
+    initial = tf.constant(0.1, shape=shape)
+    return tf.Variable(initial)
+
+
+def conv2d(x, W):
+    """Convolution wrapper
+    """
+    return tt.nn.conv2d(
+        x,
+        W,
+        strides=[1, 1, 1, 1],
+        padding="SAME"
+    )
+
+
+def max_pool_2x2(x):
+    """Max pooling wrapper
+    """
+    return tf.nn.max_pool(
+        x,
+        ksize=[1, 2, 2, 1],
+        strides=[1, 2, 2, 1],
+        padding="SAME"
+    )
+
+
+###############################################################################
+##  softmax regression
+###############################################################################
 mnist = input_data.read_data_sets('MNIST_data', one_hot=True)
 
 x = tf.placeholder(
@@ -54,3 +98,7 @@ print(accuracy.eval(
         y_: mnist.test.labels
     }
 ))
+
+###############################################################################
+## Deeper net
+###############################################################################
