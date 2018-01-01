@@ -35,3 +35,25 @@ womensrole_bglm_1 <- stan_glm(
 )
 
 womensrole_bglm_1
+
+posterior_interval(womensrole_bglm_1)
+residuals(womensrole_bglm_1)
+vcov(womensrole_bglm_1)
+
+###############################################################################
+## Model criticism
+###############################################################################
+y_rep <- posterior_predict(womensrole_bglm_1)
+
+x_df <- womensrole %>%
+  rownames_to_column("id")
+y_rep_df <- y_rep %>%
+  as.data.frame() %>%
+  rownames_to_column("rep") %>%
+  gather(id, value, -rep) %>%
+  left_join(x_df)
+
+ggplot(y_rep_df) +
+  geom_boxplot(
+    aes(x = as.factor(education), y = agree / total)
+  )
