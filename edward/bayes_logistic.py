@@ -36,8 +36,27 @@ y = Bernoulli(tf.matmul(X, beta))
 
 # (Variational) Inference
 qloc = tf.Variable(tf.random_normal((D, 1)))
-qscale = tf.Variable(tf.random_gamma((D, 1), 1))
+qscale = tf.nn.softplus(tf.Variable(tf.random_normal((D, 1))))
 qbeta = Normal(loc=qloc, scale=qscale)
 
-inference = ed.KLqp({beta: qbeta}, data = {X: X_train, y: y_train})
+inference = ed.KLqp({beta: qbeta}, data={X: X_train, y: y_train})
 inference.initialize(n_iter=500)
+
+# look at change in beta samples over iterations
+tf.global_variables_initializer().run()
+samples = {"beta": np.zeros(inference.n_iter)}
+params = {
+    "loc": np.zeros(inference.n_iter),
+    "scale": np.zeros(inference.n_iter)
+}
+
+for i in range(inference.n_iter):
+    info_dict = inference.update()
+    inference.print_progress(info_dict)
+    samples["beta"][i] = qbeta.eval()
+    params["loc"][i] = qbeta.loc.eval()
+    params["scale"][i] = qbeta.scale.eval()
+
+# just printing some random things
+# sess.run(y, feed_dict={X: X_train})
+# sess.run(qbeta)
