@@ -31,27 +31,46 @@ def build_toy_dataset(N):
 
   return x
 
-N = 500  # number of data points
+N = 40  # number of data points
 D = 2  # dimensionality of data
 
 x_train = build_toy_dataset(N)
 
 # Model
-K = 2
+K = 3
 pi = Dirichlet(tf.ones(K))
 mu = Normal(tf.zeros(D), tf.ones(D), sample_shape=K)
 sigmasq = InverseGamma(tf.ones(D), tf.ones(D), sample_shape=K)
-x = ParamMixture(
-    pi,
-    {'loc': mu, 'scale_diag': tf.sqrt(sigmasq)},
-    MultivariateNormalDiag,
-    sample_shape=N
+x = []
+z = []
+for i in range(N):
+  z.append(Categorical(probs=pi))
+  x.append(Normal(mu[z[i].sample()], 1.0))
+
+# Variational distributions
+qz = []
+for i in range(N):
+  qz[i] = Categorical(tf.Variable(tf.random_dirichlet(K)))
+
+qmu = Normal(
+  loc=tf.Variable(tf.random_normal([D, K])),
+  scale=tf.nn.softplus(tf.Variable(tf.random_normal([D, K])))
 )
-z = x.cat
 
-z_t = ed.complete_conditional(z)
-sess.run(z_t.prob([[0, 1], [2, 1]]))
+def local_updates(x_i, qmu):
+  K = qmu.get_shape().as_list()[1]
+  probs = np.zeros(K)
 
-sess.run(z.prob([0, 1]))
-sess.run(z_t.logits)
-p0 = z_t.prob(tf.ones([500, 1]))
+  for k in range(K):
+    np.dot(qmu.mean()[:, k], x_i) - 0.5 * (qmu.variance()[:, K] + qmu.mean()[:, K]) ^ 2
+
+# coordinate ascent
+for iter in range(max_iter):
+
+  for i in range(N):
+    # update local variational params
+
+  for k in range(K):
+    # update global variational params
+
+  # compute elbo
